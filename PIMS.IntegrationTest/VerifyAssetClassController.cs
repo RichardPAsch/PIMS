@@ -4,16 +4,10 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Web.Http;
-using System.Web.Http.Hosting;
-using System.Web.Http.Routing;
-using Moq;
-using Newtonsoft.Json;
 using NUnit.Framework;
 using PIMS.Core.Models;
-using PIMS.Data.Repositories;
 using PIMS.Web.Api.Controllers;
-using System.Web;
+
 
 namespace PIMS.IntegrationTest
 {
