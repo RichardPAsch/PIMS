@@ -228,10 +228,11 @@ namespace PIMS.UnitTest
             _ctrl = new AssetClassController(_mockRepo.Object) {Request = request, Configuration = httpCfg};
 
             /* Http configuration */
-            httpCfg.Routes.MapHttpRoute("DefaultApi", "api/{controller}/{Code}", new {Code = RouteParameter.Optional});
+            // Use correct Route name, such that "Code" parameter maps correctly.
+            httpCfg.Routes.MapHttpRoute("AssetClassRoute", "api/{controller}/{Code}", new { Code = RouteParameter.Optional });
 
             /* Route */
-            var httpRouteData = new HttpRouteData(httpCfg.Routes["DefaultApi"], new HttpRouteValueDictionary(new {controller = "AssetClass"}));
+            var httpRouteData = new HttpRouteData(httpCfg.Routes["AssetClassRoute"], new HttpRouteValueDictionary(new { controller = "AssetClass" }));
             _ctrl.Request.Properties[HttpPropertyKeys.HttpRouteDataKey] = httpRouteData;
 
             var newClassification = new AssetClass {
