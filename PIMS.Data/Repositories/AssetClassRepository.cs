@@ -72,6 +72,9 @@ namespace PIMS.Data.Repositories
         
         public bool Create(AssetClass newEntity)
         {
+            var currListing = this.RetreiveAll().ToList();
+            if (currListing.Any(ac => ac.Code.ToUpper().Trim() == newEntity.Code.ToUpper().Trim())) return false;
+
             using (var sess = _sfFactory.OpenSession())
             {
                 using (var trx = sess.BeginTransaction())
@@ -81,8 +84,7 @@ namespace PIMS.Data.Repositories
                         sess.Save(newEntity);
                         trx.Commit();
                     }
-                    catch  
-                    {
+                    catch{
                         return false;
                     }
                 }
@@ -90,14 +92,52 @@ namespace PIMS.Data.Repositories
 
             return true;
         }
-
+        
         public bool Update(AssetClass entity)
         {
-            throw new NotImplementedException();
+            using (var sess = _sfFactory.OpenSession()) {
+
+                using (var trx = sess.BeginTransaction()) {
+
+                    try{
+                        var listings = this.RetreiveAll().ToList();
+                        var item = listings.Find(ac => ac.KeyId == entity.KeyId);
+                        item.Code = entity.Code.Trim().ToUpper();
+                        item.Description = entity.Description.Trim();
+                       
+                        sess.Update(item);
+                        trx.Commit();
+                    }
+                    catch {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
         }
 
+
         public bool Delete(Guid cGuid) {
-            throw new NotImplementedException();
+
+            using (var sess = _sfFactory.OpenSession()) {
+
+                using (var trx = sess.BeginTransaction()) {
+
+                    try
+                    {
+                        var listings = this.RetreiveAll().ToList();
+                        var deletedAssetClass = listings.Find(ac => ac.KeyId == cGuid);
+
+                        sess.Delete(deletedAssetClass);
+                        trx.Commit();
+                    }
+                    catch {
+                        return false;
+                    }
+                }
+                return true;
+            }
         }
 
 
