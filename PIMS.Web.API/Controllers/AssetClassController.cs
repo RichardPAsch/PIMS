@@ -94,7 +94,8 @@ namespace PIMS.Web.Api.Controllers
             {
                 try
                 {
-                    var uri = Url.Link("DefaultApi", new { Code = newClassification.Code });
+                    // Route name must match existing route in WebApiConfig.
+                    var uri = Url.Link("AssetClassRoute", new {controller = "AssetClass", Code = newClassification.Code});
                     if (uri != null) response.Headers.Location = new Uri(uri);
                 }
                 catch (Exception ex)
