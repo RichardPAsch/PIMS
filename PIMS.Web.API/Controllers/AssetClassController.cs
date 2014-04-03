@@ -59,10 +59,12 @@ namespace PIMS.Web.Api.Controllers
             return req.CreateResponse(HttpStatusCode.OK, classification);
         }
 
-        public HttpResponseMessage Delete([FromBody] Guid classificationId, HttpRequestMessage req) {
 
-            if (!_repository.Delete(classificationId)) {
-                return req.CreateErrorResponse(HttpStatusCode.NotFound, "Asset class does not exist");
+        // Guid parameter name (id) must match RouteTemplate name in WebApiConfig.
+        public HttpResponseMessage Delete(Guid id, HttpRequestMessage req) {
+
+            if (!_repository.Delete(id)) {
+                return req.CreateErrorResponse(HttpStatusCode.NotFound, "Asset class could not be removed, or was not found.");
             }
             
             return req.CreateResponse(HttpStatusCode.OK);
@@ -79,9 +81,7 @@ namespace PIMS.Web.Api.Controllers
                 return req.CreateResponse(HttpStatusCode.OK, updatedClassification);
             }
 
-
-            return req.CreateResponse(HttpStatusCode.BadRequest);
-
+            return req.CreateErrorResponse(HttpStatusCode.BadRequest, "Unable to update AssetClass: " + updatedClassification.Code);
         }
 
 
