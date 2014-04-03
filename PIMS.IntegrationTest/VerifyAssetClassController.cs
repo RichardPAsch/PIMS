@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using Newtonsoft.Json;
 using NUnit.Framework;
 using PIMS.Core.Models;
 using PIMS.Web.Api.Controllers;
@@ -136,29 +137,50 @@ namespace PIMS.IntegrationTest
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                 var newClassification = new AssetClass {
-                                                            Code = "CEF",
-                                                            Description = "Closed-End Fund"
+                                                            Code = "tC7",
+                                                            Description = "testDesc7"
                                                         };
                 
-
                 // Act
-                var response = client.PostAsJsonAsync(client.BaseAddress.ToString(), newClassification).Result;// OK! data saved!
-                //HttpResponseMessage resp = await client.GetAsync(client.BaseAddress);
-                //var classes = await resp.Content.ReadAsAsync<IEnumerable<AssetClass>>();
+                var response = client.PostAsJsonAsync(client.BaseAddress.ToString(), newClassification).Result;
+                var jsonResult = response.Content.ReadAsStringAsync().Result;
+                var classification = JsonConvert.DeserializeObject<AssetClass>(jsonResult);
+              
 
-
-                //// Assert
-                //Assert.IsTrue(resp.StatusCode == HttpStatusCode.OK);
-                //Assert.IsNotNull(classes);
-                //// Avoid posssible multiple enumerations.
-                //var assetClasses = classes as AssetClass[] ?? classes.ToArray();
-                //Assert.IsTrue(assetClasses.First().Code != string.Empty);
-                //Assert.IsTrue(assetClasses.First().Description != string.Empty);
-                //Assert.GreaterOrEqual(assetClasses.Count(), 4);
+                // Assert
+                Assert.IsTrue(response.StatusCode == HttpStatusCode.Created);
+                Assert.IsTrue(classification.Code == "tC7");
+                Assert.NotNull(response.Headers.Location);
             }
             
         }
-      
+
+
+        [Test]
+        // ReSharper disable once InconsistentNaming
+        public async void Cannot_POST_a_duplicate_Asset_Classification() {
+
+            using (var client = new HttpClient()) {
+
+                // Arrange
+                client.BaseAddress = new Uri(UrlBase + "/AssetClass/");
+                client.DefaultRequestHeaders.Accept.Clear();
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                var newClassification = new AssetClass {
+                    Code = "CEF",
+                    Description = "Closed-End Fund"
+                };
+
+                // Act
+                var response = client.PostAsJsonAsync(client.BaseAddress.ToString(), newClassification).Result;
+              
+                // Assert
+                Assert.IsTrue(response.StatusCode == HttpStatusCode.Conflict);
+
+
+            }
+
+        }
 
     }
 
