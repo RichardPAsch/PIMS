@@ -11,12 +11,12 @@ namespace PIMS.Web.Api
     {
         public static void Register(HttpConfiguration config) {
 
-           
+
             config.Routes.MapHttpRoute(
                name: "DefaultApi",
                routeTemplate: "api/{controller}/{id}",
                defaults: new { id = RouteParameter.Optional },
-               constraints: new { id = new RouteGuidConstraint() } 
+               constraints: new { id = new RouteGuidConstraint() }
            );
 
             config.Routes.MapHttpRoute(
