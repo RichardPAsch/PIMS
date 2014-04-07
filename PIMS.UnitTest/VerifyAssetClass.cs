@@ -1,38 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Security.Cryptography.X509Certificates;
 using System.Web.Http;
-using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
 using System.Web.Http.Routing;
-using Moq.Language.Flow;
 using Newtonsoft.Json;
 using NUnit.Framework;
 using PIMS.Core.Models;
 using PIMS.Data.FakeRepositories;
 using PIMS.Web.Api.Controllers;
 using Moq;
-
-
-// TODO: 1) test to fetch 1 classification 
-/* DONE */
-// TODO: 2) test to update 1 classification 
-/* DONE */
-// TODO: 3) test to delete 1 classification - admin only privilege to do this!
-/* DONE */
-
-// TODO: Need to set up StructureMap with correct mapping for ClassificationRepository (PROD) - in order to test via Fiddler !! Integration tests.
-// TODO: 4) test to create a classification - PROD
-// TODO: 5) test to fetch classifications - PROD
-// TODO: 6) test to fetch 1 classification - PROD
-// TODO: 7) test to update 1 classification - PROD
-// TODO: 8) test to delete 1 classification - admin only privilege - PROD
-
-// TODO: 9) refactor common code for last 3 tests(fake)
-
 
 
 namespace PIMS.UnitTest
@@ -52,7 +30,7 @@ namespace PIMS.UnitTest
           repository uses controller's directive(s) in fetching correct data
         */
 
-        // TODO: REFACTOR !!
+
         [SetUp]
         public void Init()
         {
@@ -83,8 +61,7 @@ namespace PIMS.UnitTest
         public void Controller_can_GET_a_single_Fake_classification_for_a_valid_code() {
 
             // Arrange - Need to supply context-related properties of the request, to avoid Http error.
-            var request = new HttpRequestMessage();
-            request.Properties[HttpPropertyKeys.HttpConfigurationKey] = new HttpConfiguration();
+            var request = TestHelpers.GetHttpRequestMessage();
            _ctrl = new AssetClassController(_mockRepo.Object);
             
             // Act
@@ -100,8 +77,7 @@ namespace PIMS.UnitTest
         public void Controller_can_GET_a_single_Fake_classification_for_a_valid_key() {
 
             // Arrange - Need to supply context-related properties of the request, to avoid Http error.
-            var request = new HttpRequestMessage();
-            request.Properties[HttpPropertyKeys.HttpConfigurationKey] = new HttpConfiguration();
+            var request = TestHelpers.GetHttpRequestMessage();
             _ctrl = new AssetClassController(_mockRepo.Object);
 
             // Act
@@ -119,8 +95,7 @@ namespace PIMS.UnitTest
         {
 
             // Arrange
-            var request = new HttpRequestMessage();
-            request.Properties[HttpPropertyKeys.HttpConfigurationKey] = new HttpConfiguration();
+            var request = TestHelpers.GetHttpRequestMessage();
             _ctrl = new AssetClassController(_mockRepo.Object);
 
             // Act
@@ -136,8 +111,7 @@ namespace PIMS.UnitTest
         public void Controller_cannot_GET_a_single_Fake_classification_for_an_invalid_code() {
 
             // Arrange - Need to supply context-related properties of the request, to avoid Http error.
-            var request = new HttpRequestMessage();
-            request.Properties[HttpPropertyKeys.HttpConfigurationKey] = new HttpConfiguration();
+            var request = TestHelpers.GetHttpRequestMessage();
             _ctrl = new AssetClassController(_mockRepo.Object);
 
             // Act
@@ -145,7 +119,6 @@ namespace PIMS.UnitTest
 
             // Assert
             Assert.IsTrue(myClass.StatusCode == HttpStatusCode.NotFound);
-
         }
 
 
@@ -154,8 +127,7 @@ namespace PIMS.UnitTest
         public void Controller_cannot_DELETE_a_single_invalid_fake_classification() {
 
             // Arrange
-            var request = new HttpRequestMessage();
-            request.Properties[HttpPropertyKeys.HttpConfigurationKey] = new HttpConfiguration();
+            var request = TestHelpers.GetHttpRequestMessage();
             _ctrl = new AssetClassController(_mockRepo.Object);
 
             // Act
@@ -163,7 +135,6 @@ namespace PIMS.UnitTest
 
             // Assert
             Assert.IsTrue(result.StatusCode == HttpStatusCode.NotFound);
-
         }
         
 
@@ -172,8 +143,7 @@ namespace PIMS.UnitTest
         public void Controller_can_Update_PUT_a_single_fake_classification() {
 
             // Arrange
-            var request = new HttpRequestMessage();
-            request.Properties[HttpPropertyKeys.HttpConfigurationKey] = new HttpConfiguration();
+            var request = TestHelpers.GetHttpRequestMessage();
             _ctrl = new AssetClassController(_mockRepo.Object);
             const string classCode = "CS";
 
@@ -196,8 +166,7 @@ namespace PIMS.UnitTest
         public void Controller_cannot_Update_PUT_a_single_invalid_fake_classification() {
 
             // Arrange
-            var request = new HttpRequestMessage();
-            request.Properties[HttpPropertyKeys.HttpConfigurationKey] = new HttpConfiguration();
+            var request = TestHelpers.GetHttpRequestMessage();
             _ctrl = new AssetClassController(_mockRepo.Object);
             var fakeAssetClass = new AssetClass {KeyId = Guid.NewGuid(), Code = "FRE", Description = "junk"};
 
@@ -215,36 +184,28 @@ namespace PIMS.UnitTest
         [Test]
         // ReSharper disable once InconsistentNaming
         public void Controller_Can_POST_a_Fake_Classification() {
-
-            // Arrange - Boiler plate setup: mimics controller context state that run-time engine expects
-            // when handling a POST; this may be unnecessary with WebApi v2.x?
-
-            /* Request */
-            var request = new HttpRequestMessage(HttpMethod.Post, UrlBase + "/AssetClass");
-            var httpCfg = new HttpConfiguration();
-            request.Properties[HttpPropertyKeys.HttpConfigurationKey] = httpCfg;
-
-            /* Controller */
-            _ctrl = new AssetClassController(_mockRepo.Object) {Request = request, Configuration = httpCfg};
-
-            /* Http configuration */
-            // Use correct Route name, such that "Code" parameter maps correctly.
-            httpCfg.Routes.MapHttpRoute("AssetClassRoute", "api/{controller}/{Code}", new { Code = RouteParameter.Optional });
-
-            /* Route */
-            var httpRouteData = new HttpRouteData(httpCfg.Routes["AssetClassRoute"], new HttpRouteValueDictionary(new { controller = "AssetClass" }));
-            _ctrl.Request.Properties[HttpPropertyKeys.HttpRouteDataKey] = httpRouteData;
+            
+            // Arrange
+            _ctrl = new AssetClassController(_mockRepo.Object);
 
             var newClassification = new AssetClass {
                 KeyId = Guid.NewGuid(),
-                Code = "CEF",
-                Description = "Closed-End Fund"
+                Code = "C10",
+                Description = "Closed-End Fund10"
             };
 
-
+            
             // Act
-            var result = _ctrl.Post(newClassification, request);
-            // Check data for new Classification entity.
+            var result = _ctrl.Post(newClassification, TestHelpers.GetHttpRequestMessage(
+                                                                                HttpMethod.Post, 
+                                                                                UrlBase + "/AssetClass",
+                                                                                _ctrl,
+                                                                                "AssetClassRoute",
+                                                                                "api/{controller}/{Code}",
+                                                                                new { Code = RouteParameter.Optional }
+                                                                            ));
+           
+            // Format entity.
             var jsonResult = result.Content.ReadAsStringAsync().Result;
             var classification = JsonConvert.DeserializeObject<AssetClass>(jsonResult);
 
@@ -252,8 +213,8 @@ namespace PIMS.UnitTest
             // Assert
             Assert.AreEqual(HttpStatusCode.Created, result.StatusCode);
             Assert.IsNotNull(classification);
-            Assert.AreEqual(result.Headers.Location, "http://localhost/api/AssetClass/CEF");
-            Assert.IsTrue(classification.Code == "CEF");
+            Assert.AreEqual(result.Headers.Location, "http://localhost/api/AssetClass/C10");
+            Assert.IsTrue(classification.Code == "C10");
             Assert.IsTrue(classification.KeyId != Guid.Empty);
         }
 
@@ -262,23 +223,8 @@ namespace PIMS.UnitTest
         // ReSharper disable once InconsistentNaming
         public void Controller_Cannot_POST_a_duplicate_Fake_Classification() {
 
-            // Arrange - Boiler plate setup: mimics controller context state that run-time engine expects
-            // when handling a POST; this may be unnecessary with WebApi v2.x?
-
-            /* Request */
-            var request = new HttpRequestMessage(HttpMethod.Post, UrlBase + "/AssetClass");
-            var httpCfg = new HttpConfiguration();
-            request.Properties[HttpPropertyKeys.HttpConfigurationKey] = httpCfg;
-
-            /* Controller */
-            _ctrl = new AssetClassController(_mockRepo.Object) { Request = request, Configuration = httpCfg };
-
-            /* Http configuration */
-            httpCfg.Routes.MapHttpRoute("DefaultApi", "api/{controller}/{Code}", new { Code = RouteParameter.Optional });
-
-            /* Route */
-            var httpRouteData = new HttpRouteData(httpCfg.Routes["DefaultApi"], new HttpRouteValueDictionary(new { controller = "AssetClass" }));
-            _ctrl.Request.Properties[HttpPropertyKeys.HttpRouteDataKey] = httpRouteData;
+            // Arrange
+            _ctrl = new AssetClassController(_mockRepo.Object);
 
             var newClassification = new AssetClass {
                 KeyId = Guid.NewGuid(),
@@ -288,8 +234,15 @@ namespace PIMS.UnitTest
 
 
             // Act
-            var result = _ctrl.Post(newClassification, request);
-            // Check data for new Classification entity.
+            var result = _ctrl.Post(newClassification, TestHelpers.GetHttpRequestMessage(
+                                                                                HttpMethod.Post,
+                                                                                UrlBase + "/AssetClass",
+                                                                                _ctrl,
+                                                                                "AssetClassRoute",
+                                                                                "api/{controller}/{Code}",
+                                                                                new { Code = RouteParameter.Optional }
+                                                                            ));
+
             var jsonResult = result.Content.ReadAsStringAsync().Result;
             var classification = JsonConvert.DeserializeObject<AssetClass>(jsonResult);
 
