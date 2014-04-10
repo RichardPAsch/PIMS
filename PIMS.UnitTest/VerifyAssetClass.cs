@@ -3,8 +3,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
-using System.Web.Http.Hosting;
-using System.Web.Http.Routing;
 using Newtonsoft.Json;
 using NUnit.Framework;
 using PIMS.Core.Models;
