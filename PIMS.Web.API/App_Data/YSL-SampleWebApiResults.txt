@@ -1,0 +1,175 @@
+http://query.yahooapis.com/v1/public/yql?q=select%20Name,symbol,Open,DividendShare,EarningsShare,PERatio,DividendYield,ExDividendDate,DividendPayDate,PreviousClose%20from%20yahoo.finance.quotes%20where%20symbol%20in%20%28%22GSK%22%29&format=json&env=store://datatables.org/alltableswithkeys
+
+
+// selcted data - Json result
+
+{
+
+    "query": {
+        "count": 1,
+        "created": "2014-04-14T22:18:01Z",
+        "lang": "en-US",
+        "results": {
+            "quote": {
+                "symbol": "GSK",
+                "DividendShare": "2.469",
+                "EarningsShare": "3.552",
+                "Name": "GlaxoSmithKline P",
+                "Open": "51.78",
+                "PreviousClose": "51.76",
+                "ExDividendDate": "Feb 19",
+                "PERatio": "14.57",
+                "DividendPayDate": "Apr 10",
+                "DividendYield": "4.77"
+            }
+        }
+    }
+
+}
+
+
+
+
+// All available Json result:
+
+{
+    "query": {
+        "count": 1,
+        "created": "2014-04-14T21:50:32Z",
+        "lang": "en-US",
+        "results": {
+            "quote": {
+                "symbol": "AAPL",
+                "Ask": "521.75",
+                "AverageDailyVolume": "11027300",
+                "Bid": "521.55",
+                "AskRealtime": "521.75",
+                "BidRealtime": "521.55",
+                "BookValue": "145.313",
+                "Change_PercentChange": "+2.07 - +0.40%",
+                "Change": "+2.07",
+                "Commission": null,
+                "ChangeRealtime": "+2.07",
+                "AfterHoursChangeRealtime": "N/A - N/A",
+                "DividendShare": "12.20",
+                "LastTradeDate": "4/14/2014",
+                "TradeDate": null,
+                "EarningsShare": "40.233",
+                "ErrorIndicationreturnedforsymbolchangedinvalid": null,
+                "EPSEstimateCurrentYear": "42.60",
+                "EPSEstimateNextYear": "46.52",
+                "EPSEstimateNextQuarter": "8.51",
+                "DaysLow": "517.21",
+                "DaysHigh": "522.16",
+                "YearLow": "385.10",
+                "YearHigh": "575.14",
+                "HoldingsGainPercent": "- - -",
+                "AnnualizedGain": null,
+                "HoldingsGain": null,
+                "HoldingsGainPercentRealtime": "N/A - N/A",
+                "HoldingsGainRealtime": null,
+                "MoreInfo": "cnsprmiIed",
+                "OrderBookRealtime": null,
+                "MarketCapitalization": "465.3B",
+                "MarketCapRealtime": null,
+                "EBITDA": "56.565B",
+                "ChangeFromYearLow": "+136.58",
+                "PercentChangeFromYearLow": "+35.47%",
+                "LastTradeRealtimeWithTime": "N/A - <b>521.68</b>",
+                "ChangePercentRealtime": "N/A - +0.40%",
+                "ChangeFromYearHigh": "-53.46",
+                "PercebtChangeFromYearHigh": "-9.30%",
+                "LastTradeWithTime": "Apr 14 - <b>521.68</b>",
+                "LastTradePriceOnly": "521.68",
+                "HighLimit": null,
+                "LowLimit": null,
+                "DaysRange": "517.21 - 522.16",
+                "DaysRangeRealtime": "N/A - N/A",
+                "FiftydayMovingAverage": "531.243",
+                "TwoHundreddayMovingAverage": "529.664",
+                "ChangeFromTwoHundreddayMovingAverage": "-7.984",
+                "PercentChangeFromTwoHundreddayMovingAverage": "-1.51%",
+                "ChangeFromFiftydayMovingAverage": "-9.563",
+                "PercentChangeFromFiftydayMovingAverage": "-1.80%",
+                "Name": "Apple Inc.",
+                "Notes": null,
+                "Open": "521.79",
+                "PreviousClose": "519.61",
+                "PricePaid": null,
+                "ChangeinPercent": "+0.40%",
+                "PriceSales": "2.66",
+                "PriceBook": "3.58",
+                "ExDividendDate": "Feb 6",
+                "PERatio": "12.92",
+                "DividendPayDate": "Feb 13",
+                "PERatioRealtime": null,
+                "PEGRatio": "0.64",
+                "PriceEPSEstimateCurrentYear": "12.20",
+                "PriceEPSEstimateNextYear": "11.17",
+                "Symbol": "AAPL",
+                "SharesOwned": null,
+                "ShortRatio": "2.50",
+                "LastTradeTime": "4:00pm",
+                "TickerTrend": "&nbsp;++-===&nbsp;",
+                "OneyrTargetPrice": "594.39",
+                "Volume": "7321869",
+                "HoldingsValue": null,
+                "HoldingsValueRealtime": null,
+                "YearRange": "385.10 - 575.14",
+                "DaysValueChange": "- - +0.40%",
+                "DaysValueChangeRealtime": "N/A - N/A",
+                "StockExchange": "NasdaqNM",
+                "DividendYield": "2.35",
+                "PercentChange": "+0.40%"
+            }
+        }
+    }
+
+}
+
+// for 2 stocks
+
+http://query.yahooapis.com/v1/public/yql?q=select%20Name,symbol,Open,DividendShare,EarningsShare,PERatio,DividendYield,ExDividendDate,DividendPayDate,PreviousClose%20from%20yahoo.finance.quotes%20where%20symbol%20in%20%28%22GSK%22,%22IBM%22%29&format=json&env=store://datatables.org/alltableswithkeys
+
+// results:
+
+{
+
+    "query": {
+        "count": 2,
+        "created": "2014-04-14T22:21:12Z",
+        "lang": "en-US",
+        "results": {
+            "quote": [
+                {
+                    "symbol": "GSK",
+                    "DividendShare": "2.469",
+                    "EarningsShare": "3.552",
+                    "Name": "GlaxoSmithKline P",
+                    "Open": "51.78",
+                    "PreviousClose": "51.76",
+                    "ExDividendDate": "Feb 19",
+                    "PERatio": "14.57",
+                    "DividendPayDate": "Apr 10",
+                    "DividendYield": "4.77"
+                },
+                {
+                    "symbol": "IBM",
+                    "DividendShare": "3.80",
+                    "EarningsShare": "14.942",
+                    "Name": "International Bus",
+                    "Open": "196.24",
+                    "PreviousClose": "195.19",
+                    "ExDividendDate": "Feb 6",
+                    "PERatio": "13.06",
+                    "DividendPayDate": "Mar 10",
+                    "DividendYield": "1.95"
+                }
+            ]
+        }
+    }
+
+}
+
+// access via VS C#
+private const string BASE_URL = "http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.quotes%20where%20symbol%20in%20({0})&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys";
