@@ -11,6 +11,12 @@ namespace PIMS.Web.Api
     {
         public static void Register(HttpConfiguration config) {
 
+            config.Routes.MapHttpRoute(
+              name: "ProfileRoute",
+              routeTemplate: "api/{controller}/{ticker}",
+              defaults: new { id = RouteParameter.Optional }
+          );
+
 
             config.Routes.MapHttpRoute(
                name: "DefaultApi",
