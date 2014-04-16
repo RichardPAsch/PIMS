@@ -1,20 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Linq.Expressions;
-using FluentNHibernate.Conventions;
-using NHibernate.SqlCommand;
 using PIMS.Core.Models;
 using PIMS.Data.Repositories;
 
-//TODO Note:
-/*
- * DO AWAY with using hand-rolled moq objects, as is used here.
- * CONS: more code = more complexity (more moq code or more complex code)
- *       interface changes make (prod) code more brittle
- *       any interaction logic chamges increases brittleness
- */
 
 namespace PIMS.Data.FakeRepositories
 {
@@ -54,14 +43,7 @@ namespace PIMS.Data.FakeRepositories
 
             return listing.AsQueryable();
         }
-
-
-        //public AssetClass Retreive(Expression<Func<AssetClass, int, bool>> predicate)
-        //{
-        //    var classification = RetreiveAll().Where(predicate).Single();
-        //    return classification;
-        //}
-
+        
 
         public AssetClass Retreive(object assetCode)
         {
