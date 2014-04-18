@@ -17,13 +17,12 @@ namespace PIMS.UnitTest
     public class VerifyProfile
     {
         private ProfileController _ctrl;
-        private const string UrlBase = "http://localhost/PIMS.Web.API/api";
-        private Mock<InMemoryProfileRepository> _mockRepo;
+        private Mock<InMemoryAssetRepository> _mockRepo;
 
 
         [SetUp]
         public void Init() {
-            _mockRepo = new Mock<InMemoryProfileRepository>();
+            _mockRepo = new Mock<InMemoryAssetRepository>();
         }
 
 
@@ -36,60 +35,99 @@ namespace PIMS.UnitTest
             _ctrl = new ProfileController(_mockRepo.Object);
 
             // Act
-            var myProfile = _ctrl.Get(request, "GSK");
+            var myProfile = _ctrl.Get(request, "YHO");
             var taskProfile = myProfile.Content.ReadAsAsync<Profile>().Result;
-            
+
 
             // Assert
             Assert.IsNotNull(myProfile);
             Assert.IsTrue(HttpStatusCode.OK == myProfile.StatusCode);
-            Assert.IsTrue(taskProfile.TickerSymbol == "GSK");
-            
+            Assert.IsTrue(taskProfile.TickerSymbol == "YHO");
+        }
+
+        [Test]
+        // ReSharper disable once InconsistentNaming
+        public void Controller_cannot_GET_a_single_Fake_Profile_for_a_invalid_ticker_symbol() {
+
+            // Arrange 
+            var request = TestHelpers.GetHttpRequestMessage();
+            _ctrl = new ProfileController(_mockRepo.Object);
+
+            // Act
+            var myProfile = _ctrl.Get(request, "RPA");
+            var taskProfile = myProfile.Content.ReadAsAsync<Profile>().Result;
+
+
+            // Assert
+            Assert.IsTrue(myProfile.StatusCode == HttpStatusCode.NotFound);
+            Assert.IsNull(taskProfile.TickerSymbol);
+
         }
 
 
         [Test]
         // ReSharper disable once InconsistentNaming
-        public void Controller_can_POST_a_new_fake_Profile() {
+        public void Controller_can_GET_a_single_Fake_Profile_based_on_a_valid_AssetId() {
 
             // Arrange 
+            var request = TestHelpers.GetHttpRequestMessage();
             _ctrl = new ProfileController(_mockRepo.Object);
-            var newProfile = new Profile()
-                             {
-                                 ProfileId = Guid.NewGuid(), 
-                                 SharePrice = 692.16M,
-                                 DividendFreq = "S",
-                                 DividendYield = 3.07M,
-                                 DividendRate = 1.052M,
-                                 TickerDescription = "Google",
-                                 EarningsPerShare = 7.96M,
-                                 PE_Ratio = 19.01M,
-                                 LastUpdate = DateTime.Now,
-                                 TickerSymbol = "GOOG"
-
-                             };
 
             // Act
-            var result = _ctrl.Post(newProfile, TestHelpers.GetHttpRequestMessage(
-                                                                                HttpMethod.Post,
-                                                                                UrlBase + "/Profile",
-                                                                                _ctrl,
-                                                                                "ProfileRoute",
-                                                                                "api/{controller}/{ticker}",
-                                                                                new { ticker = RouteParameter.Optional }
-                                                                            ));
-            // Format entity.
-            var jsonResult = result.Content.ReadAsStringAsync().Result;
-            var profileEntity = JsonConvert.DeserializeObject<Profile>(jsonResult);
+            var myProfile = _ctrl.Get(request, new Guid("e07a582a-aec8-43b9-9cb8-faed5e5434de"));
+            var taskProfile = myProfile.Content.ReadAsAsync<Profile>().Result;
 
 
             // Assert
-            Assert.AreEqual(HttpStatusCode.Created, result.StatusCode);
-            Assert.IsNotNull(profileEntity);
-            Assert.AreEqual(result.Headers.Location, "http://localhost/api/Profile/GOOG");
-            Assert.IsTrue(profileEntity.DividendFreq == "S");
-            Assert.IsTrue(profileEntity.ProfileId != Guid.Empty);
+            Assert.IsNotNull(myProfile);
+            Assert.IsTrue(HttpStatusCode.OK == myProfile.StatusCode);
+            Assert.IsTrue(taskProfile.TickerSymbol == "AAPL");
         }
+
+
+
+        //[Test]
+        //// ReSharper disable once InconsistentNaming
+        //public void Controller_can_POST_a_new_fake_Profile() {
+
+        //    // Arrange 
+        //    _ctrl = new ProfileController(_mockRepo.Object);
+        //    var newProfile = new Profile()
+        //                     {
+        //                         ProfileId = Guid.NewGuid(), 
+        //                         SharePrice = 692.16M,
+        //                         DividendFreq = "S",
+        //                         DividendYield = 3.07M,
+        //                         DividendRate = 1.052M,
+        //                         TickerDescription = "Google",
+        //                         EarningsPerShare = 7.96M,
+        //                         PE_Ratio = 19.01M,
+        //                         LastUpdate = DateTime.Now,
+        //                         TickerSymbol = "GOOG"
+
+        //                     };
+
+        //    // Act
+        //    var result = _ctrl.Post(newProfile, TestHelpers.GetHttpRequestMessage(
+        //                                                                        HttpMethod.Post,
+        //                                                                        UrlBase + "/Profile",
+        //                                                                        _ctrl,
+        //                                                                        "ProfileRoute",
+        //                                                                        "api/{controller}/{ticker}",
+        //                                                                        new { ticker = RouteParameter.Optional }
+        //                                                                    ));
+        //    // Format entity.
+        //    var jsonResult = result.Content.ReadAsStringAsync().Result;
+        //    var profileEntity = JsonConvert.DeserializeObject<Profile>(jsonResult);
+
+
+        //    // Assert
+        //    Assert.AreEqual(HttpStatusCode.Created, result.StatusCode);
+        //    Assert.IsNotNull(profileEntity);
+        //    Assert.AreEqual(result.Headers.Location, "http://localhost/api/Profile/GOOG");
+        //    Assert.IsTrue(profileEntity.DividendFreq == "S");
+        //    Assert.IsTrue(profileEntity.ProfileId != Guid.Empty);
+        //}
 
 
 
