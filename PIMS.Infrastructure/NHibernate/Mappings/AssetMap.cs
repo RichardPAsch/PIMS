@@ -39,6 +39,9 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             // User is in context of an Asset
             References(x => x.User, "UserId");
 
+            
+            References(x => x.AccountType);
+
 
             //// 1:1 relationship; Classification is in context of Asset.
             //Component(x => x.Classification, m => {
