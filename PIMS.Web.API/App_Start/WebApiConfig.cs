@@ -12,10 +12,17 @@ namespace PIMS.Web.Api
         public static void Register(HttpConfiguration config) {
 
             config.Routes.MapHttpRoute(
-              name: "ProfileRoute",
-              routeTemplate: "api/{controller}/{ticker}",
-              defaults: new { id = RouteParameter.Optional }
-          );
+             name: "AssetRoute",
+             routeTemplate: "api/{controller}/{ticker}",
+             defaults: new { id = RouteParameter.Optional }
+         );
+
+            // Needed ?
+          //  config.Routes.MapHttpRoute(
+          //    name: "ProfileRoute",
+          //    routeTemplate: "api/Asset/{ticker}/Profile/{ProfileId}",
+          //    defaults: new { controller = "Profile", ProfileId = RouteParameter.Optional }
+          //);
 
 
             config.Routes.MapHttpRoute(
