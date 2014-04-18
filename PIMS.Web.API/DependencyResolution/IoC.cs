@@ -47,14 +47,16 @@ namespace PIMS.Web.Api.DependencyResolution {
                                     });
 
                             // TODO: connect strings needed?
-                            x.For<IAssetRepository>().Use<AssetRepository>(); //.Ctor<string>("connectionString").EqualToAppSetting("Connection-String");
+                           // x.For<IAssetRepository>().Use<AssetRepository>(); //.Ctor<string>("connectionString").EqualToAppSetting("Connection-String");
                             x.For<IIncomeRepository>().Use<IncomeRepository>();
                             x.For<IPositionRepository>().Use<PositionRepository>();
-                            x.For<IProfileRepository>().Use<ProfileRepository>();
+                           // x.For<IProfileRepository>().Use<ProfileRepository>();
                             x.For<IUserManager>().Use<UserManager>();
                             x.For<IMembershipAdapter>().Use<MembershipAdapter>();
                             x.For<IUserMapper>().Use<UserMapper>();
                             x.For<IGenericRepository<AssetClass>>().Use<AssetClassRepository>();
+                            x.For<IGenericRepository<Profile>>().Use<ProfileRepository>();
+                            x.For<IGenericRepository<Asset>>().Use<AssetRepository>();
 
 
                             // ISessionFactory is expensive to initialize, so we'll create it as a singleton.
