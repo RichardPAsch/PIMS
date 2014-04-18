@@ -33,6 +33,9 @@ namespace PIMS.Core.Models
 
         public virtual User User { get; set; }
 
+        public virtual string AccountType { get; set; }   // e.g. Roth-IRA, IRA, etc.
+
+
         // TODO - reevaluate
         // lookup can be provided via link to Bloomberg site:
         // http://www.bloomberg.com/markets/symbolsearch?query=etv&commit=Find+Symbols
