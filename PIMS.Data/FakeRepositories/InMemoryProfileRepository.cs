@@ -16,7 +16,7 @@ namespace PIMS.Data.FakeRepositories
                                            {
                                                new Profile
                                                {
-                                                   ProfileId = Guid.NewGuid(), // new Guid("a2692700-3e14-4af0-a0d1-4da1fh2204d8"),
+                                                   ProfileId = new Guid("e07a582a-aec8-43b9-9cb8-faed5e5434de"),
                                                    SharePrice = 22.16M,
                                                    DividendFreq = "M",
                                                    DividendYield = 4.892M,
@@ -75,15 +75,23 @@ namespace PIMS.Data.FakeRepositories
 
         public Profile RetreiveById(Guid key)
         {
-            // all fetches to be via ticker
-            return null;
+            Profile selectedProfile = null;
+            try {
+                selectedProfile = RetreiveAll().Single(a => a.ProfileId == key);
+            }
+            catch (Exception ex) {
+                var msg = ex.Message; // for debug
+                return null;
+            }
+
+            return selectedProfile;
         }
 
         public bool Create(Profile newEntity)
         {
             var currListing = this.RetreiveAll().ToList();
 
-            // In PROD: check against SQL Server.
+            // In PROD: check against SQL Server for existing record.
             if (currListing.Any(p => p.TickerSymbol.ToUpper().Trim() == newEntity.TickerSymbol.ToUpper().Trim())) return false;
             currListing.Add(newEntity); 
             return true;
@@ -91,31 +99,40 @@ namespace PIMS.Data.FakeRepositories
 
         public bool Delete(Guid idGuid)
         {
-            var profiles = RetreiveAll();
+            // In PROD, the following constraints apply:
+            // 1. ADMIN only access,
+            // 2. no deletion allowed if any referencing Asset exist
+
+            var profiles = RetreiveAll().ToList();
+            var oldCount = profiles.Count();
             try {
-                profiles.ToList().Remove(profiles.First(p => p.ProfileId == idGuid));
-                return true;
+                profiles.Remove(profiles.First(p => p.ProfileId == idGuid));
+                return oldCount != profiles.Count();
             }
             catch {
                 return false;
             }
         }
 
-        public bool Update(Profile entity)
+        public bool Update(Profile updatedProfile)
         {
+            var resp = true;
             try {
                 // Mimic a real update.
-                var profiles = RetreiveAll();
-                var item = profiles.First(p => p.TickerSymbol == entity.TickerSymbol);
-                item.SharePrice = entity.SharePrice;
+                var profiles = RetreiveAll().ToList();
+                var oldProfile = profiles.First(p => p.TickerSymbol == updatedProfile.TickerSymbol);
+                profiles.Remove(oldProfile);
+                profiles.Add(updatedProfile);
+                resp = oldProfile.SharePrice != updatedProfile.SharePrice;
             }
             catch (Exception) {
                 // Mimic failed update due to some exception.
-                return false;
+                resp = false;
             }
-
-
-            return true;
+            
+            return resp;
         }
+
+
     }
 }
