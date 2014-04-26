@@ -8,34 +8,37 @@ using PIMS.Data.Repositories;
 
 namespace PIMS.Web.Api.Controllers
 {
+    /* Notes:
+       1. Support only for /api/Asset/<ticker>/Profile       - GET
+       2. Support only for /api/Asset/<ticker>/Profile/<id>  - PUT
+       3. Creation delegated to ProfileRepository.Save() for /api/Asset/<ticker>/Profile - POST - are we sure ??
+    */
+
+
     public class ProfileController : ApiController
     {
-        //private static IGenericRepository<Profile> _repository;
-        private static IGenericRepository<Asset> _repositoryAsset;
+        private static IGenericRepository<Profile> _repository;
 
-        public ProfileController(IGenericRepository<Asset> repositoryAsset)
+        public ProfileController(IGenericRepository<Profile> repositoryProfile)
         {
-            //_repository = repository;
-            _repositoryAsset = repositoryAsset;
+            _repository = repositoryProfile;
         }
 
 
-        // Get Profile for a given Asset.
+
         public HttpResponseMessage Get(HttpRequestMessage req, string ticker)
         {
             var response = new HttpResponseMessage();
             try
             {
-                var selectedAsset = _repositoryAsset.Retreive(ticker);
-                var assetProfile = selectedAsset.Profile;
+                var selectedProfile = _repository.Retreive(ticker);
 
                 // Ascertain we have the right Profile for the right Asset.
-                if (assetProfile.TickerSymbol == selectedAsset.AssetClass.Code)
-                    response = req.CreateResponse(HttpStatusCode.OK, assetProfile);
+                if (selectedProfile.TickerSymbol == ticker)
+                    response = req.CreateResponse(HttpStatusCode.OK, selectedProfile);
             }
             catch (Exception ex)
             {
-
                 response = req.CreateErrorResponse(HttpStatusCode.NotFound, "Unable to get Profile data for :" + ticker + " due to " + ex.Message);
             }
 
@@ -43,51 +46,73 @@ namespace PIMS.Web.Api.Controllers
         }
 
 
-        // Get Profile for a given Asset.
-        public HttpResponseMessage Get(HttpRequestMessage req, Guid assetId) {
+        public HttpResponseMessage Get(HttpRequestMessage req, Guid profileId) {
             var response = new HttpResponseMessage();
             try {
-                var selectedAsset = _repositoryAsset.RetreiveById(assetId);
-                var assetProfile = selectedAsset.Profile;
+                var selectedProfile = _repository.RetreiveById(profileId);
 
                 // Ascertain we have the right Profile for the right Asset.
-                if (assetProfile.TickerSymbol == selectedAsset.AssetClass.Code)
-                    response = req.CreateResponse(HttpStatusCode.OK, assetProfile);
+                if (selectedProfile.ProfileId == profileId)
+                    response = req.CreateResponse(HttpStatusCode.OK, selectedProfile);
             }
             catch (Exception ex) {
 
-                response = req.CreateErrorResponse(HttpStatusCode.NotFound, "Unable to get Profile data for AssetId :" + assetId + " due to " + ex.Message);
+                response = req.CreateErrorResponse(HttpStatusCode.NotFound, "Unable to get Profile data for AssetId :" + profileId + " due to " + ex.Message);
             }
 
             return response;
         }
+        
 
-
-
-
-        // TODO: to be implemented
         public HttpResponseMessage Post([FromBody] Profile newProfile, HttpRequestMessage requestMessage)
         {
-            //var response = requestMessage.CreateResponse(HttpStatusCode.Created, newProfile);
-            //if (_repository.Create(newProfile)) {
-            //    try {
-            //        // Route name must match existing route in WebApiConfig.
-            //        var uri = Url.Link("ProfileRoute", new { controller = "Profile", ticker = newProfile.TickerSymbol });
-            //        if (uri != null) response.Headers.Location = new Uri(uri);
-            //    }
-            //    catch (Exception ex) {
-            //        response = requestMessage.CreateErrorResponse(HttpStatusCode.BadRequest,
-            //                                    "New Profile not added, due to: " + ex.Message);
-            //    }
-            //} else {
-            //    response = requestMessage.CreateErrorResponse(HttpStatusCode.Conflict, "Duplicate entry found for " + newProfile.TickerSymbol);
-            //}
+            // Adding a Profile via an Asset POST/PUT from:
+            // 1. Profile data via Yahoo.Finance, OR
+            // 2. existing backend Profile record
+            // 3. URL - /api/Asset/<ticker>/Profile 
 
-            //return response;
-            return null;
+
+            var response = requestMessage.CreateResponse(HttpStatusCode.Created, newProfile);
+            if (_repository.Create(newProfile)) {
+                try
+                {
+                    // Route name must match existing route in WebApiConfig.
+                    // TODO: Try to get this to work using Url.Link(). Work around needs to be tested via Fiddler.
+                    //var uri = Url.Link("ProfileRoute", new { controller = "Profile"});
+                    var uri = requestMessage.RequestUri.AbsoluteUri;
+                    response.Headers.Location = new Uri(uri);
+                }
+                catch (Exception ex) {
+                    response = requestMessage.CreateErrorResponse(HttpStatusCode.BadRequest,
+                                                "New Profile not added, due to: " + ex.Message);
+                }
+            } else {
+                response = requestMessage.CreateErrorResponse(HttpStatusCode.Conflict, "Duplicate entry found for " + newProfile.TickerSymbol);
+            }
+
+            return response;
 
         }
 
 
+        public HttpResponseMessage Put([FromBody] Profile revisedProfile, HttpRequestMessage req) {
+
+            if (_repository.Update(revisedProfile)) {
+                return req.CreateResponse(HttpStatusCode.OK, revisedProfile);
+            }
+
+            return req.CreateErrorResponse(HttpStatusCode.BadRequest, "Unable to update Profile for: " + revisedProfile.TickerSymbol);
+        }
+
+
+        public HttpResponseMessage Delete(Guid id, HttpRequestMessage req) {
+
+            if (!_repository.Delete(id)) {
+                return req.CreateErrorResponse(HttpStatusCode.NotFound, "Profile could not be removed, or was not found.");
+            }
+
+            return req.CreateResponse(HttpStatusCode.OK);
+
+        }
     }
 }
