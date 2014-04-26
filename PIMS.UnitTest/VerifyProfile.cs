@@ -17,12 +17,19 @@ namespace PIMS.UnitTest
     public class VerifyProfile
     {
         private ProfileController _ctrl;
-        private Mock<InMemoryAssetRepository> _mockRepo;
+        private Mock<InMemoryProfileRepository> _mockRepo;
+        private const string UrlBase = "http://localhost/PIMS.Web.API/api/Asset";
 
+        /* Note:
+         * Test data represents either:
+         *      1) Yahoo.Finance-derived, or 
+         *      2) existing (db) Profile info edits
+         * as will be the case when using ProfileRepository.
+        */
 
         [SetUp]
         public void Init() {
-            _mockRepo = new Mock<InMemoryAssetRepository>();
+            _mockRepo = new Mock<InMemoryProfileRepository>();
         }
 
 
@@ -35,14 +42,14 @@ namespace PIMS.UnitTest
             _ctrl = new ProfileController(_mockRepo.Object);
 
             // Act
-            var myProfile = _ctrl.Get(request, "YHO");
+            var myProfile = _ctrl.Get(request, "HMC");
             var taskProfile = myProfile.Content.ReadAsAsync<Profile>().Result;
 
 
             // Assert
             Assert.IsNotNull(myProfile);
             Assert.IsTrue(HttpStatusCode.OK == myProfile.StatusCode);
-            Assert.IsTrue(taskProfile.TickerSymbol == "YHO");
+            Assert.IsTrue(taskProfile.TickerSymbol == "HMC");
         }
 
         [Test]
@@ -81,92 +88,149 @@ namespace PIMS.UnitTest
             // Assert
             Assert.IsNotNull(myProfile);
             Assert.IsTrue(HttpStatusCode.OK == myProfile.StatusCode);
-            Assert.IsTrue(taskProfile.TickerSymbol == "AAPL");
+            Assert.IsTrue(taskProfile.TickerSymbol == "GSK");
+        }
+        
+
+        [Test]
+        // ReSharper disable once InconsistentNaming
+        public void Controller_can_POST_a_new_fake_Profile() {
+
+            // New Profile created in context of Asset POST/PUT.
+
+            // Arrange 
+            _ctrl = new ProfileController(_mockRepo.Object);
+            var newProfile = new Profile() {
+                    ProfileId = Guid.NewGuid(),
+                    SharePrice = 692.16M,
+                    DividendFreq = "S",
+                    DividendYield = 3.07M,
+                    DividendRate = 1.052M,
+                    TickerDescription = "Google",
+                    EarningsPerShare = 7.96M,
+                    PE_Ratio = 19.01M,
+                    LastUpdate = DateTime.Now,
+                    TickerSymbol = "GOOG"
+            };
+
+            // Act
+            var result = _ctrl.Post(newProfile, TestHelpers.GetHttpRequestMessage(
+                                                                                HttpMethod.Post,
+                                                                                UrlBase + "/" + newProfile.TickerSymbol + "/Profile",
+                                                                                _ctrl,
+                                                                                "ProfileRoute",
+                                                                                "api/Asset/{ticker}/Profile/{ProfileId}",
+                                                                                new { ProfileId = RouteParameter.Optional }
+                                                                            ));
+            // Format entity.
+            var jsonResult = result.Content.ReadAsStringAsync().Result;
+            var profileEntity = JsonConvert.DeserializeObject<Profile>(jsonResult);
+
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.Created, result.StatusCode);
+            Assert.IsNotNull(profileEntity);
+            Assert.AreEqual(result.Headers.Location, UrlBase +  "/" + newProfile.TickerSymbol + "/Profile");
+            Assert.IsTrue(profileEntity.DividendFreq == "S");
+            Assert.IsTrue(profileEntity.ProfileId != Guid.Empty);
         }
 
 
-
-        //[Test]
-        //// ReSharper disable once InconsistentNaming
-        //public void Controller_can_POST_a_new_fake_Profile() {
-
-        //    // Arrange 
-        //    _ctrl = new ProfileController(_mockRepo.Object);
-        //    var newProfile = new Profile()
-        //                     {
-        //                         ProfileId = Guid.NewGuid(), 
-        //                         SharePrice = 692.16M,
-        //                         DividendFreq = "S",
-        //                         DividendYield = 3.07M,
-        //                         DividendRate = 1.052M,
-        //                         TickerDescription = "Google",
-        //                         EarningsPerShare = 7.96M,
-        //                         PE_Ratio = 19.01M,
-        //                         LastUpdate = DateTime.Now,
-        //                         TickerSymbol = "GOOG"
-
-        //                     };
-
-        //    // Act
-        //    var result = _ctrl.Post(newProfile, TestHelpers.GetHttpRequestMessage(
-        //                                                                        HttpMethod.Post,
-        //                                                                        UrlBase + "/Profile",
-        //                                                                        _ctrl,
-        //                                                                        "ProfileRoute",
-        //                                                                        "api/{controller}/{ticker}",
-        //                                                                        new { ticker = RouteParameter.Optional }
-        //                                                                    ));
-        //    // Format entity.
-        //    var jsonResult = result.Content.ReadAsStringAsync().Result;
-        //    var profileEntity = JsonConvert.DeserializeObject<Profile>(jsonResult);
-
-
-        //    // Assert
-        //    Assert.AreEqual(HttpStatusCode.Created, result.StatusCode);
-        //    Assert.IsNotNull(profileEntity);
-        //    Assert.AreEqual(result.Headers.Location, "http://localhost/api/Profile/GOOG");
-        //    Assert.IsTrue(profileEntity.DividendFreq == "S");
-        //    Assert.IsTrue(profileEntity.ProfileId != Guid.Empty);
-        //}
-
-
-
-
-
-
-        /*
-
-           [Test]
+        [Test]
         // ReSharper disable once InconsistentNaming
-        public void Controller_can_DELETE_a_single_fake_classification() {
-
-            // Arrange
-            var request = TestHelpers.GetHttpRequestMessage();
-            _ctrl = new AssetClassController(_mockRepo.Object);
+        public void Controller_cannot_POST_a_new_duplicate_fake_Profile() {
+            
+            // Arrange 
+            _ctrl = new ProfileController(_mockRepo.Object);
+            var newProfile = new Profile() {
+                ProfileId = new Guid("e07a582a-aec8-43b9-9cb8-faed5e5434de"),
+                SharePrice = 22.16M,
+                DividendFreq = "M",
+                DividendYield = 4.892M,
+                DividendRate = .912M,
+                TickerDescription = "Glaxo Smith Kline",
+                EarningsPerShare = 3.46M,
+                PE_Ratio = 15.17M,
+                LastUpdate = DateTime.Now,
+                TickerSymbol = "GSK"
+            };
 
             // Act
-            var result = _ctrl.Delete(new Guid("9a6e794a-9455-4468-b915-1e465a05a3ac"), request);
+            var result = _ctrl.Post(newProfile, TestHelpers.GetHttpRequestMessage(
+                                                                                HttpMethod.Post,
+                                                                                UrlBase + "/" + newProfile.TickerSymbol + "/Profile",
+                                                                                _ctrl,
+                                                                                "ProfileRoute",
+                                                                                "api/Asset/{ticker}/Profile/{ProfileId}",
+                                                                                new { ProfileId = RouteParameter.Optional }
+                                                                            ));
+            // Format entity.
+            var jsonResult = result.Content.ReadAsStringAsync().Result;
+            var profileEntity = JsonConvert.DeserializeObject<Profile>(jsonResult);
+
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.Conflict, result.StatusCode); // 409
+            Assert.IsNotNull(profileEntity);
+            Assert.IsTrue(profileEntity.ProfileId == Guid.Empty);
+        }
+
+
+        [Test]
+        // ReSharper disable once InconsistentNaming
+        public void Controller_can_Update_PUT_a_fake_Profile() {
+
+            // Arrange - edited
+            var revisedProfile = new Profile() {
+                ProfileId = Guid.NewGuid(),
+                SharePrice = 201.06M,
+                DividendFreq = "Q",
+                DividendYield = 6.79M,
+                DividendRate = 1.31M,
+                TickerDescription = "International Business Machines",
+                EarningsPerShare = 6.81M,
+                PE_Ratio = 21.07M,
+                LastUpdate = DateTime.Now,
+                TickerSymbol = "IBM"
+            };
+
+            var request = TestHelpers.GetHttpRequestMessage();
+            _ctrl = new ProfileController(_mockRepo.Object);
+
+            // Act
+            var respMsg = _ctrl.Put(revisedProfile, request);
+            var content = respMsg.Content.ReadAsStringAsync().Result;
+            var testProfile = JsonConvert.DeserializeObject<Profile>(content);
+      
+
+            // Assert
+            Assert.IsNotNull(respMsg);
+            Assert.AreEqual(HttpStatusCode.OK, respMsg.StatusCode);
+            Assert.AreNotEqual(revisedProfile.SharePrice, 216.06M);
+
+        }
+
+      
+
+        [Test]
+        // ReSharper disable once InconsistentNaming
+        public void Controller_can_DELETE_a_single_fake_Profile() {
+            
+            // TODO - per ADMIN role only!
+            // Arrange 
+            var request = TestHelpers.GetHttpRequestMessage();
+            _ctrl = new ProfileController(_mockRepo.Object);
+
+            // Act
+            var result = _ctrl.Delete(new Guid("e07a582a-aec8-43b9-9cb8-faed5e5434de"), request);
 
             // Assert
             Assert.IsTrue(result.StatusCode == HttpStatusCode.OK);
         } 
           
           
-         
-        [Test]
-        // ReSharper disable once InconsistentNaming
-        public void Controller_cannot_GET_a_single_Fake_Profile_for_an_invalid_ticker() {
-
-            // Arrange - Need to supply context-related properties of the request, to avoid Http error.
-            var request = TestHelpers.GetHttpRequestMessage();
-            _ctrl = new ProfileController(_mockRepo.Object);
-
-            // Act
-            var myProfile = _ctrl.Get(request, "X2Z");
-
-            // Assert
-            Assert.IsTrue(myProfile.StatusCode == HttpStatusCode.NotFound);
-        }
+         /*
+        
 
 
         [Test]
@@ -184,86 +248,14 @@ namespace PIMS.UnitTest
             Assert.IsTrue(result.StatusCode == HttpStatusCode.NotFound);
         }
 
+        */
+        
 
-        [Test]
-        // ReSharper disable once InconsistentNaming
-        public void Controller_can_Update_PUT_a_single_fake_classification() {
-
-            // Arrange
-            var request = TestHelpers.GetHttpRequestMessage();
-            _ctrl = new AssetClassController(_mockRepo.Object);
-            const string classCode = "CS";
-
-            // Act
-            var respMsg = _ctrl.Get(request, classCode);
-            var content = respMsg.Content.ReadAsStringAsync().Result;
-            var testAssetClass = JsonConvert.DeserializeObject<AssetClass>(content);
-            testAssetClass.Description = "Common stock/equity"; // modified 
-            var respMsg2 = _ctrl.Put(testAssetClass, request);
-
-
-            // Assert
-            Assert.IsNotNull(respMsg2);
-            Assert.AreEqual(HttpStatusCode.OK, respMsg2.StatusCode);
-
-        }
-
-        [Test]
-        // ReSharper disable once InconsistentNaming
-        public void Controller_cannot_Update_PUT_a_single_invalid_fake_classification() {
-
-            // Arrange
-            var request = TestHelpers.GetHttpRequestMessage();
-            _ctrl = new AssetClassController(_mockRepo.Object);
-            var fakeAssetClass = new AssetClass { KeyId = Guid.NewGuid(), Code = "FRE", Description = "junk" };
-
-
-            // Act
-            var respMsg = _ctrl.Put(fakeAssetClass, request);
-
-
-            // Assert
-            Assert.IsNotNull(respMsg);
-            Assert.AreEqual(HttpStatusCode.BadRequest, respMsg.StatusCode);
-
-        }
+       
 
       
         
-        [Test]
-        // ReSharper disable once InconsistentNaming
-        public void Controller_Cannot_POST_a_duplicate_Fake_Classification() {
-
-            // Arrange
-            _ctrl = new AssetClassController(_mockRepo.Object);
-
-            var newClassification = new AssetClass {
-                KeyId = Guid.NewGuid(),
-                Code = "ETF",
-                Description = "Exchange Traded Fund"
-            };
-
-
-            // Act
-            var result = _ctrl.Post(newClassification, TestHelpers.GetHttpRequestMessage(
-                                                                                HttpMethod.Post,
-                                                                                UrlBase + "/AssetClass",
-                                                                                _ctrl,
-                                                                                "AssetClassRoute",
-                                                                                "api/{controller}/{Code}",
-                                                                                new { Code = RouteParameter.Optional }
-                                                                            ));
-
-            var jsonResult = result.Content.ReadAsStringAsync().Result;
-            var classification = JsonConvert.DeserializeObject<AssetClass>(jsonResult);
-
-
-            // Assert
-            Assert.AreEqual(HttpStatusCode.Conflict, result.StatusCode);
-            Assert.IsNullOrEmpty(classification.Code);
-
-        }
-        */
+        
 
     }
 }
