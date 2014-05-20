@@ -29,7 +29,7 @@ namespace PIMS.Data.FakeRepositories
                                                },
                                                 new Profile
                                                {
-                                                   ProfileId = Guid.NewGuid(),// new Guid("a2622700-3h14-4af0-v0d1-4ra1fh9204t8"),
+                                                   ProfileId = new Guid("dbf1590e-b99f-468d-a44e-e5e8f86c5f86"),
                                                    SharePrice = 216.06M,
                                                    DividendFreq = "Q",
                                                    DividendYield = 6.71M,
@@ -42,7 +42,7 @@ namespace PIMS.Data.FakeRepositories
                                                },
                                                 new Profile
                                                {
-                                                   ProfileId = Guid.NewGuid(), // new Guid("g2492700-3e14-4vf0-a0z3-4da1fh1207j8"),
+                                                   ProfileId = Guid.NewGuid(), 
                                                    SharePrice = 103.01M,
                                                    DividendFreq = "A",
                                                    DividendYield = 6.14M,
@@ -114,7 +114,7 @@ namespace PIMS.Data.FakeRepositories
             }
         }
 
-        public bool Update(Profile updatedProfile)
+       public bool Update(Profile updatedProfile, object id)
         {
             var resp = true;
             try {

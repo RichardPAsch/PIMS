@@ -13,7 +13,7 @@ namespace PIMS.Data.FakeRepositories
         public IQueryable<AssetClass> RetreiveAll()
         {
             var assetAssetClass = new AssetClass();
-            List<AssetClass> listing = new List<AssetClass>()
+            var listing = new List<AssetClass>()
                                            {
                                                new AssetClass
                                                {
@@ -102,24 +102,19 @@ namespace PIMS.Data.FakeRepositories
         }
 
 
-        public bool Update(AssetClass entity)
+        public bool Update(AssetClass entity, object id)
         {
             try
             {
                 // Mimic a real update.
-                var classifcations = RetreiveAll();
-                var item = classifcations.First(c => c.Code == entity.Code);
-                item.Description = entity.Description;
+                var classifcations = RetreiveAll().ToList().Where(ac => ac.Code == entity.Code);
+                return classifcations.Any();
             }
             catch (Exception)
             {
                 // Mimic failed update due to some exception.
                 return false;
             }
-          
-        
-            return true;
-      
         }
     }
 }

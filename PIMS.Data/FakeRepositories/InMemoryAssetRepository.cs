@@ -28,7 +28,7 @@ namespace PIMS.Data.FakeRepositories
                                                             PositionId = Guid.NewGuid(), 
                                                             PurchaseDate = DateTime.UtcNow.AddDays(-2), 
                                                             Quantity = 100,
-                                                            Security = new List<Asset>(), // TODO: re-evaluate this
+                                                            //Security = new List<Asset>(), // TODO: re-evaluate this
                                                             TotalValue = 923.11M,
                                                             UnitPrice = 142.93M
                                                         },
@@ -41,7 +41,7 @@ namespace PIMS.Data.FakeRepositories
                                                             LastUpdate = DateTime.UtcNow.AddDays(-4),
                                                             PE_Ratio = 15.66M,
                                                             ProfileId = Guid.NewGuid(),
-                                                            Security = new List<Asset>(), // TODO: re-evaluate this
+                                                            //Security = new List<Asset>(), // TODO: re-evaluate this
                                                             SharePrice = 73.11M,
                                                             TickerDescription = "Apple Inc.",
                                                             TickerSymbol = "AAPL" // TODO: duplicate
@@ -59,7 +59,7 @@ namespace PIMS.Data.FakeRepositories
                                                             PositionId = Guid.NewGuid(), 
                                                             PurchaseDate = DateTime.UtcNow.AddDays(-2), 
                                                             Quantity = 200,
-                                                            Security = new List<Asset>(), // TODO: re-evaluate this
+                                                            //Security = new List<Asset>(), // TODO: re-evaluate this
                                                             TotalValue = 49.81M,
                                                             UnitPrice = 152.03M
                                                         },
@@ -72,7 +72,7 @@ namespace PIMS.Data.FakeRepositories
                                                             LastUpdate = DateTime.UtcNow.AddDays(-3),
                                                             PE_Ratio = 19.96M,
                                                             ProfileId = Guid.NewGuid(),
-                                                            Security = new List<Asset>(), // TODO: re-evaluate this
+                                                            //Security = new List<Asset>(), // TODO: re-evaluate this
                                                             SharePrice = 103.01M,
                                                             TickerDescription = "Yahoo Inc.",
                                                             TickerSymbol = "YHO"
@@ -90,7 +90,7 @@ namespace PIMS.Data.FakeRepositories
                                                             PositionId = Guid.NewGuid(), 
                                                             PurchaseDate = DateTime.UtcNow.AddDays(-8), 
                                                             Quantity = 300,
-                                                            Security = new List<Asset>(), // TODO: re-evaluate this
+                                                            //Security = new List<Asset>(), // TODO: re-evaluate this
                                                             TotalValue = 2874.33M,
                                                             UnitPrice = 192.98M
                                                         },
@@ -103,7 +103,7 @@ namespace PIMS.Data.FakeRepositories
                                                             LastUpdate = DateTime.UtcNow.AddDays(-7),
                                                             PE_Ratio = 25.76M,
                                                             ProfileId = Guid.NewGuid(),
-                                                            Security = new List<Asset>(), // TODO: re-evaluate this
+                                                            //Security = new List<Asset>(), // TODO: re-evaluate this
                                                             SharePrice = 93.51M,
                                                             TickerDescription = "Energy Transfer Partners, MLP.",
                                                             TickerSymbol = "ETP"
@@ -180,7 +180,7 @@ namespace PIMS.Data.FakeRepositories
 
        
         // TODO: implementation pending
-        public bool Update(Asset entity) {
+        public bool Update(Asset entity, object id) {
             //try {
             //    // Mimic a real update.
             //    var profiles = RetreiveAll();
