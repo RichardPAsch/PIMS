@@ -114,6 +114,7 @@
     <Compile Include="NHTestRepository1.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="VerifyAssetClassController.cs" />
+    <Compile Include="VerifyProfileController.cs" />
     <Compile Include="VerifyThatNHibernateCan.cs" />
     <Compile Include="VerifyThatStructureMap.cs" />
   </ItemGroup>
