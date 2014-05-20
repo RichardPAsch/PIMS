@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.Security.Cryptography.X509Certificates;
+using System.Security.Policy;
 using System.Web.Http;
 using NHibernate;
 
@@ -18,12 +20,14 @@ namespace PIMS.Web.Api.Controllers
 
         // GET api/values
         public IEnumerable<string> Get() {
-            return new string[] { "Richard", "Patricia" };
+            return new string[] { "Richard", "Patricia", "Get() is ok" };
         }
 
         // GET api/values/5
-        public string Get(int id) {
-            return "Richard";
+        public string Get(int id)
+        {
+            var res = Get();
+            return string.Format("Value for {0} is: {1}", id, res.GetEnumerator().Current);
         }
 
         // POST api/values

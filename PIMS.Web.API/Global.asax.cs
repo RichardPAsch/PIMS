@@ -1,9 +1,7 @@
-﻿using System;
-using System.Web.Http;
+﻿using System.Web.Http;
 using System.Web.Mvc;
 using System.Web.Optimization;
 using System.Web.Routing;
-using NHibernate;
 using PIMS.Web.Api.App_Start;
 using StructureMap;
 

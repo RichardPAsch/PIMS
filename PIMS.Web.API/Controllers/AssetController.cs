@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using PIMS.Core.Models;
@@ -17,9 +17,10 @@ namespace PIMS.Web.Api.Controllers
         }
 
 
-        public HttpResponseMessage Get(Guid assetId)
+
+        public HttpResponseMessage Get(HttpRequestMessage req, string ticker)
         {
-            return null;
+            return req.CreateResponse(HttpStatusCode.OK);
         }
 
     }
