@@ -40,7 +40,7 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             References(x => x.User, "UserId");
 
             
-            References(x => x.AccountType);
+            Map(x => x.AccountType);
 
 
             //// 1:1 relationship; Classification is in context of Asset.
