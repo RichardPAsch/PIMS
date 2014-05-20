@@ -20,11 +20,10 @@ namespace PIMS.UnitTest
         private Mock<InMemoryProfileRepository> _mockRepo;
         private const string UrlBase = "http://localhost/PIMS.Web.API/api/Asset";
 
-        /* Note:
-         * Test data represents either:
+        /*  Note:
+         *  Test data represents either:
          *      1) Yahoo.Finance-derived, or 
-         *      2) existing (db) Profile info edits
-         * as will be the case when using ProfileRepository.
+         *      2) existing (db) Profile info, 
         */
 
         [SetUp]
@@ -68,10 +67,8 @@ namespace PIMS.UnitTest
             // Assert
             Assert.IsTrue(myProfile.StatusCode == HttpStatusCode.NotFound);
             Assert.IsNull(taskProfile.TickerSymbol);
-
         }
-
-
+        
         [Test]
         // ReSharper disable once InconsistentNaming
         public void Controller_can_GET_a_single_Fake_Profile_based_on_a_valid_AssetId() {
@@ -96,8 +93,6 @@ namespace PIMS.UnitTest
         // ReSharper disable once InconsistentNaming
         public void Controller_can_POST_a_new_fake_Profile() {
 
-            // New Profile created in context of Asset POST/PUT.
-
             // Arrange 
             _ctrl = new ProfileController(_mockRepo.Object);
             var newProfile = new Profile() {
@@ -115,13 +110,13 @@ namespace PIMS.UnitTest
 
             // Act
             var result = _ctrl.Post(newProfile, TestHelpers.GetHttpRequestMessage(
-                                                                                HttpMethod.Post,
-                                                                                UrlBase + "/" + newProfile.TickerSymbol + "/Profile",
-                                                                                _ctrl,
-                                                                                "ProfileRoute",
-                                                                                "api/Asset/{ticker}/Profile/{ProfileId}",
-                                                                                new { ProfileId = RouteParameter.Optional }
-                                                                            ));
+                                                            HttpMethod.Post,
+                                                            UrlBase + "/" + newProfile.TickerSymbol + "/Profile",
+                                                            _ctrl,
+                                                            "ProfileRoute",
+                                                            "api/Asset/{ticker}/Profile/{ProfileId}",
+                                                            new { ProfileId = RouteParameter.Optional }
+                                                        ));
             // Format entity.
             var jsonResult = result.Content.ReadAsStringAsync().Result;
             var profileEntity = JsonConvert.DeserializeObject<Profile>(jsonResult);
@@ -130,12 +125,12 @@ namespace PIMS.UnitTest
             // Assert
             Assert.AreEqual(HttpStatusCode.Created, result.StatusCode);
             Assert.IsNotNull(profileEntity);
+            // TODO: Use relative path ?
             Assert.AreEqual(result.Headers.Location, UrlBase +  "/" + newProfile.TickerSymbol + "/Profile");
             Assert.IsTrue(profileEntity.DividendFreq == "S");
             Assert.IsTrue(profileEntity.ProfileId != Guid.Empty);
         }
-
-
+        
         [Test]
         // ReSharper disable once InconsistentNaming
         public void Controller_cannot_POST_a_new_duplicate_fake_Profile() {
@@ -157,20 +152,20 @@ namespace PIMS.UnitTest
 
             // Act
             var result = _ctrl.Post(newProfile, TestHelpers.GetHttpRequestMessage(
-                                                                                HttpMethod.Post,
-                                                                                UrlBase + "/" + newProfile.TickerSymbol + "/Profile",
-                                                                                _ctrl,
-                                                                                "ProfileRoute",
-                                                                                "api/Asset/{ticker}/Profile/{ProfileId}",
-                                                                                new { ProfileId = RouteParameter.Optional }
-                                                                            ));
+                                                            HttpMethod.Post,
+                                                            UrlBase + "/" + newProfile.TickerSymbol + "/Profile",
+                                                            _ctrl,
+                                                            "ProfileRoute",
+                                                            "api/Asset/{ticker}/Profile/{ProfileId}",
+                                                            new { ProfileId = RouteParameter.Optional }
+                                                        ));
             // Format entity.
             var jsonResult = result.Content.ReadAsStringAsync().Result;
             var profileEntity = JsonConvert.DeserializeObject<Profile>(jsonResult);
 
 
             // Assert
-            Assert.AreEqual(HttpStatusCode.Conflict, result.StatusCode); // 409
+            Assert.AreEqual(HttpStatusCode.Conflict, result.StatusCode); // 409 status code
             Assert.IsNotNull(profileEntity);
             Assert.IsTrue(profileEntity.ProfileId == Guid.Empty);
         }
@@ -182,7 +177,7 @@ namespace PIMS.UnitTest
 
             // Arrange - edited
             var revisedProfile = new Profile() {
-                ProfileId = Guid.NewGuid(),
+                ProfileId = new Guid("dbf1590e-b99f-468d-a44e-e5e8f86c5f86"),
                 SharePrice = 201.06M,
                 DividendFreq = "Q",
                 DividendYield = 6.79M,
@@ -199,19 +194,12 @@ namespace PIMS.UnitTest
 
             // Act
             var respMsg = _ctrl.Put(revisedProfile, request);
-            var content = respMsg.Content.ReadAsStringAsync().Result;
-            var testProfile = JsonConvert.DeserializeObject<Profile>(content);
       
 
             // Assert
-            Assert.IsNotNull(respMsg);
             Assert.AreEqual(HttpStatusCode.OK, respMsg.StatusCode);
-            Assert.AreNotEqual(revisedProfile.SharePrice, 216.06M);
-
         }
-
-      
-
+        
         [Test]
         // ReSharper disable once InconsistentNaming
         public void Controller_can_DELETE_a_single_fake_Profile() {
@@ -222,38 +210,11 @@ namespace PIMS.UnitTest
             _ctrl = new ProfileController(_mockRepo.Object);
 
             // Act
-            var result = _ctrl.Delete(new Guid("e07a582a-aec8-43b9-9cb8-faed5e5434de"), request);
+            var result = _ctrl.Delete(request, new Guid("e07a582a-aec8-43b9-9cb8-faed5e5434de"));
 
             // Assert
             Assert.IsTrue(result.StatusCode == HttpStatusCode.OK);
         } 
-          
-          
-         /*
-        
-
-
-        [Test]
-        // ReSharper disable once InconsistentNaming
-        public void Controller_cannot_DELETE_a_single_invalid_fake_classification() {
-
-            // Arrange
-            var request = TestHelpers.GetHttpRequestMessage();
-            _ctrl = new AssetClassController(_mockRepo.Object);
-
-            // Act
-            var result = _ctrl.Delete(new Guid(), request);
-
-            // Assert
-            Assert.IsTrue(result.StatusCode == HttpStatusCode.NotFound);
-        }
-
-        */
-        
-
-       
-
-      
         
         
 
