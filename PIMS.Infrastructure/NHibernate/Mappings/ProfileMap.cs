@@ -17,12 +17,12 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             Map(x => x.DividendRate).Precision(5);
             Map(x => x.DividendFreq,"DividendFrequency");
             Map(x => x.PE_Ratio,"PERatio").Precision(4);
-            Map(x => x.EarningsPerShare).Precision(2);
-            Map(x => x.SharePrice).Precision(2);
+            Map(x => x.EarningsPerShare).Precision(6);
+            Map(x => x.SharePrice).Precision(7);
             Map(x => x.LastUpdate);
 
 
-            HasMany(x => x.Security).Cascade.DeleteOrphan().Inverse();
+            //HasMany(x => x.Security).Cascade.DeleteOrphan().Inverse();
 
 
         }
