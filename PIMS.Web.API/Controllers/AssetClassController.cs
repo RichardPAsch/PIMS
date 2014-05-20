@@ -13,8 +13,6 @@ namespace PIMS.Web.Api.Controllers
     {
 
         private static IGenericRepository<AssetClass> _repository;
-        
-
         public AssetClassController(IGenericRepository<AssetClass> repository )
         {
             _repository = repository;
@@ -29,16 +27,12 @@ namespace PIMS.Web.Api.Controllers
         }
 
 
-        public HttpResponseMessage Get(HttpRequestMessage req, string code)
+        public HttpResponseMessage Get(HttpRequestMessage req, string assetClassCode)
         {
-           var classification = _repository.Retreive(code);
-
-
-            if (classification == null) {
-                return req.CreateResponse(HttpStatusCode.NotFound);
-            }
-
-            return req.CreateResponse(HttpStatusCode.OK, classification);
+           var classification = _repository.Retreive(assetClassCode);
+           return classification == null 
+               ? req.CreateResponse(HttpStatusCode.NotFound) 
+               : req.CreateResponse(HttpStatusCode.OK, classification);
         }
 
 
@@ -61,14 +55,11 @@ namespace PIMS.Web.Api.Controllers
 
 
         // Guid parameter name (id) must match RouteTemplate name in WebApiConfig.
-        public HttpResponseMessage Delete(Guid id, HttpRequestMessage req) {
-
-            if (!_repository.Delete(id)) {
-                return req.CreateErrorResponse(HttpStatusCode.NotFound, "Asset class could not be removed, or was not found.");
-            }
-            
-            return req.CreateResponse(HttpStatusCode.OK);
-
+        public HttpResponseMessage Delete(HttpRequestMessage req, Guid id )
+        {
+            return !_repository.Delete(id) 
+                ? req.CreateErrorResponse(HttpStatusCode.NotFound, "Asset class could not be removed, or was not found.") 
+                : req.CreateResponse(HttpStatusCode.OK);
         }
 
 
@@ -76,12 +67,17 @@ namespace PIMS.Web.Api.Controllers
 
             // No UOW repository or interface is necessary, as "Classifcation" involves no
             // logical transactions or object graphs, when used by itself.
-
-            if (_repository.Update(updatedClassification)) {
-                return req.CreateResponse(HttpStatusCode.OK, updatedClassification);
+            try
+            {
+                return req.CreateResponse(_repository.Update(updatedClassification, updatedClassification.KeyId) 
+                    ? HttpStatusCode.OK 
+                    : HttpStatusCode.NotFound, updatedClassification);
             }
-
-            return req.CreateErrorResponse(HttpStatusCode.BadRequest, "Unable to update AssetClass: " + updatedClassification.Code);
+            catch (Exception ex)
+            {
+                return req.CreateErrorResponse(HttpStatusCode.BadRequest, "Unable to update AssetClass: " 
+                    + updatedClassification.Code + " due to: " + ex.Message);
+            }
         }
 
 
@@ -94,9 +90,12 @@ namespace PIMS.Web.Api.Controllers
             {
                 try
                 {
+                    // TODO: Why do we get a relative URL here (commented code for uri); use of "newClassification.Code" - correct?
                     // Route name must match existing route in WebApiConfig.
-                    var uri = Url.Link("AssetClassRoute", new {controller = "AssetClass", Code = newClassification.Code});
-                    if (uri != null) response.Headers.Location = new Uri(uri);
+                    //var uri = Url.Link("AssetClassRoute", new {controller = "AssetClass", Code = newClassification.Code});
+                    var uri = requestMessage.RequestUri.AbsoluteUri + "/" + newClassification.Code;
+                    response.Headers.Location = new Uri(uri);
+                    //if (uri != null) response.Headers.Location = new Uri(uri);
                 }
                 catch (Exception ex)
                 {
