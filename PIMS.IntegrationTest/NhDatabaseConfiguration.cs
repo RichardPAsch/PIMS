@@ -18,6 +18,9 @@ namespace PIMS.IntegrationTest
                  // Using mappings from WebApi. 
                  // TODO: Should we use our own /Test/Mappings instead ?
                 .Mappings(m => m.FluentMappings.AddFromAssemblyOf<IncomeMap>())
+                .Mappings(m => m.FluentMappings.AddFromAssemblyOf<ProfileMap>())
+                .Mappings(m => m.FluentMappings.AddFromAssemblyOf<PositionMap>())
+                .Mappings(m => m.FluentMappings.AddFromAssemblyOf<AssetMap>())
                 .BuildSessionFactory();
 
         }
