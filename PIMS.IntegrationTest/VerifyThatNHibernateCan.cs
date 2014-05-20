@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.IO;
 using System.Net;
+using System.Runtime.InteropServices;
 using FluentNHibernate.Testing;
 using NHibernate;
 using NUnit.Framework;
@@ -34,8 +35,7 @@ namespace PIMS.IntegrationTest
 
         private string _connString = string.Empty;
         private ISessionFactory _sessionFactory = null;
-
-
+        
         [SetUp]
         public void Init() {
 
@@ -44,6 +44,8 @@ namespace PIMS.IntegrationTest
             //_connString = @"Data Source=RICHARD-VAIO\RICHARDDB;Initial Catalog='Lighthouse - PIMS';Integrated Security=True";
             _sessionFactory = NHibernateConfiguration.CreateSessionFactory(_connString);
         }
+
+
 
 
 
@@ -65,7 +67,7 @@ namespace PIMS.IntegrationTest
             .CheckReference(c => c.Income, new Income() 
                                              {
                                                 IncomeId = new Guid(),
-                                                DateRecvd = DateTime.Now,
+                                                DateRecvd = DateTime.Now.ToLocalTime(),
                                                 Actual = decimal.Parse("182.11"),
                                                 Projected = decimal.Parse("190.26")
                                             })
@@ -84,30 +86,33 @@ namespace PIMS.IntegrationTest
         /// </summary>
         [Test]
         // ReSharper disable once InconsistentNaming
-        public void Correctly_Map_And_Persist_ALL_composite_entities_within_a_single_transaction() {
+        public void Correctly_Map_And_Persist_ALL_composite_entities_within_a_single_transaction()
+        {
 
+            var todaysDateTime = DateTime.Now.ToLocalTime();
             using (var currSess = _sessionFactory.OpenSession())
                 using (var trx = currSess.BeginTransaction())
                 {
                     // Arrange
                     new PersistenceSpecification<Asset>(currSess, new CustomEqualityComparer())
+                    
 
                     //  Act
                     .CheckReference(c => c.Income, new Income() {
                         Actual = decimal.Parse("74.50"),
-                        DateRecvd = DateTime.Now,
+                        DateRecvd = todaysDateTime,
                         Projected = decimal.Parse("75.11"),
                         IncomeId = new Guid()
                     })
 
                     .CheckReference(c => c.Position, new Position() {
                         PositionId = new Guid(),
-                        PurchaseDate = DateTime.Now,
+                        PurchaseDate = todaysDateTime,
                         MarketPrice = decimal.Parse("54.26"),
                         Quantity = decimal.Parse("125"),
                         TotalValue = decimal.Parse("89.95"),
                         UnitPrice = decimal.Parse("53.11")
-                     })
+                    })
 
                      .CheckReference(c => c.Profile, new Profile() {
                          ProfileId = new Guid(),
@@ -116,8 +121,11 @@ namespace PIMS.IntegrationTest
                          DividendRate = decimal.Parse("0.7913"),
                          DividendYield = decimal.Parse("5.08"),
                          PE_Ratio = decimal.Parse("14.00"),
-                         DividendFreq = "M"
-                      })
+                         DividendFreq = "M",
+                         EarningsPerShare = decimal.Parse("1.90"),
+                         SharePrice = 46.11M,
+                         LastUpdate = todaysDateTime
+                     })
 
                       .CheckReference(c => c.User, new User() {
                           LastName = "Asch",
@@ -125,7 +133,7 @@ namespace PIMS.IntegrationTest
                           Password = "mypassword",
                           UserName = "rpa",
                           EMail = "rpasch@rpclassics.net"
-                       })
+                      })
 
                        // Assert 
                       .VerifyTheMappings();
@@ -137,7 +145,7 @@ namespace PIMS.IntegrationTest
 
 
 
-        [Test]
+        //[Test]
         // ReSharper disable once InconsistentNaming
         public void Correctly_Utilize_Its_UnitOfWork_Via_ISession()
         {
