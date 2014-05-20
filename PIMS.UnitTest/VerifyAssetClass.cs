@@ -98,7 +98,7 @@ namespace PIMS.UnitTest
             _ctrl = new AssetClassController(_mockRepo.Object);
 
             // Act
-            var result = _ctrl.Delete(new Guid("9a6e794a-9455-4468-b915-1e465a05a3ac"), request);
+            var result = _ctrl.Delete(request, new Guid("9a6e794a-9455-4468-b915-1e465a05a3ac") );
 
             // Assert
             Assert.IsTrue(result.StatusCode == HttpStatusCode.OK);
@@ -130,7 +130,7 @@ namespace PIMS.UnitTest
             _ctrl = new AssetClassController(_mockRepo.Object);
 
             // Act
-            var result = _ctrl.Delete(new Guid(), request);
+            var result = _ctrl.Delete(request, new Guid() );
 
             // Assert
             Assert.IsTrue(result.StatusCode == HttpStatusCode.NotFound);
@@ -160,6 +160,7 @@ namespace PIMS.UnitTest
 
         }
 
+
         [Test]
         // ReSharper disable once InconsistentNaming
         public void Controller_cannot_Update_PUT_a_single_invalid_fake_classification() {
@@ -175,10 +176,10 @@ namespace PIMS.UnitTest
 
 
             // Assert
-            Assert.IsNotNull(respMsg);
-            Assert.AreEqual(HttpStatusCode.BadRequest, respMsg.StatusCode);
+            Assert.IsTrue(respMsg.StatusCode ==  HttpStatusCode.NotFound);
 
         }
+
 
         [Test]
         // ReSharper disable once InconsistentNaming
@@ -212,11 +213,12 @@ namespace PIMS.UnitTest
             // Assert
             Assert.AreEqual(HttpStatusCode.Created, result.StatusCode);
             Assert.IsNotNull(classification);
-            Assert.AreEqual(result.Headers.Location, "http://localhost/api/AssetClass/C10");
+            // TODO: modified (4/25) since corrected in VerifyProfile unit test. - Absolute vs. Relative URL in header location.
+            Assert.AreEqual(result.Headers.Location, UrlBase + "/AssetClass/" + newClassification.Code);
             Assert.IsTrue(classification.Code == "C10");
             Assert.IsTrue(classification.KeyId != Guid.Empty);
         }
-
+        
 
         [Test]
         // ReSharper disable once InconsistentNaming
