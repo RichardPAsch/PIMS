@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Net.Http.Formatting;
 using System.Web.Http;
 using Newtonsoft.Json.Serialization;
@@ -11,32 +10,47 @@ namespace PIMS.Web.Api
     {
         public static void Register(HttpConfiguration config) {
 
+            /*  Development notes:
+             *  1. Route mapping order is CRITICAL: most specific -> least specific ordering is required.
+             *  2. Route mapping mismatch yields HTTP 404 error.
+             *  3. Use custom route constraints when "defaults" and "Constraints" involve the same segment.
+             *  4. IIS 7.5 - This application runs within "PIMSWebApi" app pool, the latter of which executes under "Richard" account credentials.
+            */
+
+
             config.Routes.MapHttpRoute(
                 name: "ProfileRoute",
-                routeTemplate: "api/Asset/{ticker}/Profile",
-                defaults: new { controller = "Profile" }
+                routeTemplate: "api/Asset/{ticker}/{controller}/{profileId}",
+                defaults: new { controller = "Profile", profileId = RouteParameter.Optional }
              );
 
             config.Routes.MapHttpRoute(
-                name: "AssetRoute",
-                routeTemplate: "api/{controller}/{ticker}",
-                defaults: new { id = RouteParameter.Optional }
-             );
-
-            config.Routes.MapHttpRoute(
-               name: "DefaultApi",
-               routeTemplate: "api/{controller}/{id}",
-               defaults: new { id = RouteParameter.Optional },
-               constraints: new { id = new RouteGuidConstraint() }
+                name: "AssetClassesRoute",
+                routeTemplate: "api/{controller}",
+                defaults: new { controller = "AssetClass" }
            );
 
             config.Routes.MapHttpRoute(
                 name: "AssetClassRoute",
-                routeTemplate: "api/{controller}/{Code}",
-                defaults: new { Code = RouteParameter.Optional }
+                routeTemplate: "api/{controller}/{assetClassCode}",
+                defaults: new { controller = "AssetClass"},
+                constraints: new { assetClassCode = "^[a-zA-Z]+$" }
+           );
+
+            config.Routes.MapHttpRoute(
+                name: "AssetClassRouteById",
+                routeTemplate: "api/{controller}/{id}",
+                defaults: new { controller = "AssetClass" }
             );
 
-           
+
+            config.Routes.MapHttpRoute(
+                name: "DefaultApi",
+                routeTemplate: "api/{controller}/{id}",
+                defaults: new { controller = "AssetClass" },
+                constraints: new { id = new RouteGuidConstraint() }
+            );
+
 
 
 
