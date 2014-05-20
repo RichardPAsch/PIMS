@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Linq;
-using System.Linq.Expressions;
 using NHibernate;
-using NHibernate.Impl;
 using NHibernate.Linq;
 using PIMS.Core.Models;
 
@@ -25,7 +23,6 @@ namespace PIMS.Data.Repositories
         //public string _connString = @"Data Source=RICHARD-VAIO\RICHARDDB;Initial Catalog='Lighthouse - PIMS - Test';Integrated Security=True";
 
         private readonly ISessionFactory _sfFactory;
-        
         public AssetClassRepository(ISessionFactory sfFactory)
         {
             if (sfFactory == null)
@@ -46,12 +43,9 @@ namespace PIMS.Data.Repositories
         {
            using (var sess = _sfFactory.OpenSession())
             {
-               //using (var trx = sess.BeginTransaction()) {
                var classsificationsQuery = (from classification in sess.Query<AssetClass>() select classification);
                return classsificationsQuery.ToList().AsQueryable();
-               //}
             }
-
         }
 
         public AssetClass RetreiveById(Guid idGuid)
@@ -92,19 +86,43 @@ namespace PIMS.Data.Repositories
 
             return true;
         }
-        
-        public bool Update(AssetClass entity)
+       
+        public bool Delete(Guid cGuid) {
+
+            var deleteOk = true;
+            var assetClassToDelete = RetreiveById(cGuid);
+
+            using (var sess = _sfFactory.OpenSession()) {
+                using (var trx = sess.BeginTransaction()) {
+                    try {
+                        sess.Delete(assetClassToDelete);
+                        trx.Commit();
+                    }
+                    catch (Exception ex) {
+                        // TODO: Candidate for logging.
+                        var debugError = ex.Message;
+                        deleteOk = false;
+                    }
+                }
+            }
+
+            return deleteOk;
+        }
+
+        public bool Update(AssetClass entity, object id)
         {
+            // Each AssetClass is unique, therefore we'll only need to
+            // use the passed AssetClass's id to update the datastore.
             using (var sess = _sfFactory.OpenSession()) {
 
                 using (var trx = sess.BeginTransaction()) {
 
-                    try{
+                    try {
                         var listings = this.RetreiveAll().ToList();
-                        var item = listings.Find(ac => ac.KeyId == entity.KeyId);
+                        var item = listings.Find(ac => ac.KeyId == (Guid)id); //entity.KeyId);
                         item.Code = entity.Code.Trim().ToUpper();
                         item.Description = entity.Description.Trim();
-                       
+
                         sess.Update(item);
                         trx.Commit();
                     }
@@ -114,46 +132,8 @@ namespace PIMS.Data.Repositories
                 }
                 return true;
             }
-
         }
 
-
-        public bool Delete(Guid cGuid) {
-
-            using (var sess = _sfFactory.OpenSession()) {
-
-                using (var trx = sess.BeginTransaction()) {
-
-                    try
-                    {
-                        var listings = this.RetreiveAll().ToList();
-                        var deletedAssetClass = listings.Find(ac => ac.KeyId == cGuid);
-
-                        sess.Delete(deletedAssetClass);
-                        trx.Commit();
-                    }
-                    catch {
-                        return false;
-                    }
-                }
-                return true;
-            }
-        }
-
-
-
-        //public AssetClass Retreive(Expression<Func<AssetClass, int, bool>> predicate)
-        //{
-        //    //var z = RetreiveAll();
-        //    //var a = new Guid("5db0cb9c-e1f8-4981-954b-96a79bce16e2");
-        //    //var y = z.Where(c => c.ClassificationId == a); // ok, but why?
-
-        //    var listing2 = RetreiveAll().Where(predicate);
-
-        //    var listing = RetreiveAll();
-        //    IQueryable<AssetClass> classification = listing.Where(c => c.ClassificationId == new Guid("5db0cb9c-e1f8-4981-954b-96a79bce16e2"));
-        //    return classification.FirstOrDefault();//ok
-        //}
 
 
     }

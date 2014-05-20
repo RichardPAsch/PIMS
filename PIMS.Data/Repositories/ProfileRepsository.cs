@@ -1,8 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Newtonsoft.Json;
+using NHibernate;
+using NHibernate.Linq;
 using PIMS.Core.Models;
 
 
@@ -10,56 +11,143 @@ namespace PIMS.Data.Repositories
 {
     public class ProfileRepository : IGenericRepository<Profile>
     {
-        // Profile use case scenarios:
-        // 1. POSTed asset with user-entered Profile info
-        // 2. POSTed asset with new Profile info from Yahoo.
-        // 3. POSTed asset with new Profile info from existing Profile record.
-        // 4. GET asset Profile per ticker.
-        // 5. PUT asset Profile to update existing (db) Profile from Yahoo.
+        //    Profile use case scenarios:
+        // 1. C - Any creation as part of a new asset, will reference Yahoo for the Profile.
+        // 2. R - Any Profile fetches will derive first from a) persisted Db, or secondly, b) Yahoo.
+        // 3. U - Any updates will fetch the latest data from Yahoo, regardlees of last update for now.
+        // 4. D - Only admin role allowed to delete Profiles - WIP secondary to security implementation.
 
 
-        public ProfileRepository()
+        private readonly ISessionFactory _sfFactory;
+        public ProfileRepository(ISessionFactory sfFactory)
         {
-            //throw new NotImplementedException();
+            if (sfFactory == null)
+                throw new ArgumentNullException("sfFactory");
+
+            _sfFactory = sfFactory;
         }
+        
 
-
-
-
-        // Not needed.
-        public IQueryable<Profile> RetreiveAll()
-        {
-            return null;
-        }
 
         public Profile Retreive(object property)
         {
-            // TODO: Check for EXISTING (persissted) Profile record for asset, if user chooses not to "refresh" profile via Yahoo.Finance
-            throw new NotImplementedException();
-        }
+            string tickerSymbol = property as string;
+            using (_sfFactory.OpenSession())
+            {
+                Profile returnProfile = null;
+                var profiles = RetreiveAll();
+                var filteredProfile = profiles
+                    .Where(p => String.Equals(p.TickerSymbol.Trim().ToUpper(), tickerSymbol.ToString(CultureInfo.InvariantCulture).Trim().ToUpper(), StringComparison.CurrentCultureIgnoreCase))
+                    .AsQueryable();
 
+                // If no db record exist, use Yahoo Finance.
+                if (filteredProfile.Any())
+                {
+                    returnProfile = filteredProfile.FirstOrDefault();
+                }
+                else
+                {
+                    var jsonProfile = YahooFinanceSvc.Process(tickerSymbol);
+                    returnProfile = JsonConvert.DeserializeObject<Profile>(jsonProfile);
+
+                    // Yahoo will still return a status code = 200 for INVALID tickers; however,
+                    // both the ticker symbol and the description will be equal in such cases. 
+                    returnProfile = String.Equals(returnProfile.TickerSymbol.Trim(), returnProfile.TickerDescription.Trim(), StringComparison.CurrentCultureIgnoreCase)
+                        ? null
+                        : returnProfile;
+                }
+
+                return returnProfile;
+            }
+        }
+        
         public Profile RetreiveById(Guid key)
         {
-            // TODO: Retreives EXISTING (persissted) Profile record for asset.
-            throw new NotImplementedException();
+            var filteredProfile = RetreiveAll().ToList().Where(p => p.ProfileId == key);
+            return filteredProfile.FirstOrDefault();
         }
-
+        
         public bool Create(Profile newEntity)
         {
-            //TODO: Profile data will be from a) user-entered info, or 2) "refresh" profile from Yahoo.Finance
-            throw new NotImplementedException();
+            var existingProfiles = this.RetreiveAll().ToList();
+            if (existingProfiles.Any(p => p.TickerSymbol.ToUpper().Trim() == newEntity.TickerSymbol.ToUpper().Trim())) return false;
+
+            using (var sess = _sfFactory.OpenSession()) {
+                using (var trx = sess.BeginTransaction()) {
+                    try {
+                        sess.Save(newEntity);
+                        trx.Commit();
+                    }
+                    catch(Exception ex)
+                    {
+                        // TODO: Candidate for logging error.
+                        var debugError = ex.Message;
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
 
         // TODO: Accessible via Admin only.
-        public bool Delete(Guid idGuid)
+        // ReSharper disable once InconsistentNaming
+        public bool Delete(Guid ProfileId)
         {
-            throw new NotImplementedException();
+            var deleteOk = true;
+            
+            // ** To avoid NHibernate.Hql.Ast.ANTLR.QuerySyntaxException], NHibernate needs to load 
+            // the OBJECT before deleting it, so that it can cascade deletes through its' object graph. **
+            var profileToDelete = RetreiveById(ProfileId);
+
+            using (var sess = _sfFactory.OpenSession()) {
+                using (var trx = sess.BeginTransaction()) {
+                    try
+                    {
+                        sess.Delete(profileToDelete);
+                        trx.Commit();
+                    }
+                    catch(Exception ex)
+                    {
+                        // TODO: Candidate for logging.
+                        var debugError = ex.Message;
+                        deleteOk = false;
+                    }
+                }
+            }
+
+            return deleteOk;
+        }
+        
+        public bool Update(Profile revisedProfile, object id)
+        {
+            // Do we have an existing record on file to update? If so, update anyway,
+            // even if only 1 field is affected.
+            var updateOk = true;
+            using (var sess = _sfFactory.OpenSession()) {
+                using (var trx = sess.BeginTransaction()) {
+                    try {
+                        sess.Update(revisedProfile);
+                        trx.Commit();
+                    }
+                    catch {
+                        updateOk = false;
+                    }
+                }
+            }
+
+            return updateOk;
+        }
+        
+        public IQueryable<Profile> RetreiveAll() {
+
+            using (var sess = _sfFactory.OpenSession())
+            {
+                var profileQuery = sess.Query<Profile>();
+                return profileQuery.ToList().AsQueryable();
+            }
         }
 
 
-        public bool Update(Profile entity)
-        {
-            throw new NotImplementedException();
-        }
     }
 }
