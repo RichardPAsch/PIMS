@@ -76,6 +76,7 @@
     <Content Include="Documentation\OriginalUML.png" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="app.config" />
     <None Include="Documentation\PIMS-DomainModel.cd" />
     <None Include="packages.config" />
   </ItemGroup>
