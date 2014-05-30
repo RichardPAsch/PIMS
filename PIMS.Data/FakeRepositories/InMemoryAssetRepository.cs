@@ -121,25 +121,14 @@ namespace PIMS.Data.FakeRepositories
             {
                 selectedAsset = RetreiveAll().First(a => a.Profile.TickerSymbol == property.ToString());
             }
-            catch (Exception ex) {
+            catch (Exception) {
                 return null;
             }
 
             return selectedAsset;
         }
 
-        //public Asset RetreiveId(string tickerSymbol) {
-        //    Asset selectedAsset = null;
-        //    try {
-        //        selectedAsset = RetreiveAll().Single(a => a.Profile.TickerSymbol == tickerSymbol.ToString(CultureInfo.InvariantCulture).Trim());
-        //    }
-        //    catch (Exception ex) {
-        //        var msg = ex.Message;
-        //        return null;
-        //    }
-
-        //    return selectedAsset;
-        //}
+        
 
 
         public Asset RetreiveById(Guid key) {
@@ -149,7 +138,7 @@ namespace PIMS.Data.FakeRepositories
             {
                 selectedAsset = RetreiveAll().First(a => a.AssetId == key);
             }
-            catch (Exception ex) {
+            catch (Exception) {
                 return null;
             }
 
