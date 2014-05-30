@@ -56,7 +56,7 @@ namespace PIMS.IntegrationTest
 
                 // Act
                 var resp = await client.GetAsync(client.BaseAddress);
-                var assetProfile = await resp.Content.ReadAsAsync<Profile>();
+                await resp.Content.ReadAsAsync<Profile>();
 
 
                 // Assert
@@ -110,7 +110,7 @@ namespace PIMS.IntegrationTest
                 // Act
                 var response = client.PostAsJsonAsync(client.BaseAddress.ToString(), assetProfile).Result;
                 var jsonResult = response.Content.ReadAsStringAsync().Result;
-                var profile = JsonConvert.DeserializeObject<Profile>(jsonResult);
+                JsonConvert.DeserializeObject<Profile>(jsonResult);
 
 
                 // Assert
@@ -150,14 +150,14 @@ namespace PIMS.IntegrationTest
             using (var client = new HttpClient()) {
 
                 // Arrange - change id with each new test.
-                client.BaseAddress = new Uri(UrlBase + "/IBM/Profile/bdb63a03-d014-4e44-aa88-a33001045002");
+                client.BaseAddress = new Uri(UrlBase + "/IBM/Profile/422fafdb-0b9c-4be8-9c13-a33a00f44f09");
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/octet-stream"));
                 
 
                 // Act
                 var resp = await client.DeleteAsync(client.BaseAddress);
-                var assetProfile = await resp.Content.ReadAsAsync<Profile>();
+                await resp.Content.ReadAsAsync<Profile>();
 
 
                 // Assert

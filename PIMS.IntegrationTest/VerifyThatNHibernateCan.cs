@@ -4,13 +4,11 @@ using System;
 using System.Collections;
 using System.IO;
 using System.Net;
-using System.Runtime.InteropServices;
 using FluentNHibernate.Testing;
 using NHibernate;
 using NUnit.Framework;
 using PIMS.Core.Models;
 using PIMS.Web.Api;
-using PIMS.Web.Api.App_Start;
 
 
 namespace PIMS.IntegrationTest
@@ -34,7 +32,7 @@ namespace PIMS.IntegrationTest
         */
 
         private string _connString = string.Empty;
-        private ISessionFactory _sessionFactory = null;
+        private ISessionFactory _sessionFactory;
         
         [SetUp]
         public void Init() {
@@ -64,8 +62,8 @@ namespace PIMS.IntegrationTest
             new PersistenceSpecification<Asset>(currSess, new CustomEqualityComparer())
 
             // Act
-            .CheckReference(c => c.Income, new Income() 
-                                             {
+            .CheckReference(c => c.Income, new Income
+                                           {
                                                 IncomeId = new Guid(),
                                                 DateRecvd = DateTime.Now.ToLocalTime(),
                                                 Actual = decimal.Parse("182.11"),
@@ -91,53 +89,57 @@ namespace PIMS.IntegrationTest
 
             var todaysDateTime = DateTime.Now.ToLocalTime();
             using (var currSess = _sessionFactory.OpenSession())
-                using (var trx = currSess.BeginTransaction())
+                using (currSess.BeginTransaction())
                 {
                     // Arrange
                     new PersistenceSpecification<Asset>(currSess, new CustomEqualityComparer())
                     
 
-                    //  Act
-                    .CheckReference(c => c.Income, new Income() {
-                        Actual = decimal.Parse("74.50"),
-                        DateRecvd = todaysDateTime,
-                        Projected = decimal.Parse("75.11"),
-                        IncomeId = new Guid()
-                    })
+                        //  Act
+                        .CheckReference(c => c.Income, new Income
+                                                       {
+                                                                        Actual = decimal.Parse("74.50"),
+                                                                        DateRecvd = todaysDateTime,
+                                                                        Projected = decimal.Parse("75.11"),
+                                                                        IncomeId = new Guid()
+                                                                    })
 
-                    .CheckReference(c => c.Position, new Position() {
-                        PositionId = new Guid(),
-                        PurchaseDate = todaysDateTime,
-                        MarketPrice = decimal.Parse("54.26"),
-                        Quantity = decimal.Parse("125"),
-                        TotalValue = decimal.Parse("89.95"),
-                        UnitPrice = decimal.Parse("53.11")
-                    })
+                        .CheckReference(c => c.Position, new Position
+                                                         {
+                                                                            PositionId = new Guid(),
+                                                                            PurchaseDate = todaysDateTime,
+                                                                            MarketPrice = decimal.Parse("54.26"),
+                                                                            Quantity = decimal.Parse("125"),
+                                                                            TotalValue = decimal.Parse("89.95"),
+                                                                            UnitPrice = decimal.Parse("53.11")
+                                                                        })
 
-                     .CheckReference(c => c.Profile, new Profile() {
-                         ProfileId = new Guid(),
-                         TickerSymbol = "GSK",
-                         TickerDescription = "GlaxoSmithKline",
-                         DividendRate = decimal.Parse("0.7913"),
-                         DividendYield = decimal.Parse("5.08"),
-                         PE_Ratio = decimal.Parse("14.00"),
-                         DividendFreq = "M",
-                         EarningsPerShare = decimal.Parse("1.90"),
-                         SharePrice = 46.11M,
-                         LastUpdate = todaysDateTime
-                     })
+                        .CheckReference(c => c.Profile, new Profile
+                                                        {
+                                                                          ProfileId = new Guid(),
+                                                                          TickerSymbol = "GSK",
+                                                                          TickerDescription = "GlaxoSmithKline",
+                                                                          DividendRate = decimal.Parse("0.7913"),
+                                                                          DividendYield = decimal.Parse("5.08"),
+                                                                          PE_Ratio = decimal.Parse("14.00"),
+                                                                          DividendFreq = "M",
+                                                                          EarningsPerShare = decimal.Parse("1.90"),
+                                                                          SharePrice = 46.11M,
+                                                                          LastUpdate = todaysDateTime
+                                                                      })
 
-                      .CheckReference(c => c.User, new User() {
-                          LastName = "Asch",
-                          FirstName = "Richard P.",
-                          Password = "mypassword",
-                          UserName = "rpa",
-                          EMail = "rpasch@rpclassics.net"
-                      })
+                        .CheckReference(c => c.User, new User
+                                                     {
+                                                                    LastName = "Asch",
+                                                                    FirstName = "Richard P.",
+                                                                    Password = "mypassword",
+                                                                    UserName = "rpa",
+                                                                    EMail = "rpasch@rpclassics.net"
+                                                                })
 
-                       // Assert 
-                      .VerifyTheMappings();
-                      currSess.Transaction.Commit();
+                        // Assert 
+                        .VerifyTheMappings();
+                    currSess.Transaction.Commit();
                 }
 
 
@@ -155,13 +157,6 @@ namespace PIMS.IntegrationTest
            //StructureMap.IContainer smContainer = IoC.Initialize(_connString);
          
 
-            //var con = smContainer.WhatDoIHave();
-            //var sf = smContainer.GetInstance<ISessionFactory>();
-            //sf.OpenSession();
-
-            // WHAT do we want to do here? Why do we need a db connection?
-            // Mimic URL call to controller
-            // Call ValuesController.Get()
             // NHibernate.CheckSession() should be called as a result of ISession ctor injection
             const string urlBase = "http://localhost/PIMS.Web.API/api";
             //var client = CreateWebClient();
@@ -175,31 +170,9 @@ namespace PIMS.IntegrationTest
             if (stream != null)
             {
                 var streamRdr = new StreamReader(stream);
-                var content = streamRdr.ReadToEnd();
+                streamRdr.ReadToEnd();
             }
 
-          
-            //    // Act
-            //var testRepo = new NHTestRepository1(sf.OpenSession());
-            //HttpClient client = new HttpClient();
-            //client.BaseAddress = new Uri(url2);
-            //HttpResponseMessage response = client.GetAsync(urlGET).Result;
-
-            //var res = response.Length;
-
-
-
-
-            //    //ISessionFactory sf = NHibernateConfiguration.ConfigureNHibernate(container);
-            //    //var session = sf.OpenSession();
-
-            //    //HttpWebRequest request1 = (HttpWebRequest)WebRequest.Create(url1);
-
-
-
-            //    // Assert
-            //    //Assert.IsFalse(container.TryGetInstance<ISessionFactory>().IsClosed);
-            //    //var tr1 = new NHTestRepository1(session);
 
         }
 
@@ -208,12 +181,14 @@ namespace PIMS.IntegrationTest
 
 
 
+/*
          private static WebClient CreateWebClient()
         {
              var webClient = new WebClient();
              return webClient;
 
         }
+*/
        
 
     }
@@ -253,7 +228,7 @@ namespace PIMS.IntegrationTest
         }
 
 
-        public new int GetHashCode(object obj) {
+        public int GetHashCode(object obj) {
             //throw new NotImplementedException();
             return obj.ToString().ToLower().GetHashCode();
         }
