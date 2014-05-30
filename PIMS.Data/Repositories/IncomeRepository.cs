@@ -1,33 +1,51 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using NHibernate;
 using PIMS.Core.Models;
 
 
 namespace PIMS.Data.Repositories
 {
-    public class IncomeRepository : IIncomeRepository
+    public class IncomeRepository : IGenericRepository<Income>
     {
-        public IncomeRepository()
+
+        private readonly ISessionFactory _sfFactory;
+
+        public IncomeRepository(ISessionFactory sfFactory)
         {
-            // to be implemented
+            if (sfFactory == null)
+                throw new ArgumentNullException("sfFactory");
+
+            _sfFactory = sfFactory;
         }
 
 
-
-        public Income CreateIncome(Income newPosition)
+        public IQueryable<Income> RetreiveAll()
         {
             throw new NotImplementedException();
         }
 
-        public Income FetchIncome(long id)
+        public Income Retreive(object property)
         {
             throw new NotImplementedException();
         }
 
-        public bool UpdateIncome(long id)
+        public Income RetreiveById(Guid key)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool Create(Income newEntity)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool Delete(Guid idGuid)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool Update(Income entity, object id)
         {
             throw new NotImplementedException();
         }
