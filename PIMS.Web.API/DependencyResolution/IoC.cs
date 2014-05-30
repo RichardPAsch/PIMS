@@ -25,7 +25,6 @@ using StructureMap;
 using PIMS.Web.Common.Security;
 using PIMS.Web.Api.TypeMappers;
 using NHibernate;
-using PIMS.Web.Api.App_Start;
 
 
 namespace PIMS.Web.Api.DependencyResolution {
@@ -46,17 +45,15 @@ namespace PIMS.Web.Api.DependencyResolution {
                                         scan.AssemblyContainingType<Class1>(); // InfraStructure; (T to be replaced with real file)
                                     });
 
-                            // TODO: connect strings needed?
-                           // x.For<IAssetRepository>().Use<AssetRepository>(); //.Ctor<string>("connectionString").EqualToAppSetting("Connection-String");
-                            x.For<IIncomeRepository>().Use<IncomeRepository>();
-                            x.For<IPositionRepository>().Use<PositionRepository>();
-                           // x.For<IProfileRepository>().Use<ProfileRepository>();
+                            // x.For<IAssetRepository>().Use<AssetRepository>(); //.Ctor<string>("connectionString").EqualToAppSetting("Connection-String");
                             x.For<IUserManager>().Use<UserManager>();
                             x.For<IMembershipAdapter>().Use<MembershipAdapter>();
                             x.For<IUserMapper>().Use<UserMapper>();
                             x.For<IGenericRepository<AssetClass>>().Use<AssetClassRepository>();
                             x.For<IGenericRepository<Profile>>().Use<ProfileRepository>();
                             x.For<IGenericRepository<Asset>>().Use<AssetRepository>();
+                            x.For<IGenericRepository<Position>>().Use<PositionRepository>();
+                            x.For<IGenericRepository<Income>>().Use<IncomeRepository>();
 
 
                             // ISessionFactory is expensive to initialize, so we'll create it as a singleton.
