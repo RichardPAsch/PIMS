@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace PIMS.Core.Models
 {
@@ -23,7 +22,7 @@ namespace PIMS.Core.Models
 
         public virtual decimal? DividendYield { get; set; }
 
-        public virtual IList<Asset> Security { get; set; }
+        //public virtual IList<Asset> Security { get; set; }
 
         // ReSharper disable once InconsistentNaming
         public virtual decimal? PE_Ratio { get; set; }
