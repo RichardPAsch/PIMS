@@ -29,7 +29,8 @@ namespace PIMS.Web.Api
 
             // 9/25/13; 'AREAS' not needed -RPA
             //AreaRegistration.RegisterAllAreas(); calls HelpPageRegistration.RegisterArea() - all AreaRegistration derived classes.
-            WebApiConfig.Register(GlobalConfiguration.Configuration);
+           // WebApiConfig.Register(GlobalConfiguration.Configuration); obsolete
+            GlobalConfiguration.Configure(WebApiConfig.Register);
             FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);
             RouteConfig.RegisterRoutes(RouteTable.Routes);
             BundleConfig.RegisterBundles(BundleTable.Bundles);
