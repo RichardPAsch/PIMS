@@ -182,7 +182,7 @@ namespace PIMS.IntegrationTest
 
         [Test]
         // ReSharper disable once InconsistentNaming
-        public async void Can_POST_a_New_Asset_Classification() {
+        public void Can_POST_a_New_Asset_Classification() {
 
             using (var client = new HttpClient()) {
 
@@ -215,7 +215,7 @@ namespace PIMS.IntegrationTest
 
         [Test]
         // ReSharper disable once InconsistentNaming
-        public async void Cannot_POST_a_duplicate_Asset_Classification() {
+        public void Cannot_POST_a_duplicate_Asset_Classification() {
 
             using (var client = new HttpClient()) {
 
