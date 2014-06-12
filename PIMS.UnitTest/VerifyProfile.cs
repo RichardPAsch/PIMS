@@ -4,7 +4,7 @@ using System.Net.Http;
 using System.Web.Http;
 using Newtonsoft.Json;
 using NUnit.Framework;
-using PIMS.Core.Models;
+using PIMS.Core.Security;
 using PIMS.Data.FakeRepositories;
 using PIMS.Web.Api.Controllers;
 using Moq;
