@@ -1,5 +1,6 @@
 ﻿using System;
 
+
 namespace PIMS.Core.Models
 {
     public class Asset 

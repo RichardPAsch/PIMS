@@ -2,7 +2,6 @@
 using System.ComponentModel.DataAnnotations;
 using PIMS.Core.Interfaces;
 
-
 namespace PIMS.Core.Models
 {
     /* Property names MUST match table columns. */
