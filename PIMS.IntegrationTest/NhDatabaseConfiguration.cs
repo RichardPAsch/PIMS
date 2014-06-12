@@ -1,6 +1,7 @@
 ﻿using FluentNHibernate.Cfg.Db;
 using NHibernate;
 using PIMS.Infrastructure.NHibernate.Mappings;
+using System.Configuration;
 
 
 namespace PIMS.IntegrationTest
@@ -10,10 +11,13 @@ namespace PIMS.IntegrationTest
         public static ISessionFactory CreateSessionFactory()
         {
             // Using test database.
-            //.MsSql2008.ConnectionString(c => c.Is(connString)))
+
+            // TODO: Note use of NHibernate ApplicationUser setup in PIMS.Web.Api.NHibernateConfiguration; replicate here ?
+            var testConnString = ConfigurationManager.ConnectionStrings["PIMS-ConnString"].ConnectionString;
             return FluentNHibernate.Cfg.Fluently.Configure()
                 .Database(MsSqlConfiguration.MsSql2008
-                    .ConnectionString(c => c.Is(@"Data Source=RICHARD-VAIO\RICHARDDB;Initial Catalog='Lighthouse - PIMS - Test';Integrated Security=True")))
+                .ConnectionString(c => c.Is(testConnString)))
+                //.ConnectionString(c => c.Is(@"Data Source=RICHARD-VAIO\RICHARDDB;Initial Catalog='Lighthouse - PIMS - Test';Integrated Security=True")))
                 .CurrentSessionContext("web")
                  // Using mappings from WebApi. 
                  // TODO: Should we use our own /Test/Mappings instead ?
