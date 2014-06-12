@@ -2,7 +2,7 @@
 using System.Web.Security;
 using PIMS.Web.Common.Security;
 
-namespace PIMS.Core.Security
+namespace PIMS.Core.Models
 {
     public class MembershipAdapter : IMembershipInfoProvider, IMembershipAdapter
     {

@@ -1,6 +1,6 @@
 using System.Web.Http;
 
-namespace PIMS.Core.Security
+namespace PIMS.Core.Models
 
 {
     public class AdministratorAuthorized : AuthorizeAttribute
