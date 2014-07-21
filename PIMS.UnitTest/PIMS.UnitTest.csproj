@@ -55,6 +55,7 @@
       <HintPath>..\packages\NUnit.2.6.3\lib\nunit.framework.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Net.Http.Formatting, Version=5.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
@@ -110,6 +111,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Security\VerifyAuthentication.cs" />
     <Compile Include="TestHelpers.cs" />
     <Compile Include="VerifyAssetClass.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -123,6 +125,10 @@
     <ProjectReference Include="..\PIMS.Data\PIMS.Data.csproj">
       <Project>{33B1CB55-58DA-4CFA-A65D-B1900118D039}</Project>
       <Name>PIMS.Data</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\PIMS.Infrastructure\PIMS.Infrastructure.csproj">
+      <Project>{053DD3C8-253E-438A-951F-77B7052C018A}</Project>
+      <Name>PIMS.Infrastructure</Name>
     </ProjectReference>
     <ProjectReference Include="..\PIMS.Web.API\PIMS.Web.API.csproj">
       <Project>{5ed25faf-292a-4c24-bba9-f9ef78c6bfae}</Project>
