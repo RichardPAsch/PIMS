@@ -5,17 +5,17 @@ using System.Net.Http;
 using System.Web.Http;
 using Newtonsoft.Json;
 using NUnit.Framework;
-using PIMS.Core.Security;
 using PIMS.Data.FakeRepositories;
 using PIMS.Web.Api.Controllers;
 using Moq;
+using PIMS.Core.Models;
 
 
 
 namespace PIMS.UnitTest
 {
     [TestFixture]
-    public class VerifyAssetClass
+    public class Authentication
     {
         private AssetClassController _ctrl;
         private const string UrlBase = "http://localhost/PIMS.Web.API/api";
