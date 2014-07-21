@@ -4,7 +4,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using Newtonsoft.Json;
 using NUnit.Framework;
-using PIMS.Core.Security;
+using PIMS.Core.Models;
 
 
 namespace PIMS.IntegrationTest
@@ -70,6 +70,7 @@ namespace PIMS.IntegrationTest
 
             using (var client = new HttpClient()) {
 
+                // TODO: Why are we retreiving a profile from our own db and posting it back again? Retreive from yahoo?
                 // Arrange
                 const string testTicker = "IBM";
                 client.BaseAddress = new Uri(UrlBase + "/" + testTicker + "/Profile");

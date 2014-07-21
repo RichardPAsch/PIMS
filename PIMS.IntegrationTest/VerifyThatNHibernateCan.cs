@@ -7,8 +7,8 @@ using System.Net;
 using FluentNHibernate.Testing;
 using NHibernate;
 using NUnit.Framework;
-using PIMS.Core.Security;
 using PIMS.Web.Api;
+using PIMS.Core.Models;
 
 
 namespace PIMS.IntegrationTest

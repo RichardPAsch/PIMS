@@ -7,7 +7,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using Newtonsoft.Json;
 using NUnit.Framework;
-using PIMS.Core.Security;
+using PIMS.Core.Models;
 
 
 namespace PIMS.IntegrationTest
