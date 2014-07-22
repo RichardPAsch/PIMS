@@ -1,27 +1,24 @@
 ﻿using System;
-using System.Web;
-using System.Web.Routing;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Web.Http.Routing;
+
 
 namespace PIMS.Web.Api
 {
-    public class RouteGuidConstraint : IRouteConstraint
+
+    public class RouteGuidConstraint : IHttpRouteConstraint
     {
-        
-        // All /{id} segments in routing should conform to Guid format.
-        public bool Match(HttpContextBase httpContext, Route route, string parameterName, RouteValueDictionary values, RouteDirection routeDirection)
-        {
-            if (values.ContainsKey(parameterName)) {
-                string stringValue = values[parameterName] as string;
+        public bool Match(HttpRequestMessage request, IHttpRoute route, string parameterName, IDictionary<string, object> values, HttpRouteDirection routeDirection) {
+            if (!values.ContainsKey(parameterName)) return false;
+            var stringValue = values[parameterName] as string;
 
-                if (!string.IsNullOrEmpty(stringValue)) {
-                    Guid guidValue;
+            if (string.IsNullOrEmpty(stringValue)) return false;
+            Guid guidValue;
 
-                    return Guid.TryParse(stringValue, out guidValue) && (guidValue != Guid.Empty);
-                }
-            }
-
-            return false;
-
+            return Guid.TryParse(stringValue, out guidValue) && (guidValue != Guid.Empty);
         }
+
+
     }
 }
