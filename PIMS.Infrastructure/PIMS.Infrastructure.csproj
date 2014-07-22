@@ -11,6 +11,8 @@
     <AssemblyName>PIMS.Infrastructure</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -33,28 +35,49 @@
     <Reference Include="FluentNHibernate">
       <HintPath>..\packages\FluentNHibernate.1.4.0.0\lib\net35\FluentNHibernate.dll</HintPath>
     </Reference>
-    <Reference Include="Iesi.Collections">
-      <HintPath>..\packages\Iesi.Collections.3.2.0.4000\lib\Net35\Iesi.Collections.dll</HintPath>
+    <Reference Include="Microsoft.AspNet.Identity.Core">
+      <HintPath>..\packages\Microsoft.AspNet.Identity.Core.2.0.1\lib\net45\Microsoft.AspNet.Identity.Core.dll</HintPath>
     </Reference>
     <Reference Include="NHibernate">
       <HintPath>..\packages\NHibernate.3.3.3.4001\lib\Net35\NHibernate.dll</HintPath>
     </Reference>
+    <Reference Include="NHibernate.AspNet.Identity">
+      <HintPath>..\packages\NHibernate.AspNet.Identity.1.0.2005\lib\net45\NHibernate.AspNet.Identity.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Activities" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
+    <Reference Include="System.Transactions" />
+    <Reference Include="System.Web" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Class1.cs" />
+    <Compile Include="NHibernate\Mappings\AccountMap.cs" />
     <Compile Include="NHibernate\Mappings\AssetClassMap.cs" />
     <Compile Include="NHibernate\Mappings\AssetMap.cs" />
     <Compile Include="NHibernate\Mappings\IncomeMap.cs" />
     <Compile Include="NHibernate\Mappings\PositionMap.cs" />
     <Compile Include="NHibernate\Mappings\ProfileMap.cs" />
     <Compile Include="NHibernate\Mappings\UserMap.cs" />
+    <Compile Include="NHibernate\NHAspNetIdentity\DomainModel\BaseObject.cs" />
+    <Compile Include="NHibernate\NHAspNetIdentity\DomainModel\BaseObjectEqualityComparer.cs" />
+    <Compile Include="NHibernate\NHAspNetIdentity\DomainModel\DomainSignatureAttribute.cs" />
+    <Compile Include="NHibernate\NHAspNetIdentity\DomainModel\Entity.cs" />
+    <Compile Include="NHibernate\NHAspNetIdentity\DomainModel\EntityWithTypedId.cs" />
+    <Compile Include="NHibernate\NHAspNetIdentity\DomainModel\IEntityWithTypedId.cs" />
+    <Compile Include="NHibernate\NHAspNetIdentity\DomainModel\IHasAssignedId.cs" />
+    <Compile Include="NHibernate\NHAspNetIdentity\DomainModel\ValidatableObject.cs" />
+    <Compile Include="NHibernate\NHAspNetIdentity\DomainModel\ValueObject.cs" />
+    <Compile Include="NHibernate\NHAspNetIdentity\Helpers\MappingHelper.cs" />
+    <Compile Include="NHibernate\NHAspNetIdentity\IdentityRole.cs" />
+    <Compile Include="NHibernate\NHAspNetIdentity\IdentityUser.cs" />
+    <Compile Include="NHibernate\NHAspNetIdentity\IdentityUserClaim.cs" />
+    <Compile Include="NHibernate\NHAspNetIdentity\IdentityUserLogin.cs" />
+    <Compile Include="NHibernate\NHAspNetIdentity\RoleStore`1.cs" />
+    <Compile Include="NHibernate\NHAspNetIdentity\UserStore`1.cs" />
+    <Compile Include="NHibernate\NHAspNetIdentity\UUIDHexCombGeneratorDef.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -64,9 +87,23 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="bin\PIMS.Core.dll" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="app.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="UserProfile\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
+  </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
