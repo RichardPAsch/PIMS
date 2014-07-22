@@ -2,6 +2,8 @@
 using System.Net.Http.Formatting;
 using System.Web.Http;
 using Newtonsoft.Json.Serialization;
+using System.Web.Http.Cors;
+using Microsoft.Owin.Security.OAuth;
 
 
 namespace PIMS.Web.Api
@@ -10,12 +12,32 @@ namespace PIMS.Web.Api
     {
         public static void Register(HttpConfiguration config) {
 
-            /*  Development notes:
+            // Configure to use bearer TOKEN-based authentication.
+            config.SuppressDefaultHostAuthentication();
+            config.Filters.Add(new HostAuthenticationFilter(OAuthDefaults.AuthenticationType));
+
+
+
+            // Globally allow for cross-origin requests (CORS). May be overridden
+            // selectively, via attribute, at the controller-level if necessary.
+            // Differing URL port numbers = CORS.
+            var cors = new EnableCorsAttribute("*", "*", "GET,POST,PUT,DELETE");
+            config.EnableCors(cors);
+
+
+            /*  Route Development notes:
              *  1. Route mapping order is CRITICAL: most specific -> least specific ordering is required.
              *  2. Route mapping mismatch yields HTTP 404 error.
              *  3. Use custom route constraints when "defaults" and "Constraints" involve the same segment.
              *  4. IIS 7.5 - This application runs within "PIMSWebApi" app pool, the latter of which executes under "Richard" account credentials.
             */
+
+
+            config.Routes.MapHttpRoute(
+               name: "AccountRoute",
+               routeTemplate: "api/Account/{registrationData}",
+               defaults: new { controller = "Account", registrationData = RouteParameter.Optional }
+            );
 
 
             config.Routes.MapHttpRoute(
