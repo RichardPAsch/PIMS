@@ -17,22 +17,24 @@
 
 using System.Web.Http;
 using System.Web.Mvc;
-using StructureMap;
+using PIMS.Web.Api;
 using PIMS.Web.Api.DependencyResolution;
+using System.Configuration;
 
-[assembly: WebActivator.PreApplicationStartMethod(typeof(PIMS.Web.Api.App_Start.StructuremapMvc), "Start")]
+
+[assembly: WebActivator.PreApplicationStartMethod(typeof(StructuremapMvc), "Start")]
 
 
-namespace PIMS.Web.Api.App_Start {
+namespace PIMS.Web.Api {
 
 
 	public static class StructuremapMvc {
 
 		public static void Start()
 		{
-		    var connString = @"Data Source=RICHARD-VAIO\RICHARDDB;Initial Catalog='Lighthouse - PIMS - Test';Integrated Security=True"; // use web.config
+            var connString = ConfigurationManager.ConnectionStrings["PIMS-ConnString"].ConnectionString;
 
-			IContainer container = IoC.Initialize(connString); // Initialize the container, aka bootstrap
+            var container = IoC.Initialize(connString); // Initialize the container, aka bootstrap
 			DependencyResolver.SetResolver(new StructureMapDependencyResolver(container));
 			GlobalConfiguration.Configuration.DependencyResolver = new StructureMapDependencyResolver(container);
 
