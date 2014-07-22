@@ -1,11 +1,12 @@
 ﻿using System.Collections.Generic;
 using Microsoft.AspNet.Identity;
-using NHibernate.AspNet.Identity;
-using NHibernate.Mapping.ByCode.Conformist;
 using NHibernate.Mapping.ByCode;
+using NHibernate.Mapping.ByCode.Conformist;
+using PIMS.Core.Security.Nhibernate.Identity;
+using PIMS.Infrastructure.NHibernate.NHAspNetIdentity.DomainModel;
 
 
-namespace PIMS.Core.Models.Nhibernate.Identity
+namespace PIMS.Infrastructure.NHibernate.NHAspNetIdentity
 {
     public class IdentityUser : EntityWithTypedId<string>, IUser
     {
@@ -39,7 +40,7 @@ namespace PIMS.Core.Models.Nhibernate.Identity
     {
         public IdentityUserMap() {
             Table("AspNetUsers");
-            Id(x => x.Id, m => m.Generator(new UUIDHexCombGeneratorDef("D")));
+            Id(x => x.Id, m => m.Generator(new UuidHexCombGeneratorDef("D")));
 
             Property(x => x.UserName);
             Property(x => x.PasswordHash);

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.AspNet.Identity;
@@ -8,9 +7,11 @@ using NHibernate;
 using NHibernate.AspNet.Identity;
 using NHibernate.Linq;
 
-namespace PIMS.Core.Models
+
+
+namespace PIMS.Infrastructure.NHibernate.NHAspNetIdentity
 {
-    public class RoleStore<TRole> : IRoleStore<TRole>, IDisposable where TRole : IdentityRole
+    public class RoleStore<TRole> : IRoleStore<TRole> where TRole : IdentityRole
     {
         private bool _disposed;
 
@@ -27,25 +28,25 @@ namespace PIMS.Core.Models
                 throw new ArgumentNullException("context");
 
             ShouldDisposeSession = true;
-            this.Context = context;
+            Context = context;
         }
 
         public Task<TRole> FindByIdAsync(string roleId)
         {
-            this.ThrowIfDisposed();
-            return Task.FromResult(Context.Get<TRole>((object)roleId));
+            ThrowIfDisposed();
+            return Task.FromResult(Context.Get<TRole>(roleId));
         }
 
         public Task<TRole> FindByNameAsync(string roleName)
         {
-            this.ThrowIfDisposed();
-            return Task.FromResult<TRole>(Queryable.FirstOrDefault<TRole>(Queryable.Where<TRole>(this.Context.Query<TRole>(), (Expression<Func<TRole, bool>>)(u => u.Name.ToUpper() == roleName.ToUpper()))));
+            ThrowIfDisposed();
+            return Task.FromResult(Context.Query<TRole>().FirstOrDefault(u => String.Equals(u.Name, roleName, StringComparison.CurrentCultureIgnoreCase)));
         }
 
         public virtual async Task CreateAsync(TRole role)
         {
-            this.ThrowIfDisposed();
-            if ((object)role == null)
+            ThrowIfDisposed();
+            if (role == null)
                 throw new ArgumentNullException("role");
             await Task.FromResult(Context.Save(role));
         }
@@ -57,35 +58,35 @@ namespace PIMS.Core.Models
 
         public virtual async Task UpdateAsync(TRole role)
         {
-            this.ThrowIfDisposed();
-            if ((object)role == null)
+            ThrowIfDisposed();
+            if (role == null)
                 throw new ArgumentNullException("role");
             using (var transaction = new TransactionScope(TransactionScopeOption.Required))
             {
                 Context.Update(role);
                 transaction.Complete();
-                int num = await Task.FromResult(0);
+                await Task.FromResult(0);
             }
         }
 
         private void ThrowIfDisposed()
         {
-            if (this._disposed)
-                throw new ObjectDisposedException(this.GetType().Name);
+            if (_disposed)
+                throw new ObjectDisposedException(GetType().Name);
         }
 
         public void Dispose()
         {
-            this.Dispose(true);
-            GC.SuppressFinalize((object)this);
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         protected virtual void Dispose(bool disposing)
         {
-            if (disposing && !this._disposed && ShouldDisposeSession)
-                this.Context.Dispose();
-            this._disposed = true;
-            this.Context = (ISession)null;
+            if (disposing && !_disposed && ShouldDisposeSession)
+                Context.Dispose();
+            _disposed = true;
+            Context = null;
         }
     }
 }
