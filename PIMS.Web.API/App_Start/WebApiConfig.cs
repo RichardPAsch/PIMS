@@ -32,12 +32,10 @@ namespace PIMS.Web.Api
              *  4. IIS 7.5 - This application runs within "PIMSWebApi" app pool, the latter of which executes under "Richard" account credentials.
             */
 
-
-            config.Routes.MapHttpRoute(
-               name: "AccountRoute",
-               routeTemplate: "api/Account/{registrationData}",
-               defaults: new { controller = "Account", registrationData = RouteParameter.Optional }
-            );
+            
+            // Give priority to attribute routing (WebApi 2)
+            config.MapHttpAttributeRoutes();
+            
 
 
             config.Routes.MapHttpRoute(
