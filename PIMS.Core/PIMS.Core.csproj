@@ -80,6 +80,7 @@
     <Compile Include="Models\ApplicationUser.cs" />
     <Compile Include="Models\Asset.cs" />
     <Compile Include="Models\AssetClass.cs" />
+    <Compile Include="Models\LoginModel.cs" />
     <Compile Include="Models\RegistrationModel.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
