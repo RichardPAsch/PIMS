@@ -19,7 +19,7 @@ namespace PIMS.IntegrationTest.Security
         //private AccountController _ctrl;
         private const string UrlBase = "http://localhost/PIMS.Web.API/api/Account";
         private RegistrationModel _registration;
-        private UserManager<ApplicationUser> _userMgr;
+        private UserManager<ApplicationUser> _userMgr; // needed ?
     
 
 
@@ -35,9 +35,9 @@ namespace PIMS.IntegrationTest.Security
             // Min length for password = 6.
             _registration = new RegistrationModel
                             {
-                                UserName = "RPATest0721c",
-                                Password = "pwrd21c",
-                                ConfirmPassword = "pwrd21c"
+                                UserName = "TestUser0723a",
+                                Password = "pwrd0723a",
+                                ConfirmPassword = "pwrd0723a"
                             };
 
            _userMgr = new UserManager<ApplicationUser>(new UserStore<ApplicationUser>(NHibernateConfiguration.CreateSessionFactory(ConnString).OpenSession()));
