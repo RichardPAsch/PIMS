@@ -31,7 +31,7 @@ namespace PIMS.Web.Api
             //AreaRegistration.RegisterAllAreas(); calls HelpPageRegistration.RegisterArea() - all AreaRegistration derived classes.
            // WebApiConfig.Register(GlobalConfiguration.Configuration); obsolete
 
-            //GlobalConfiguration.Configure(WebApiConfig.Register);
+            GlobalConfiguration.Configure(WebApiConfig.Register); // enabled for attribute routing
             //FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);
             //RouteConfig.RegisterRoutes(RouteTable.Routes);
             //BundleConfig.RegisterBundles(BundleTable.Bundles);
