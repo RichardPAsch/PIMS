@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Identity;
+using Microsoft.Owin.Security;
 using Microsoft.Owin.Security.OAuth;
 using PIMS.Core.Models;
-using Microsoft.Owin.Security;
 
 // Leveraging existence of Microsoft's embedded authorization server: Owin/Katana OAuth2 middleware. If necessary
 // at a later point, we'll migrate to an external authorization server, e.g., Thinktecture. 
@@ -18,7 +18,8 @@ namespace PIMS.Core.Security
         private readonly string _publicClientId;
         private readonly Func<UserManager<ApplicationUser>> _userManagerFactory;
 
-        public KatanaAuthorizationServer(string publicClientId, Func<UserManager<ApplicationUser>> userManagerFactory) {
+        public KatanaAuthorizationServer(string publicClientId, Func<UserManager<ApplicationUser>> userManagerFactory)
+        {
             if (publicClientId == null) {
                 throw new ArgumentNullException("publicClientId");
             }
@@ -35,6 +36,8 @@ namespace PIMS.Core.Security
         {
             
         }
+
+
 
         public override async Task GrantResourceOwnerCredentials(OAuthGrantResourceOwnerCredentialsContext context)
         {
