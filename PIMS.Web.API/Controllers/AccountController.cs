@@ -23,6 +23,7 @@ namespace PIMS.Web.Api.Controllers
         public UserManager<ApplicationUser> UserManager { get; private set; }
         public object SignInStub { get; set; }
         private static ISessionFactory _sf;
+
         public enum ManageMessageId
         {
             ChangePasswordSuccess,
@@ -77,6 +78,7 @@ namespace PIMS.Web.Api.Controllers
                 throw;
             }
 
+            // Needed ??
            // AuthenticationManager.SignOut(DefaultAuthenticationTypes.ExternalCookie);
            // Enable the application to use a cookie to store information for the signed in user
             //var identity = await UserManager.CreateIdentityAsync(user, DefaultAuthenticationTypes.ApplicationCookie);
@@ -157,6 +159,24 @@ namespace PIMS.Web.Api.Controllers
             //return StatusCode(HttpStatusCode.Unauthorized);
         }
 
+
+
+        [System.Web.Http.HttpGet]
+        [System.Web.Http.Authorize]
+        public IHttpActionResult SecurityTestMethod()
+        {
+            return Ok("Access granted.");
+
+        }
+
+
+
+
+        //private async Task SignInAsync(ApplicationUser user, bool isPersistent) {
+        //    AuthenticationManager.SignOut(DefaultAuthenticationTypes.ExternalCookie);
+        //    var identity = await UserManager.CreateIdentityAsync(user, DefaultAuthenticationTypes.ApplicationCookie);
+        //    AuthenticationManager.SignIn(new AuthenticationProperties() { IsPersistent = isPersistent }, identity);
+        //}
 
 
         //private void AddErrors(IdentityResult result) {
