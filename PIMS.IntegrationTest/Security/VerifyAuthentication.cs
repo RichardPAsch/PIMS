@@ -35,9 +35,9 @@ namespace PIMS.IntegrationTest.Security
             // Min length for password = 6.
             _registration = new RegistrationModel
                             {
-                                UserName = "TestUser0723a",
-                                Password = "pwrd0723a",
-                                ConfirmPassword = "pwrd0723a"
+                                UserName = "TestUser0731a",
+                                Password = "pwrd0731a",
+                                ConfirmPassword = "pwrd0731a"
                             };
 
            _userMgr = new UserManager<ApplicationUser>(new UserStore<ApplicationUser>(NHibernateConfiguration.CreateSessionFactory(ConnString).OpenSession()));
