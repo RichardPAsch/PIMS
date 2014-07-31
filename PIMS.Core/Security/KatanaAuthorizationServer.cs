@@ -41,11 +41,13 @@ namespace PIMS.Core.Security
 
         public override async Task GrantResourceOwnerCredentials(OAuthGrantResourceOwnerCredentialsContext context)
         {
-            // Validate the username and password.
-            using (var userManager = _userManagerFactory()) { 
+            using (var userManager = _userManagerFactory())
+            {
+                // Validate the username and password credentials.
                 var user = await userManager.FindAsync(context.UserName, context.Password);
-                if (user == null) {
-                    context.SetError("invalid_grant", "The user name and/or password is incorrect.");
+                if (user == null || (string.IsNullOrWhiteSpace(context.UserName) || string.IsNullOrWhiteSpace(context.Password) ))
+                {
+                    context.SetError("invalid_grant", "The user name and/or password is invalid.");
                     context.Rejected();
                     return; 
                 }
@@ -74,7 +76,7 @@ namespace PIMS.Core.Security
 
         public override Task ValidateClientAuthentication(OAuthValidateClientAuthenticationContext context)
         {
-            // Resource owner password credentials does not provide a client ID.
+            // Resource owner password credentials does not provide a client ID to be validated.
             if (context.ClientId == null) {
                 context.Validated();
             }
