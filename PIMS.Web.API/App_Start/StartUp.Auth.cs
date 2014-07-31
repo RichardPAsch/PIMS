@@ -40,12 +40,13 @@ namespace PIMS.Web.Api
             
             // Wire up the authorization server (KatanaAuthorizationServer) to the Katana pipeline, 
             // and configure accordingly. Token generation.
-            // TODO: Shorten AccessTokenExpireTimeSpan to 2 hours for PROD.
+            // TODO: Use AccessTokenExpireTimeSpan of 3 hours for PROD.
             app.UseOAuthAuthorizationServer(new OAuthAuthorizationServerOptions
                                         {
-                                            AllowInsecureHttp = true,     // for testing only - will need SSL for PROD
+                                            AllowInsecureHttp = true,                               // for development only - will need SSL for PROD
                                             TokenEndpointPath = new PathString("/token"),
-                                            AccessTokenExpireTimeSpan = TimeSpan.FromHours(3), 
+                                            AccessTokenExpireTimeSpan = TimeSpan.FromMinutes(10),    // for development only 
+                                            //AccessTokenExpireTimeSpan = TimeSpan.FromHours(3), 
                                             Provider = new KatanaAuthorizationServer(PublicClientId, UserManagerFactory)
                                         });
            
