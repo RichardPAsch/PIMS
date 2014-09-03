@@ -1,10 +1,12 @@
 ﻿using System.Web.Mvc;
 
-namespace PIMS.Web.Api.App_Start
+
+namespace PIMS.Web.Api
 {
     public class FilterConfig
     {
-        public static void RegisterGlobalFilters(GlobalFilterCollection filters) {
+        public static void RegisterGlobalFilters(GlobalFilterCollection filters)
+        {
             filters.Add(new HandleErrorAttribute());
         }
     }
