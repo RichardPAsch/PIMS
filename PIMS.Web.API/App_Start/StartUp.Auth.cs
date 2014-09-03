@@ -36,7 +36,7 @@ namespace PIMS.Web.Api
             UserManagerFactory = () => new UserManager<ApplicationUser>(new NHibernate.AspNet.Identity
                                           .UserStore<ApplicationUser>(NHibernateConfiguration.CreateSessionFactory(connString).OpenSession()));
 
-      
+            
             
             // Wire up the authorization server (KatanaAuthorizationServer) to the Katana pipeline, 
             // and configure accordingly. Token generation.
@@ -45,13 +45,16 @@ namespace PIMS.Web.Api
                                         {
                                             AllowInsecureHttp = true,                               // for development only - will need SSL for PROD
                                             TokenEndpointPath = new PathString("/token"),
-                                            AccessTokenExpireTimeSpan = TimeSpan.FromMinutes(10),    // for development only 
+                                            AccessTokenExpireTimeSpan = TimeSpan.FromMinutes(15),   // for development only 
                                             //AccessTokenExpireTimeSpan = TimeSpan.FromHours(3), 
                                             Provider = new KatanaAuthorizationServer(PublicClientId, UserManagerFactory)
                                         });
+
            
             // Token consumption.
             app.UseOAuthBearerAuthentication(new OAuthBearerAuthenticationOptions());
+          
+          
 
             // Specify CORS policy. Currently using "AllowAll" for testing purposes.
             // TODO: For PROD - create a new policy provider that determines the specific incoming HTTP origins, headers, and methods expected.
