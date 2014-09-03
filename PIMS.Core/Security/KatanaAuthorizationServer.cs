@@ -53,7 +53,11 @@ namespace PIMS.Core.Security
                 }
 
                 // Create a ClaimsIdentity that represents the authenticated user; any claims added describe the identity of
-                // the user, e.g. his user id (the ‘sub’ claim) or roles he is a member of.
+                // the user, e.g. his user id (the ‘sub’ claim) or roles he is a member of, and becomes part of the token.
+                // ASP.NET Identity supports claims-based authentication, where the user’s identity is represented as a set of claims.
+                // Claims allow developers to be a lot more expressive in describing a user’s identity than roles allow. Whereas role 
+                // membership is just a boolean (member or non-member), a claim can include rich information about the user’s
+                // identity and membership.
                 var oAuthClaimsIdentity = await userManager.CreateIdentityAsync(user, context.Options.AuthenticationType);
                 oAuthClaimsIdentity.AddClaim(new Claim("sub", context.UserName)); // RPA: redundant?
                 oAuthClaimsIdentity.AddClaim(new Claim("role", "user"));          // RPA: added per D.Baier article
