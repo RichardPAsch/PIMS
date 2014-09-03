@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -13,14 +14,13 @@ using PIMS.Core.Models;
 using Microsoft.AspNet.Identity;
 
 
-
 namespace PIMS.Web.Api.Controllers
 {
     [System.Web.Http.RoutePrefix("api/Account")]
     public class AccountController : ApiController
     {
         private const string UrlBase = "http://localhost/PIMS.Web.Api";
-        public UserManager<ApplicationUser> UserManager { get; private set; }
+        public UserManager<ApplicationUser> UserMgr { get; private set; }
         public object SignInStub { get; set; }
         private static ISessionFactory _sf;
 
@@ -36,56 +36,33 @@ namespace PIMS.Web.Api.Controllers
         // ctors
         public AccountController(UserManager<ApplicationUser> userManager)
         {
-            UserManager = userManager;
+            UserMgr = userManager;
         }
         
-        //TODO: ctors needed, if so, when?
-        //public AccountController(ISessionFactory sf) {
-        //    if (sf == null) throw new ArgumentNullException("sf");
-        //    _sf = sf;
-        //}
-
-        //// Default parameterless ctor.
-        //public AccountController() : this(new UserManager<ApplicationUser>(new UserStore<ApplicationUser>(NHibernateConfiguration.CheckSession(_sf)))) {
-        //}
-
-    
+        // Default
+        public AccountController()
+            : this(new UserManager<ApplicationUser>(new NHibernate.AspNet.Identity.UserStore<ApplicationUser>(NHibernateConfiguration.CheckSession(_sf)))) {
+        }
 
        
-
+        
 
 
         private static IAuthenticationManager AuthenticationManager
         {
            // you can call this method as an instance method on any object of type HttpRequestMessage, per
-            // http://msdn.microsoft.com/en-us/library/system.net.http.owinhttprequestmessageextensions.getowincontext(v=vs.118).aspx
+           // http://msdn.microsoft.com/en-us/library/system.net.http.owinhttprequestmessageextensions.getowincontext(v=vs.118).aspx
 
              get { return  HttpContext.Current.GetOwinContext().Authentication; } 
         }
-
-
         
-        private async Task SignInAsync(ApplicationUser user, bool isPersistent) {
-            try
-            {
-                AuthenticationManager.SignOut(DefaultAuthenticationTypes.ExternalCookie);
-                var identity = await UserManager.CreateIdentityAsync(user, DefaultAuthenticationTypes.ApplicationCookie);
-                AuthenticationManager.SignIn(new AuthenticationProperties { IsPersistent = isPersistent }, identity);
-            }
-            catch (Exception ex)
-            {
-                var msg = ex.Message;
-                throw;
-            }
 
-            // Needed ??
-           // AuthenticationManager.SignOut(DefaultAuthenticationTypes.ExternalCookie);
-           // Enable the application to use a cookie to store information for the signed in user
-            //var identity = await UserManager.CreateIdentityAsync(user, DefaultAuthenticationTypes.ApplicationCookie);
-            //AuthenticationManager.SignIn(new AuthenticationProperties { IsPersistent = isPersistent }, identity);
+        public async Task SignInAsync(ApplicationUser user, bool isPersistent) {
+            AuthenticationManager.SignOut(DefaultAuthenticationTypes.ExternalCookie);
+            var claimsIdentity = await UserMgr.CreateIdentityAsync(user, DefaultAuthenticationTypes.ApplicationCookie);
+            AuthenticationManager.SignIn(new AuthenticationProperties { IsPersistent = isPersistent }, claimsIdentity);
         }
-
-
+        
 
         // POST: [.../Account/RegisterAsync]
         [System.Web.Http.HttpPost]
@@ -97,12 +74,12 @@ namespace PIMS.Web.Api.Controllers
 
             if (!ModelState.IsValid) return BadRequest("Invalid registration data received.");
             var user = new ApplicationUser { UserName = registrationData.UserName };
-            var identityResult = await UserManager.CreateAsync(user, registrationData.Password);
+            var identityResult = await UserMgr.CreateAsync(user, registrationData.Password);
 
-            HttpResponseMessage responseMsg = null;
             var errorMsg = string.Empty;
-            if (identityResult.Succeeded) {
-                await SignInAsync(user, false);
+            if (identityResult.Succeeded)
+            {
+                await SignInAsync(user, false); 
             }
             else
             {
@@ -127,36 +104,34 @@ namespace PIMS.Web.Api.Controllers
         [System.Web.Http.Route("LoginAsync")]
         public async Task<string> LoginAsync([FromBody] LoginModel loginData)
         {
+            // Creates token upon successful login.
             if (!ModelState.IsValid) return "Invalid login or unregistered.";
 
-            using (var client = new HttpClient())
+            var user = await UserMgr.FindAsync(loginData.UserName, loginData.Password);
+            if (user != null)
             {
-                var login = new Dictionary<string, string>
+                await SignInAsync(user, loginData.RememberMe);
+                using (var client = new HttpClient())
+                {
+                    var login = new Dictionary<string, string>
                            {
                                {"grant_type", "password"},
                                {"username", loginData.UserName},
                                {"password", loginData.Password}
                            };
 
-                var response = await client.PostAsync(UrlBase + "/token", new FormUrlEncodedContent(login));
-                var content = await response.Content.ReadAsStringAsync();
+                    // Access token endpoint on authorization server.
+                    var response = await client.PostAsync(UrlBase + "/token", new FormUrlEncodedContent(login));
+                    var content = await response.Content.ReadAsStringAsync();
 
-                var json = JObject.Parse(content);
-                return json["access_token"].ToString();
+                    var json = JObject.Parse(content);
+                    // TODO: Also return user name as confirmation of successful login ? returnUrl = /Account/LoginAsync ?
+                    //return json["access_token"].ToString() + "[Welcome " + loginData.UserName + "]";
+                    return json["access_token"].ToString();
+                }  
             }
 
-           
-
-
-            //var user = await UserManager.FindAsync(model.UserName, model.Password);
-            //if (user != null) {
-            //    await SignInAsync(user, model.RememberMe);
-            //    return Ok();
-            //}
-            //ModelState.AddModelError("", "Invalid username and/or password.");
-
-            // If we got this far, something failed, redisplay form
-            //return StatusCode(HttpStatusCode.Unauthorized);
+            return "Unable to create access token.";
         }
 
 
@@ -171,51 +146,37 @@ namespace PIMS.Web.Api.Controllers
 
 
 
+        // POST: /Account/Manage
+        [System.Web.Http.HttpPost]
+        [ValidateAntiForgeryToken]
+        [System.Web.Http.Route("ManageAsync")]
+        public async Task<IHttpActionResult> ManageAsync([FromBody] ManageUserModel manageData)
+        {
+            if (!ModelState.IsValid || (manageData.ConfirmPassword.Trim() != manageData.NewPassword.Trim())) return BadRequest("Invalid password edits.");
 
-        //private async Task SignInAsync(ApplicationUser user, bool isPersistent) {
-        //    AuthenticationManager.SignOut(DefaultAuthenticationTypes.ExternalCookie);
-        //    var identity = await UserManager.CreateIdentityAsync(user, DefaultAuthenticationTypes.ApplicationCookie);
-        //    AuthenticationManager.SignIn(new AuthenticationProperties() { IsPersistent = isPersistent }, identity);
-        //}
+            var errMsg = string.Empty;
+            var identityResult = new IdentityResult();
+            var currUserId = User.Identity.GetUserId();
 
+            if (string.IsNullOrEmpty(currUserId))
+                return ResponseMessage(new HttpResponseMessage
+                                    {
+                                        StatusCode = HttpStatusCode.BadRequest,
+                                        ReasonPhrase = "Invalid user"
+                                    });
+            try
+            {
+                identityResult = await UserMgr.ChangePasswordAsync(currUserId, manageData.OldPassword, manageData.NewPassword);
+            }
+            catch (Exception ex) {
+                errMsg = ex.Message.ToString(CultureInfo.InvariantCulture); //debug
+            }
 
-        //private void AddErrors(IdentityResult result) {
-        //    foreach (var error in result.Errors) {
-        //        ModelState.AddModelError("", error);
-        //    }
-        //}
+            return ResponseMessage(identityResult.Succeeded ?
+                    new HttpResponseMessage { StatusCode = HttpStatusCode.OK, ReasonPhrase = "Password updated for user:  " + currUserId } :
+                    new HttpResponseMessage { StatusCode = HttpStatusCode.NotModified, ReasonPhrase = "Unable to update password, due to: " + errMsg });
 
-        //// POST: /Account/LogOff
-        //[ValidateAntiForgeryToken]
-        //public IHttpActionResult LogOff() {
-        //    AuthenticationManager.SignOut();
-        //    return Ok();
-        //}
-
-
-        //private bool HasPassword() {
-        //    var user = UserManager.FindById(User.Identity.GetUserId());
-        //    if (user != null) {
-        //        return user.PasswordHash != null;
-        //    }
-        //    return false;
-        //}
-
-
-        ////
-        //// GET: /Account/Manage
-        //public string Manage(ManageMessageId? message) {
-        //    var statusMessage =
-        //              message == ManageMessageId.ChangePasswordSuccess ? "Your password has been changed."
-        //            : message == ManageMessageId.SetPasswordSuccess ? "Your password has been set."
-        //            : message == ManageMessageId.RemoveLoginSuccess ? "The external login was removed."
-        //            : message == ManageMessageId.Error ? "An error has occurred."
-        //            : "";
-
-        //    var hasPwrd = HasPassword();
-        //    //ViewBag.ReturnUrl = Url.Action("Manage");
-        //    return statusMessage;
-        //}
+        }
 
 
 
