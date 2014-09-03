@@ -33,11 +33,12 @@ namespace PIMS.IntegrationTest.Security
         public void Init()
         {
             // Min length for password = 6.
+            // Ex: UserName = "TestUser0828a" // Password = "pwrd0828a" // ConfirmPassword = "pwrd0828a"
             _registration = new RegistrationModel
                             {
-                                UserName = "TestUser0828a",
-                                Password = "pwrd0828a",
-                                ConfirmPassword = "pwrd0828a"
+                                UserName = "TestUser0903a",
+                                Password = "pwrd0903a",
+                                ConfirmPassword = "pwrd0903a"
                             };
 
             _userMgr = new UserManager<ApplicationUser>(
