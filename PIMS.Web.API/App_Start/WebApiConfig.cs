@@ -12,7 +12,7 @@ namespace PIMS.Web.Api
     {
         public static void Register(HttpConfiguration config) {
 
-            // Configure to use bearer TOKEN-based authentication.
+            // Configure to use bearer TOKEN-based authentication, and ignore cookie authentication.
             config.SuppressDefaultHostAuthentication();
             config.Filters.Add(new HostAuthenticationFilter(OAuthDefaults.AuthenticationType));
 
