@@ -35,17 +35,13 @@ namespace PIMS.IntegrationTest.Security
             // Min length for password = 6.
             _registration = new RegistrationModel
                             {
-                                UserName = "TestUser0731a",
-                                Password = "pwrd0731a",
-                                ConfirmPassword = "pwrd0731a"
+                                UserName = "TestUser0828a",
+                                Password = "pwrd0828a",
+                                ConfirmPassword = "pwrd0828a"
                             };
 
-           _userMgr = new UserManager<ApplicationUser>(new UserStore<ApplicationUser>(NHibernateConfiguration.CreateSessionFactory(ConnString).OpenSession()));
-            
-            // API intellisense for reference
-            // var sess = _userMgr.
-            //var us = new UserStore<ApplicationUser>(NHibernateConfiguration.CreateSessionFactory(ConnString).OpenSession());
-            //us.
+            _userMgr = new UserManager<ApplicationUser>(
+                new NHibernate.AspNet.Identity.UserStore<ApplicationUser>(NHibernateConfiguration.CreateSessionFactory(ConnString).OpenSession()));
         }
 
 
@@ -73,7 +69,7 @@ namespace PIMS.IntegrationTest.Security
 
                 // Act
                 // PostAsJsonAsync(), per MS recommendation, however results in problem of RegisterAsync() accepting payload: content type?
-                // Serialized data is now associated with HttpContent element explicitly, with format then set.
+                // Serialized registration data is now associated with HttpContent element explicitly, with format then set.
                 var response = await client.PostAsync(client.BaseAddress + "/RegisterAsync", content); 
                 //var response = await client.PostAsJsonAsync(client.BaseAddress + "/RegisterAsync", _registration); // error
                 
