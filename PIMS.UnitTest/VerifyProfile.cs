@@ -1,9 +1,10 @@
 ﻿using System;
-using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
 using System.Web.Http;
-using Newtonsoft.Json;
+using System.Web.Http.Results;
 using NUnit.Framework;
+using PIMS.Core.Security;
 using PIMS.Data.FakeRepositories;
 using PIMS.Web.Api.Controllers;
 using Moq;
@@ -16,207 +17,130 @@ namespace PIMS.UnitTest
     [TestFixture]
     public class VerifyProfile
     {
+        //------------- Business rules -------------------------------------------------------------
+        // Profile creation (GET in this case) can only be done via new Asset creation, and if
+        //   no existing Profile.
+        // Profile DELETE may only succeed if Profile is not used/referenced by any Asset, and is
+        //   only allowed via Asset deletion.
+        // Profile updates (GET) will only occur automatically if necessary. No user edits allowed.
+        // Profile data is READ-ONLY: due to potential accuracy and/or liability issues stemming from 
+        //   multi-user edits. Profile data obtained via a 3rd party (Yahoo Finanace as of 12/2014)
+        //   service.
+        //------------------------------------------------------------------------------------------
+
         private ProfileController _ctrl;
         private Mock<InMemoryProfileRepository> _mockRepo;
-        private const string UrlBase = "http://localhost/PIMS.Web.API/api/Asset";
+        private Mock<PimsIdentityService> _mockIdentitySvc;
+        private Mock<InMemoryAssetRepository> _mockRepoAsset;
 
-        /*  Note:
-         *  Test data represents either:
-         *      1) Yahoo.Finance-derived, or 
-         *      2) existing (db) Profile info, 
-        */
 
         [SetUp]
         public void Init() {
             _mockRepo = new Mock<InMemoryProfileRepository>();
+            _mockIdentitySvc = new Mock<PimsIdentityService>();
+            _mockRepoAsset = new Mock<InMemoryAssetRepository>();
         }
 
 
         [Test]
         // ReSharper disable once InconsistentNaming
-        public void Controller_can_GET_a_single_Fake_Profile_for_a_valid_ticker_symbol() {
-
+        public async void Controller_can_GET_new_Profile_data_for_a_nonexistent_fake_asset()
+        {
             // Arrange 
-            var request = TestHelpers.GetHttpRequestMessage();
-            _ctrl = new ProfileController(_mockRepo.Object);
+            _ctrl = new ProfileController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoAsset.Object) {
+                Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Profile/KMB") },
+                Configuration = new HttpConfiguration()
+            };
 
-            // Act
-            var myProfile = _ctrl.Get(request, "HMC");
-            var taskProfile = myProfile.Content.ReadAsAsync<Profile>().Result;
-
+            // Act - "KMB" not in repository & will be created.
+            var profileResult = await _ctrl.GetProfileByTicker("KMB") as OkNegotiatedContentResult<Profile>;
+          
 
             // Assert
-            Assert.IsNotNull(myProfile);
-            Assert.IsTrue(HttpStatusCode.OK == myProfile.StatusCode);
-            Assert.IsTrue(taskProfile.TickerSymbol == "HMC");
+            Assert.IsNotNull(profileResult);
+            Assert.That(profileResult.Content.TickerSymbol, Is.EqualTo("KMB"));
+            Assert.IsTrue(profileResult.Content.AssetId == default(Guid));
         }
+
 
         [Test]
         // ReSharper disable once InconsistentNaming
-        public void Controller_cannot_GET_a_single_Fake_Profile_for_a_invalid_ticker_symbol() {
-
+        public async void Controller_can_GET_existing_fake_Profile_data_and_update_data_as_needed()
+        {
             // Arrange 
-            var request = TestHelpers.GetHttpRequestMessage();
-            _ctrl = new ProfileController(_mockRepo.Object);
+            _ctrl = new ProfileController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoAsset.Object) {
+                Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Profile/ETP") },
+                Configuration = new HttpConfiguration()
+            };
 
-            // Act
-            var myProfile = _ctrl.Get(request, "RPA");
-            var taskProfile = myProfile.Content.ReadAsAsync<Profile>().Result;
+            // Act - "ETP" is in repository & will be updated as needed.
+            var profileResult = await _ctrl.GetProfileByTicker("ETP") as OkNegotiatedContentResult<Profile>;
 
 
             // Assert
-            Assert.IsTrue(myProfile.StatusCode == HttpStatusCode.NotFound);
-            Assert.IsNull(taskProfile.TickerSymbol);
-        }
-        
-        [Test]
-        // ReSharper disable once InconsistentNaming
-        public void Controller_can_GET_a_single_Fake_Profile_based_on_a_valid_AssetId() {
-
-            // Arrange 
-            var request = TestHelpers.GetHttpRequestMessage();
-            _ctrl = new ProfileController(_mockRepo.Object);
-
-            // Act
-            var myProfile = _ctrl.Get(request, new Guid("e07a582a-aec8-43b9-9cb8-faed5e5434de"));
-            var taskProfile = myProfile.Content.ReadAsAsync<Profile>().Result;
-
-
-            // Assert
-            Assert.IsNotNull(myProfile);
-            Assert.IsTrue(HttpStatusCode.OK == myProfile.StatusCode);
-            Assert.IsTrue(taskProfile.TickerSymbol == "GSK");
+            Assert.IsNotNull(profileResult);
+            Assert.That(profileResult.Content.TickerSymbol, Is.EqualTo("ETP"));
+            Assert.That(Convert.ToDateTime(profileResult.Content.DividendPayDate), Is.Not.EqualTo(default(DateTime)));
+            Assert.IsTrue(profileResult.Content.AssetId != default(Guid));
         }
         
 
         [Test]
         // ReSharper disable once InconsistentNaming
-        public void Controller_can_POST_a_new_fake_Profile() {
+        public async void Controller_cannot_GET_a_single_Fake_Profile_for_a_invalid_ticker_symbol() {
 
             // Arrange 
-            _ctrl = new ProfileController(_mockRepo.Object);
-            var newProfile = new Profile() {
-                    ProfileId = Guid.NewGuid(),
-                    SharePrice = 692.16M,
-                    DividendFreq = "S",
-                    DividendYield = 3.07M,
-                    DividendRate = 1.052M,
-                    TickerDescription = "Google",
-                    EarningsPerShare = 7.96M,
-                    PE_Ratio = 19.01M,
-                    LastUpdate = DateTime.Now,
-                    TickerSymbol = "GOOG"
+            _ctrl = new ProfileController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoAsset.Object) {
+                        Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Profile/RPA") },
+                        Configuration = new HttpConfiguration()
             };
 
             // Act
-            var result = _ctrl.Post(newProfile, TestHelpers.GetHttpRequestMessage(
-                                                            HttpMethod.Post,
-                                                            UrlBase + "/" + newProfile.TickerSymbol + "/Profile",
-                                                            _ctrl,
-                                                            "ProfileRoute",
-                                                            "api/Asset/{ticker}/Profile/{ProfileId}",
-                                                            new { ProfileId = RouteParameter.Optional }
-                                                        ));
-            // Format entity.
-            var jsonResult = result.Content.ReadAsStringAsync().Result;
-            var profileEntity = JsonConvert.DeserializeObject<Profile>(jsonResult);
+            var profileResult = await _ctrl.GetProfileByTicker("RPA") as OkNegotiatedContentResult<Profile>;
 
 
             // Assert
-            Assert.AreEqual(HttpStatusCode.Created, result.StatusCode);
-            Assert.IsNotNull(profileEntity);
-            // TODO: Use relative path ?
-            Assert.AreEqual(result.Headers.Location, UrlBase +  "/" + newProfile.TickerSymbol + "/Profile");
-            Assert.IsTrue(profileEntity.DividendFreq == "S");
-            Assert.IsTrue(profileEntity.ProfileId != Guid.Empty);
+            Assert.IsNotInstanceOf<Profile>(profileResult);
         }
+        
         
         [Test]
         // ReSharper disable once InconsistentNaming
-        public void Controller_cannot_POST_a_new_duplicate_fake_Profile() {
+        public void Controller_can_not_DELETE_a_fake_Profile_currently_in_use_by_another_investor()
+        {
+            // Arrange 
+            _ctrl = new ProfileController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoAsset.Object)
+            {
+                Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Profile/1bb5e7bc-2f1e-4c89-b582-1c864b8c1c9b") },
+                Configuration = new HttpConfiguration()
+            };
+
+            // Act  
+            var result = _ctrl.Delete(new Guid("1bb5e7bc-2f1e-4c89-b582-1c864b8c1c9b"));
+
+            // Assert
+            Assert.IsTrue(result.IsCompleted == true);
+        }
+        
+
+        [Test]
+        // ReSharper disable once InconsistentNaming
+        public void Controller_can_DELETE_a_fake_Profile_currently_not_in_use_by_another_investor() {
+            // Arrange 
+            _ctrl = new ProfileController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoAsset.Object) {
+                Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Profile/66e5cd2f-8cec-4453-8920-af91589decd2") },
+                Configuration = new HttpConfiguration()
+            };
+
+            // Act  
+            var result = _ctrl.Delete(new Guid("66e5cd2f-8cec-4453-8920-af91589decd2"));
             
-            // Arrange 
-            _ctrl = new ProfileController(_mockRepo.Object);
-            var newProfile = new Profile() {
-                ProfileId = new Guid("e07a582a-aec8-43b9-9cb8-faed5e5434de"),
-                SharePrice = 22.16M,
-                DividendFreq = "M",
-                DividendYield = 4.892M,
-                DividendRate = .912M,
-                TickerDescription = "Glaxo Smith Kline",
-                EarningsPerShare = 3.46M,
-                PE_Ratio = 15.17M,
-                LastUpdate = DateTime.Now,
-                TickerSymbol = "GSK"
-            };
-
-            // Act
-            var result = _ctrl.Post(newProfile, TestHelpers.GetHttpRequestMessage(
-                                                            HttpMethod.Post,
-                                                            UrlBase + "/" + newProfile.TickerSymbol + "/Profile",
-                                                            _ctrl,
-                                                            "ProfileRoute",
-                                                            "api/Asset/{ticker}/Profile/{ProfileId}",
-                                                            new { ProfileId = RouteParameter.Optional }
-                                                        ));
-            // Format entity.
-            var jsonResult = result.Content.ReadAsStringAsync().Result;
-            var profileEntity = JsonConvert.DeserializeObject<Profile>(jsonResult);
-
 
             // Assert
-            Assert.AreEqual(HttpStatusCode.Conflict, result.StatusCode); // 409 status code
-            Assert.IsNotNull(profileEntity);
-            Assert.IsTrue(profileEntity.ProfileId == Guid.Empty);
-        }
-
-
-        [Test]
-        // ReSharper disable once InconsistentNaming
-        public void Controller_can_Update_PUT_a_fake_Profile() {
-
-            // Arrange - edited
-            var revisedProfile = new Profile() {
-                ProfileId = new Guid("dbf1590e-b99f-468d-a44e-e5e8f86c5f86"),
-                SharePrice = 201.06M,
-                DividendFreq = "Q",
-                DividendYield = 6.79M,
-                DividendRate = 1.31M,
-                TickerDescription = "International Business Machines",
-                EarningsPerShare = 6.81M,
-                PE_Ratio = 21.07M,
-                LastUpdate = DateTime.Now,
-                TickerSymbol = "IBM"
-            };
-
-            var request = TestHelpers.GetHttpRequestMessage();
-            _ctrl = new ProfileController(_mockRepo.Object);
-
-            // Act
-            var respMsg = _ctrl.Put(revisedProfile, request);
-      
-
-            // Assert
-            Assert.AreEqual(HttpStatusCode.OK, respMsg.StatusCode);
-        }
-        
-        [Test]
-        // ReSharper disable once InconsistentNaming
-        public void Controller_can_DELETE_a_single_fake_Profile() {
-            
-            // TODO - per ADMIN role only!
-            // Arrange 
-            var request = TestHelpers.GetHttpRequestMessage();
-            _ctrl = new ProfileController(_mockRepo.Object);
-
-            // Act
-            var result = _ctrl.Delete(request, new Guid("e07a582a-aec8-43b9-9cb8-faed5e5434de"));
-
-            // Assert
-            Assert.IsTrue(result.StatusCode == HttpStatusCode.OK);
+            Assert.IsTrue(result.Status == TaskStatus.RanToCompletion);
         } 
-        
-        
+
+
 
     }
 }
