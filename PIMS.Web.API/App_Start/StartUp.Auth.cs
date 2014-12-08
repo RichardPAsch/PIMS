@@ -45,7 +45,7 @@ namespace PIMS.Web.Api
                                         {
                                             AllowInsecureHttp = true,                               // for development only - will need SSL for PROD
                                             TokenEndpointPath = new PathString("/token"),
-                                            AccessTokenExpireTimeSpan = TimeSpan.FromMinutes(15),   // for development only 
+                                            AccessTokenExpireTimeSpan = TimeSpan.FromMinutes(120),   // for development only 
                                             //AccessTokenExpireTimeSpan = TimeSpan.FromHours(3), 
                                             Provider = new KatanaAuthorizationServer(PublicClientId, UserManagerFactory)
                                         });
