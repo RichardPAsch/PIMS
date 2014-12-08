@@ -6,7 +6,6 @@ using PIMS.Infrastructure.NHibernate.Mappings;
 using NHibernate.AspNet.Identity.Helpers;
 
 
-
 namespace PIMS.Web.Api
 {
     public class NHibernateConfiguration
@@ -33,7 +32,7 @@ namespace PIMS.Web.Api
                                 //.AdoNetBatchSize(10) // Limit batch inserts (etc) 
                          )
                 .CurrentSessionContext("web")  // Use current HttpContext in managing NH ISession.
-                .Mappings(m => m.FluentMappings.AddFromAssemblyOf<UserMap>()
+                .Mappings(m => m.FluentMappings.AddFromAssemblyOf<InvestorMap>()
                                 // Export current mappings for debug, if necessary - NOT WORKING
                                 //.ExportTo(@"C:\Development\VS2012\IncomeMgmtSystem\src\PIMS.Data\Documentation")  
                          )
