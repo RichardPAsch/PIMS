@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
+using NHibernate.Criterion;
 using PIMS.Core.Models;
 using PIMS.Data.Repositories;
 
@@ -9,51 +11,55 @@ namespace PIMS.Data.FakeRepositories
 {
     public class InMemoryAssetClassRepository : IGenericRepository<AssetClass>
     {
+        
 
         public IQueryable<AssetClass> RetreiveAll()
         {
-            var assetAssetClass = new AssetClass();
-            var listing = new List<AssetClass>()
-                                           {
-                                               new AssetClass
-                                               {
-                                                   KeyId = new Guid("f2695700-3e14-4af0-a0d1-4da1ff2204d8"),
-                                                   Code = "CS",
-                                                   Description = "Common Stock"
-                                               },
-                                               new AssetClass
-                                               {
-                                                   KeyId = new Guid("de85c5dd-8875-4fc1-88ad-be8b506b7678"),
-                                                   Code = "ETF",
-                                                   Description = "Exchange Traded Fund"
-                                               },
-                                                new AssetClass
-                                               {
-                                                   KeyId =new Guid("3a943b88-70d0-42ee-b6f1-ce4044dabe86"),
-                                                   Code = "MF",
-                                                   Description = "Mutual Fund"
-                                               },
-                                                new AssetClass
-                                               {
-                                                   KeyId = new Guid("9a6e794a-9455-4468-b915-1e465a05a3ac"),
-                                                   Code = "PFD",
-                                                   Description = "Preferred Stock"
-                                               }
-                                           };
+            //var assetAssetClass = new AssetClass();
+            var listing = new List<AssetClass>
+                          {
+                                new AssetClass
+                                {
+                                    KeyId = new Guid("f2695700-3e14-4af0-a0d1-4da1ff2204d8"),
+                                    Code = "CS",
+                                    Description = "Common Stock"
+                                },
+                                new AssetClass
+                                {
+                                    KeyId = new Guid("de85c5dd-8875-4fc1-88ad-be8b506b7678"),
+                                    Code = "ETF",
+                                    Description = "Exchange Traded Fund"
+                                },
+                                new AssetClass
+                                {
+                                    KeyId =new Guid("3a943b88-70d0-42ee-b6f1-ce4044dabe86"),
+                                    Code = "MF",
+                                    Description = "Mutual Fund"
+                                },
+                                new AssetClass
+                                {
+                                    KeyId = new Guid("9a6e794a-9455-4468-b915-1e465a05a3ac"),
+                                    Code = "PFD",
+                                    Description = "Preferred Stock"
+                                }
+                            };
 
             return listing.AsQueryable();
         }
-        
+
+        public IQueryable<AssetClass> RetreiveByCriteria(object property)
+        {
+            throw new NotImplementedException();
+        }
+
 
         public AssetClass Retreive(object assetCode)
         {
             AssetClass selectedClass = null;
-            try
-            {
+            try {
                 selectedClass = RetreiveAll().Single(a => a.Code == assetCode.ToString());
             }
-            catch(Exception)
-            {
+            catch (Exception) {
                 return null;
             }
 
@@ -102,7 +108,7 @@ namespace PIMS.Data.FakeRepositories
         }
 
 
-        public bool Update(AssetClass entity, object id)
+        public bool Update(AssetClass entity,object id)
         {
             try
             {
@@ -116,5 +122,17 @@ namespace PIMS.Data.FakeRepositories
                 return false;
             }
         }
+
+        public string UrlAddress { get; set; }
+
+
+        // TODO: Implement in IGenericRepository
+        public IQueryable<AssetClass> Retreive(Expression<Func<AssetClass, bool>> predicate) {
+            return RetreiveAll().Where(predicate);
+        }
+
+        //public AssetClass TestFind(Expression<Func<AssetClass, bool>> predicate) {
+        //    return RetreiveAll().FirstOrDefault(predicate);
+        //}
     }
 }
