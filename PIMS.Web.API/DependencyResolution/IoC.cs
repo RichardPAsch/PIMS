@@ -19,11 +19,12 @@
 using NHibernate.AspNet.Identity;
 using NHibernate.Context;
 using PIMS.Core.Models;
+using PIMS.Core.Security;
+using PIMS.Data.FakeRepositories;
 using PIMS.Data.Repositories;
 using PIMS.Infrastructure;
 using PIMS.Web.Api.Controllers;
 using StructureMap;
-using PIMS.Web.Api.TypeMappers;
 using NHibernate;
 using Microsoft.AspNet.Identity;
 
@@ -32,9 +33,8 @@ namespace PIMS.Web.Api.DependencyResolution {
 
     public static class IoC
     {
-
-        public static IContainer Initialize(string connString = "") {
-            
+        public static IContainer Initialize(string connString = "")
+        {
             ObjectFactory.Initialize(x =>
                         {
                             x.Scan(scan =>
@@ -42,20 +42,28 @@ namespace PIMS.Web.Api.DependencyResolution {
                                         scan.TheCallingAssembly();
                                         scan.WithDefaultConventions();
                                         scan.LookForRegistries();
-                                        scan.AssemblyContainingType<Asset>();  // Core
-                                        scan.AssemblyContainingType<Class1>(); // InfraStructure; (T to be replaced with real file)
+                                        scan.AssemblyContainingType<Asset>();                 // Core
+                                        scan.AssemblyContainingType<Class1>();                // InfraStructure; (T to be replaced with real file)
                                         scan.AssemblyContainingType<AssetClassController>();  // Web.Api
                                     });
 
                             // x.For<IAssetRepository>().Use<AssetRepository>(); //.Ctor<string>("connectionString").EqualToAppSetting("Connection-String");
                             x.For<UserManager<ApplicationUser>>().Use<UserManager<ApplicationUser>>();
                             x.For<IUserStore<ApplicationUser>>().Use<UserStore<ApplicationUser>>();
+                            x.For<IPimsIdentityService>().Use<PimsIdentityService>(); 
                             //x.For<IUserStore<ApplicationUser>>().Use<Core.Security.UserStore<ApplicationUser>>();
                             //x.For<IMembershipAdapter>().Use<MembershipAdapter>();
-                            x.For<IUserMapper>().Use<UserMapper>();
-                            x.For<IGenericRepository<AssetClass>>().Use<AssetClassRepository>();
-                            x.For<IGenericRepository<Profile>>().Use<ProfileRepository>();
-                            x.For<IGenericRepository<Asset>>().Use<AssetRepository>();
+                            //x.For<IUserMapper>().Use<UserMapper>();
+
+                            /*  --------------- UNIT TESTING only, via Fiddler --------------------------------- */
+                            x.For<IGenericRepository<Asset>>().Use<InMemoryAssetRepository>();
+                            x.For<IGenericRepository<Investor>>().Use<InMemoryInvestorRepository>();
+                            x.For<IGenericRepository<Profile>>().Use<InMemoryProfileRepository>();  
+                            /*  -------------------------------------------------------------------------------- */
+
+                            x.For<IGenericRepository<AssetClass>>().Use<AssetClassRepository>(); 
+                            //x.For<IGenericRepository<Profile>>().Use<ProfileRepository>();
+                            //x.For<IGenericRepository<Profile>>().Use<InMemoryProfileRepository>(); [10/24/14: not needed due to unit test configurations]
                             x.For<IGenericRepository<Position>>().Use<PositionRepository>();
                             x.For<IGenericRepository<Income>>().Use<IncomeRepository>();
 
