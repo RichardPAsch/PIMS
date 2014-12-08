@@ -53,12 +53,13 @@
   <ItemGroup>
     <Compile Include="Class1.cs" />
     <Compile Include="NHibernate\Mappings\AccountMap.cs" />
+    <Compile Include="NHibernate\Mappings\AccountTypeMap.cs" />
     <Compile Include="NHibernate\Mappings\AssetClassMap.cs" />
     <Compile Include="NHibernate\Mappings\AssetMap.cs" />
     <Compile Include="NHibernate\Mappings\IncomeMap.cs" />
     <Compile Include="NHibernate\Mappings\PositionMap.cs" />
     <Compile Include="NHibernate\Mappings\ProfileMap.cs" />
-    <Compile Include="NHibernate\Mappings\UserMap.cs" />
+    <Compile Include="NHibernate\Mappings\InvestorMap.cs" />
     <Compile Include="NHibernate\NHAspNetIdentity\DomainModel\BaseObject.cs" />
     <Compile Include="NHibernate\NHAspNetIdentity\DomainModel\BaseObjectEqualityComparer.cs" />
     <Compile Include="NHibernate\NHAspNetIdentity\DomainModel\DomainSignatureAttribute.cs" />
