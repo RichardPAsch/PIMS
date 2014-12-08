@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Linq.Expressions;
 using NHibernate;
 using PIMS.Core.Models;
 
@@ -25,11 +26,12 @@ namespace PIMS.Data.Repositories
             throw new NotImplementedException();
         }
 
-        public Income Retreive(object property)
+        public IQueryable<Income> Retreive(Expression<Func<Income, bool>> predicate)
         {
             throw new NotImplementedException();
         }
 
+        
         public Income RetreiveById(Guid key)
         {
             throw new NotImplementedException();
@@ -49,5 +51,7 @@ namespace PIMS.Data.Repositories
         {
             throw new NotImplementedException();
         }
+
+        public string UrlAddress { get; set; }
     }
 }

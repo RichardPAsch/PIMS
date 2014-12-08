@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Linq.Expressions;
 using PIMS.Core.Models;
 
 
@@ -20,11 +21,12 @@ namespace PIMS.Data.Repositories
             throw new NotImplementedException();
         }
 
-        public Asset Retreive(object property)
+        public IQueryable<Asset> Retreive(Expression<Func<Asset, bool>> predicate)
         {
             throw new NotImplementedException();
         }
 
+       
         public Asset RetreiveById(Guid key)
         {
             throw new NotImplementedException();
@@ -45,6 +47,6 @@ namespace PIMS.Data.Repositories
             throw new NotImplementedException();
         }
 
-        
+        public string UrlAddress { get; set; }
     }
 }

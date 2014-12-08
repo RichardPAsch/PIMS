@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Linq.Expressions;
 using NHibernate;
 using NHibernate.Linq;
 using PIMS.Core.Models;
@@ -48,6 +49,11 @@ namespace PIMS.Data.Repositories
             }
         }
 
+        public IQueryable<AssetClass> Retreive(Expression<Func<AssetClass, bool>> predicate)
+        {
+            throw new NotImplementedException();
+        }
+        
         public AssetClass RetreiveById(Guid idGuid)
         {
             var listing = RetreiveAll();
@@ -55,18 +61,10 @@ namespace PIMS.Data.Repositories
                 .Where(ac => ac.KeyId == idGuid);
             return filteredListing.FirstOrDefault();
         }
-       
-        public AssetClass Retreive(object assetClassCode)
-        {
-            var listing = RetreiveAll();
-            var filteredListing = listing
-                .Where(a => String.Equals(a.Code.Trim().ToUpper(), assetClassCode.ToString().Trim().ToUpper(), StringComparison.CurrentCultureIgnoreCase));
-            return filteredListing.FirstOrDefault();
-        }
         
         public bool Create(AssetClass newEntity)
         {
-            var currListing = this.RetreiveAll().ToList();
+            var currListing = RetreiveAll().ToList();
             if (currListing.Any(ac => ac.Code.ToUpper().Trim() == newEntity.Code.ToUpper().Trim())) return false;
 
             using (var sess = _sfFactory.OpenSession())
@@ -98,9 +96,8 @@ namespace PIMS.Data.Repositories
                         sess.Delete(assetClassToDelete);
                         trx.Commit();
                     }
-                    catch (Exception ex) {
+                    catch (Exception) {
                         // TODO: Candidate for logging.
-                        var debugError = ex.Message;
                         deleteOk = false;
                     }
                 }
@@ -118,7 +115,7 @@ namespace PIMS.Data.Repositories
                 using (var trx = sess.BeginTransaction()) {
 
                     try {
-                        var listings = this.RetreiveAll().ToList();
+                        var listings = RetreiveAll().ToList();
                         var item = listings.Find(ac => ac.KeyId == (Guid)id); //entity.KeyId);
                         item.Code = entity.Code.Trim().ToUpper();
                         item.Description = entity.Description.Trim();
@@ -134,7 +131,6 @@ namespace PIMS.Data.Repositories
             }
         }
 
-
-
+        public string UrlAddress { get; set; }
     }
 }

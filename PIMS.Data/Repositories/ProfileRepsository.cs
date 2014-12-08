@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.Linq;
+using System.Linq.Expressions;
 using Newtonsoft.Json;
 using NHibernate;
 using NHibernate.Linq;
@@ -12,9 +13,9 @@ namespace PIMS.Data.Repositories
     public class ProfileRepository : IGenericRepository<Profile>
     {
         //    Profile use case scenarios:
-        // 1. C - Any creation as part of a new asset, will reference Yahoo for the Profile.
+        // 1. C - Any creation as part of a new asset, will reference Yahoo Finance for the Profile.
         // 2. R - Any Profile fetches will derive first from a) persisted Db, or secondly, b) Yahoo.
-        // 3. U - Any updates will fetch the latest data from Yahoo, regardlees of last update for now.
+        // 3. U - Any updates will fetch the latest data from Yahoo Finance, regardlees of last update for now.
         // 4. D - Only admin role allowed to delete Profiles - WIP secondary to security implementation.
 
 
@@ -26,44 +27,29 @@ namespace PIMS.Data.Repositories
 
             _sfFactory = sfFactory;
         }
-        
 
 
-        public Profile Retreive(object property)
-        {
-            string tickerSymbol = property as string;
-            using (_sfFactory.OpenSession())
-            {
-                Profile returnProfile = null;
-                var profiles = RetreiveAll();
-                var filteredProfile = profiles
-                    .Where(p => String.Equals(p.TickerSymbol.Trim().ToUpper(), tickerSymbol.ToString(CultureInfo.InvariantCulture).Trim().ToUpper(), StringComparison.CurrentCultureIgnoreCase))
-                    .AsQueryable();
+        public IQueryable<Profile> RetreiveAll() {
 
-                // If no db record exist, use Yahoo Finance.
-                if (filteredProfile.Any())
-                {
-                    returnProfile = filteredProfile.FirstOrDefault();
-                }
-                else
-                {
-                    var jsonProfile = YahooFinanceSvc.Process(tickerSymbol);
-                    returnProfile = JsonConvert.DeserializeObject<Profile>(jsonProfile);
-
-                    // Yahoo will still return a status code = 200 for INVALID tickers; however,
-                    // both the ticker symbol and the description will be equal in such cases. 
-                    returnProfile = String.Equals(returnProfile.TickerSymbol.Trim(), returnProfile.TickerDescription.Trim(), StringComparison.CurrentCultureIgnoreCase)
-                        ? null
-                        : returnProfile;
-                }
-
-                return returnProfile;
+            using (var sess = _sfFactory.OpenSession()) {
+                var profileQuery = sess.Query<Profile>();
+                return profileQuery.ToList().AsQueryable();
             }
         }
         
+        public IQueryable<Profile> Retreive(Expression<Func<Profile, bool>> predicate)
+        {
+            try {
+                return RetreiveAll().Where(predicate);
+            }
+            catch (Exception) {
+                return null;
+            }
+        }
+
         public Profile RetreiveById(Guid key)
         {
-            var filteredProfile = RetreiveAll().ToList().Where(p => p.ProfileId == key);
+            var filteredProfile = RetreiveAll().ToList().Where(p => p.AssetId == key);
             return filteredProfile.FirstOrDefault();
         }
         
@@ -138,16 +124,7 @@ namespace PIMS.Data.Repositories
 
             return updateOk;
         }
-        
-        public IQueryable<Profile> RetreiveAll() {
 
-            using (var sess = _sfFactory.OpenSession())
-            {
-                var profileQuery = sess.Query<Profile>();
-                return profileQuery.ToList().AsQueryable();
-            }
-        }
-
-
+        public string UrlAddress { get; set; }
     }
 }
