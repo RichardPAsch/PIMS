@@ -1,12 +1,17 @@
 ﻿using System.Net.Http;
 using System.Web.Http;
 using System.Web.Http.Hosting;
+using Newtonsoft.Json;
 
 
 namespace PIMS.UnitTest
 {
     public static class TestHelpers
     {
+        public static string ObjectToJson(object objToSerialize)
+        {
+            return JsonConvert.SerializeObject(objToSerialize);
+        }
        
         public static HttpRequestMessage GetHttpRequestMessage()
         {
