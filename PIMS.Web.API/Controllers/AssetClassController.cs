@@ -2,13 +2,17 @@
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Routing;
 using PIMS.Core.Models;
+using PIMS.Data.FakeRepositories;
 using PIMS.Data.Repositories;
 
 
 namespace PIMS.Web.Api.Controllers
 {
+    [RoutePrefix("api/AssetClass")]
     public class AssetClassController : ApiController
     {
 
@@ -18,22 +22,127 @@ namespace PIMS.Web.Api.Controllers
             _repository = repository;
         }
 
+        // TODO: Why do we get a relative URL here (commented code for uri); use of "newClassification.Code" - correct?
+
+
+        // GET api/accounttype
+
+        private IHttpActionResult GetAssetClass(string assetClassCode)
+        {
+            // TODO: Implement in IGenericRepository
+            //var tempRepo = new InMemoryAssetClassRepository();
+            //var classification = tempRepo.TestFind(ac => ac.Code.ToUpper().Trim() == assetClassCode.ToUpper().Trim());
+
+            var classification = _repository.RetreiveAll().FirstOrDefault(ac => ac.Code.ToUpper().Trim() == assetClassCode.ToUpper().Trim());
+
+            return classification == null
+                ? (IHttpActionResult)NotFound()
+                : Ok(classification);
+        }
+        
+        
+
+        
+        [HttpGet]
+        [Route("")]
+        public async Task<IQueryable<AssetClass>> GetAll() {
+            return await Task<IQueryable<AssetClass>>.Factory.StartNew(() => _repository.RetreiveAll());
+        }
+
+
+        // GET api/AssetClass/CS
+        [HttpGet]
+        [Route("{assetClassCode?}")]
+        public async Task<IHttpActionResult> GetByCode(string assetClassCode) 
+        {
+            return await Task.FromResult(GetAssetClass(assetClassCode));
+        }
+        
+
+        [HttpPost]
+        [Route("")]
+        public async Task<IHttpActionResult> CreateNewAssetClass([FromBody] AssetClass newClassification) 
+        {
+            if (!ModelState.IsValid) return ResponseMessage(new HttpResponseMessage {
+                StatusCode = HttpStatusCode.BadRequest,
+                ReasonPhrase = "Invalid data received for Asset Class."
+            });
+
+            var existingAssetClass = await Task<AssetClass>.Factory
+                                                           .StartNew(() => _repository.RetreiveAll()
+                                                                                      .FirstOrDefault(ac => String.Equals(ac.Code.Trim(),
+                                                                                         newClassification.Code.Trim(),
+                                                                                         StringComparison.CurrentCultureIgnoreCase)));
+
+            if (existingAssetClass != null)
+                return ResponseMessage(new HttpResponseMessage {
+                                                StatusCode = HttpStatusCode.Conflict,
+                                                ReasonPhrase = "Duplicate Asset Class found."
+                });
+
+            var isCreated = await Task<bool>.Factory.StartNew(() => _repository.Create(newClassification));
+
+            //var x = new UrlHelper(new HttpRequestMessage(HttpMethod.Post))
+#if DEBUG
+            var newLocation = "http://localhost/Pims.Web.Api/api/AssetClass/" + newClassification.Code.Trim();
+#else
+            var newLocation = ControllerContext.Request.RequestUri.AbsoluteUri + "/" + newClassification.Code.Trim();
+#endif
        
-        public IQueryable<AssetClass> Get()
-        {
-            var classifications = _repository.RetreiveAll().OrderBy(c => c.Code);
+            if (isCreated)
+                return Created(newLocation, newClassification); // 201 status code
 
-            return classifications;
+            
+            return BadRequest("Unable to create Asset Class " + newClassification.Code);
         }
 
 
-        public HttpResponseMessage Get(HttpRequestMessage req, string assetClassCode)
+        [HttpPut]
+        [Route("{assetClassCode}")]
+        public async Task<IHttpActionResult> UpdateAssetClass([FromBody] AssetClass updatedClassification, string assetClassCode)
         {
-           var classification = _repository.Retreive(assetClassCode);
-           return classification == null 
-               ? req.CreateResponse(HttpStatusCode.NotFound) 
-               : req.CreateResponse(HttpStatusCode.OK, classification);
+            // No UOW repository or interface is necessary, as "Classifcation" involves no
+            // logical transactions or object graphs, when used by itself.
+            if (!ModelState.IsValid) return ResponseMessage(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.BadRequest,
+                ReasonPhrase = "Invalid data received for Asset Class."
+            });
+
+            // Confirm received code matches asset class to be updated.
+            var isCorrectAssetClass = _repository.RetreiveAll().Any(ac => ac.Code.ToUpper().Trim() == assetClassCode.ToUpper().Trim());
+            var isUpdated = true;
+
+            if (isCorrectAssetClass)
+            {
+                isUpdated = await Task<bool>.Factory.StartNew(() => _repository.Update(updatedClassification, updatedClassification.KeyId));
+            }
+                
+
+            if (isUpdated)
+                return Ok(updatedClassification);
+
+            return BadRequest("Unable to update Asset Class " + updatedClassification.Code);
+
         }
+
+
+        // Guid parameter name (id) must match RouteTemplate name in WebApiConfig.
+        // Require Guid as only acceptable parameter for deletes.
+        [HttpDelete]
+        [Route("{id}")]
+        public async Task<IHttpActionResult> Delete(Guid id)
+        {
+            var isDeleted = await Task<bool>.Factory.StartNew(() => _repository.Delete(id));
+
+            if(isDeleted)
+                return Ok("Delete successful");
+
+            return BadRequest(string.Format("Unable to delete, or {0} not found", id));
+           
+        }
+
+
 
 
         public HttpResponseMessage Get(HttpRequestMessage req, Guid? id)
@@ -54,65 +163,6 @@ namespace PIMS.Web.Api.Controllers
         }
 
 
-        // Guid parameter name (id) must match RouteTemplate name in WebApiConfig.
-        public HttpResponseMessage Delete(HttpRequestMessage req, Guid id )
-        {
-            return !_repository.Delete(id) 
-                ? req.CreateErrorResponse(HttpStatusCode.NotFound, "Asset class could not be removed, or was not found.") 
-                : req.CreateResponse(HttpStatusCode.OK);
-        }
-
-
-        public HttpResponseMessage Put([FromBody] AssetClass updatedClassification, HttpRequestMessage req) {
-
-            // No UOW repository or interface is necessary, as "Classifcation" involves no
-            // logical transactions or object graphs, when used by itself.
-            try
-            {
-                return req.CreateResponse(_repository.Update(updatedClassification, updatedClassification.KeyId) 
-                    ? HttpStatusCode.OK 
-                    : HttpStatusCode.NotFound, updatedClassification);
-            }
-            catch (Exception ex)
-            {
-                return req.CreateErrorResponse(HttpStatusCode.BadRequest, "Unable to update AssetClass: " 
-                    + updatedClassification.Code + " due to: " + ex.Message);
-            }
-        }
-
-
-        public HttpResponseMessage Post([FromBody] AssetClass newClassification, HttpRequestMessage requestMessage)
-        {
-            // No UOW repository or interface is necessary, as "AssetClass" involves no
-            // logical transactions or object graphs, when used by itself.
-            var response = requestMessage.CreateResponse(HttpStatusCode.Created, newClassification);
-            if (_repository.Create(newClassification))
-            {
-                try
-                {
-                    // TODO: Why do we get a relative URL here (commented code for uri); use of "newClassification.Code" - correct?
-                    // Route name must match existing route in WebApiConfig.
-                    //var uri = Url.Link("AssetClassRoute", new {controller = "AssetClass", Code = newClassification.Code});
-                    var uri = requestMessage.RequestUri.AbsoluteUri + "/" + newClassification.Code;
-                    response.Headers.Location = new Uri(uri);
-                    //if (uri != null) response.Headers.Location = new Uri(uri);
-                }
-                catch (Exception ex)
-                {
-                    response = requestMessage.CreateErrorResponse(HttpStatusCode.BadRequest,
-                                                "Unable to add new Asset class, due to: " + ex.Message);
-                }
-            }
-            else
-            {
-                response = requestMessage.CreateErrorResponse(HttpStatusCode.Conflict, "Duplicate entry found for " + newClassification.Code);
-            }
-
-            return response;
-        }
-
-
-       
 
  
     }
