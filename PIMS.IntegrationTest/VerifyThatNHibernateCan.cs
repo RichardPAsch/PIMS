@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using FluentNHibernate.Testing;
@@ -53,28 +54,28 @@ namespace PIMS.IntegrationTest
         ///      2) their respective table persistence, and
         ///      3) entity data is accurately saved via roundtrip PersistenceSpecification()
         /// </summary>
-        [Test]
-        // ReSharper disable once InconsistentNaming
-        public void Correctly_Map_And_Persist_Income()
-        {
-            // Arrange
-            var currSess = _sessionFactory.OpenSession();
-            new PersistenceSpecification<Asset>(currSess, new CustomEqualityComparer())
+        //[Test]
+        //// ReSharper disable once InconsistentNaming
+        //public void Correctly_Map_And_Persist_Income()
+        //{
+        //    // Arrange
+        //    var currSess = _sessionFactory.OpenSession();
+        //    new PersistenceSpecification<Asset>(currSess, new CustomEqualityComparer())
 
-            // Act
-            .CheckReference(c => c.Income, new Income
-                                           {
-                                                IncomeId = new Guid(),
-                                                DateRecvd = DateTime.Now.ToLocalTime(),
-                                                Actual = decimal.Parse("182.11"),
-                                                Projected = decimal.Parse("190.26")
-                                            })
+        //    // Act
+        //    .CheckReference(c => c.Income, new Income
+        //                                   {
+        //                                        IncomeId = new Guid(),
+        //                                        DateRecvd = DateTime.Now.ToLocalTime().ToString("g"),
+        //                                        Actual = decimal.Parse("182.11"),
+        //                                        Projected = decimal.Parse("190.26")
+        //                                    })
 
-            // Assert 
-            .VerifyTheMappings();
-            currSess.Close();
-            currSess.Dispose();
-        }
+        //    // Assert 
+        //    .VerifyTheMappings();
+        //    currSess.Close();
+        //    currSess.Dispose();
+        //}
 
 
 
@@ -86,8 +87,8 @@ namespace PIMS.IntegrationTest
         // ReSharper disable once InconsistentNaming
         public void Correctly_Map_And_Persist_ALL_composite_entities_within_a_single_transaction()
         {
+            var currentDateTimeUtc = DateTime.UtcNow;
 
-            var todaysDateTime = DateTime.Now.ToLocalTime();
             using (var currSess = _sessionFactory.OpenSession())
                 using (currSess.BeginTransaction())
                 {
@@ -95,54 +96,88 @@ namespace PIMS.IntegrationTest
                     new PersistenceSpecification<Asset>(currSess, new CustomEqualityComparer())
                     
 
-                        //  Act
-                        .CheckReference(c => c.Income, new Income
-                                                       {
-                                                                        Actual = decimal.Parse("74.50"),
-                                                                        DateRecvd = todaysDateTime,
-                                                                        Projected = decimal.Parse("75.11"),
-                                                                        IncomeId = new Guid()
-                                                                    })
+                    //  Act
+                    .CheckReference(c => c.Revenue, new List<Income> 
+                    {
+                        new Income
+                        {
+                            Actual = decimal.Parse("74.50"),
+                            DateRecvd = currentDateTimeUtc.ToString("g"),
+                            Projected = decimal.Parse("75.11"),
+                            IncomeId = new Guid(),
+                            Account = "Roth-IRA"
+                        }
+                    })
+                    .CheckReference(c => c.Revenue, new List<Position>
+                        {
+                            new Position
+                            {
+                                PositionId = new Guid(),
+                                PurchaseDate = currentDateTimeUtc.ToString("d"),
+                                Quantity = int.Parse("125"),
+                                UnitCost = decimal.Parse("53.11"),
+                                Account = new AccountType{AccountTypeDesc = "Roth-IRA", KeyId = Guid.NewGuid(), Url = "api/at"},
+                                LastUpdate = "10/11/2013 15:44"
+                            },
+                            new Position
+                            {
+                                PositionId = new Guid(),
+                                PurchaseDate = currentDateTimeUtc.ToString("d"),
+                                Quantity = int.Parse("19"),
+                                UnitCost = decimal.Parse("84.90"),
+                                Account = new AccountType{AccountTypeDesc = "CMA", KeyId = Guid.NewGuid(), Url = "api/at"},
+                                LastUpdate = "11/21/2014 10:04"
+                            }
+                        })
+                    //.CheckReference(c => c.Position, new Position {
+                    //    PositionId = new Guid(),
+                    //    PurchaseDate = currentDateTimeUtc.ToString("d"),
+                    //    Quantity = int.Parse("125"),
+                    //    UnitCost = decimal.Parse("53.11")
+                    //})
 
-                        .CheckReference(c => c.Position, new Position
-                                                         {
-                                                                            PositionId = new Guid(),
-                                                                            PurchaseDate = todaysDateTime,
-                                                                            MarketPrice = decimal.Parse("54.26"),
-                                                                            Quantity = decimal.Parse("125"),
-                                                                            TotalValue = decimal.Parse("89.95"),
-                                                                            UnitPrice = decimal.Parse("53.11")
-                                                                        })
+                    .CheckReference(c => c.Profile, new Profile {
+                        ProfileId = Guid.NewGuid(),
+                        AssetId = new Guid(),
+                        TickerSymbol = "GSK",
+                        TickerDescription = "GlaxoSmithKline",
+                        DividendRate = decimal.Parse("0.7913"),
+                        DividendYield = decimal.Parse("5.08"),
+                        ExDividendDate = currentDateTimeUtc.ToString("d"),
+                        DividendPayDate = currentDateTimeUtc.AddDays(5).ToString("d"),
+                        PE_Ratio = decimal.Parse("14.00"),
+                        DividendFreq = "M",
+                        EarningsPerShare = decimal.Parse("1.90"),
+                        LastUpdate = currentDateTimeUtc.ToString("g")
+                    })
+                    
+                    .CheckReference(c => c.Investor, new Investor {
+                        AspNetUsersId = Guid.NewGuid(),
+                        FirstName = "Richard",
+                        LastName = "Asch",
+                        Address1 = "10 Main Street",
+                        Address2 = "Unit 25102",
+                        City = "Redwood Shores",
+                        BirthDay = currentDateTimeUtc.ToString("d"),
+                        InvestorId = new Guid(),
+                        Phone = "65039381073",
+                        Mobile = "6509286543",
+                        EMailAddr = "me@rpclassics.net"
+                    })
 
-                        .CheckReference(c => c.Profile, new Profile
-                                                        {
-                                                                          ProfileId = new Guid(),
-                                                                          TickerSymbol = "GSK",
-                                                                          TickerDescription = "GlaxoSmithKline",
-                                                                          DividendRate = decimal.Parse("0.7913"),
-                                                                          DividendYield = decimal.Parse("5.08"),
-                                                                          PE_Ratio = decimal.Parse("14.00"),
-                                                                          DividendFreq = "M",
-                                                                          EarningsPerShare = decimal.Parse("1.90"),
-                                                                          SharePrice = 46.11M,
-                                                                          LastUpdate = todaysDateTime
-                                                                      })
+                    .CheckReference(c => c.AssetClass, new AssetClass {
+                        KeyId = Guid.NewGuid(),
+                        Code = "CSQ",
+                        Description = "Calamos Fund"
+                        
+                    })
 
-                        .CheckReference(c => c.User, new User
-                                                     {
-                                                                    LastName = "Asch",
-                                                                    FirstName = "Richard P.",
-                                                                    Password = "mypassword",
-                                                                    UserName = "rpa",
-                                                                    EMail = "rpasch@rpclassics.net"
-                                                                })
-
-                        // Assert 
-                        .VerifyTheMappings();
+                    // Assert 
+                    .VerifyTheMappings();
                     currSess.Transaction.Commit();
                 }
 
-
+            
         }
 
 
@@ -177,20 +212,6 @@ namespace PIMS.IntegrationTest
         }
 
 
-
-
-
-
-/*
-         private static WebClient CreateWebClient()
-        {
-             var webClient = new WebClient();
-             return webClient;
-
-        }
-*/
-       
-
     }
 
 
@@ -199,7 +220,7 @@ namespace PIMS.IntegrationTest
     {
         public new bool Equals(object x, object y)
         {
-            bool objectsAreEqual = false;
+            var objectsAreEqual = false;
             if (x == null || y == null){
                     return false;
             }
@@ -214,11 +235,15 @@ namespace PIMS.IntegrationTest
                       break;
                   }
                   case "Profile": {
-                       objectsAreEqual = (x is Profile && y is Profile) ? ((Profile)x).ProfileId == ((Profile)y).ProfileId : x.Equals(y);
+                       objectsAreEqual = (x is Profile && y is Profile) ? ((Profile)x).AssetId == ((Profile)y).AssetId : x.Equals(y);
                        break;
                       }
-                  case "User": {
-                          objectsAreEqual = (x is User && y is User) ? ((User)x).UserId == ((User)y).UserId : x.Equals(y);
+                  case "Investor": {
+                          objectsAreEqual = (x is Investor && y is Investor) ? ((Investor)x).InvestorId == ((Investor)y).InvestorId : x.Equals(y);
+                          break;
+                      }
+                  case "AssetClass": {
+                      objectsAreEqual = (x is AssetClass && y is AssetClass) ? ((AssetClass)x).KeyId == ((AssetClass)y).KeyId : x.Equals(y);
                           break;
                       }
               }
