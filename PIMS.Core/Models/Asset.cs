@@ -1,13 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 
 
 namespace PIMS.Core.Models
 {
     public class Asset 
     {
-        /* ---------------------------
-         *  Aggregate ROOT object.
-         * --------------------------- 
+        /* ----------------------------------------------------------------------------
+         *  Aggregate ROOT object. Modifications here must also be made to AssetMap.
+         * --------------------------- ------------------------------------------------
         */
         
         // Read-only to prevent re-creating collection. Will create empty collection
@@ -15,26 +16,25 @@ namespace PIMS.Core.Models
         // Commented: No need to have associated collection with each instance!
         //private readonly IList<Classification> _classifications = new List<Classification>();
         
-        // Lookup data for assigning an asset class.
-        //public virtual IList<Classification> Classifications {
-          
-        //    get { return _classifications; }
-        //}
         
+        public virtual string Url { get; set; }
 
         public virtual Guid AssetId { get; set; }
-
-        public virtual AssetClass AssetClass { get; set; }
         
-        public virtual Income Income { get; set; }
-
-        public virtual Position Position { get; set; }
+        public virtual Investor Investor { get; set; }
+        
+        public virtual AssetClass AssetClass { get; set; }     // e.g., common stcck
 
         public virtual Profile Profile { get; set; }
 
-        public virtual User User { get; set; }
+        // Unique per Investor/Asset/AccountType
+        public virtual IList<Position> Positions { get; set; }
 
-        public virtual string AccountType { get; set; }   // e.g. Roth-IRA, IRA, etc.
+        // Unique per Investor/Asset/AccountType
+        public virtual IList<Income> Revenue { get; set; }
+   
+        
+       
 
 
         // TODO - reevaluate

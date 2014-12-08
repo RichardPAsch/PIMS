@@ -1,25 +1,36 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+
 
 namespace PIMS.Core.Models
 {
     public class Position
     {
         // Considered as child object of Aggregate root (Asset).
+        public virtual string Url { get; set; }
 
-        // Current market unit price
-        public virtual decimal MarketPrice { get; set; }
-
+        [Required]
         public virtual Guid PositionId { get; set; }
 
-        public virtual DateTime PurchaseDate { get; set; }
+        [Required]
+        public virtual string PurchaseDate { get; set; }
 
-        public virtual decimal Quantity { get; set; }
+        [Required]
+        [Range(1,10000)]
+        public virtual int Quantity { get; set; }
 
-        public virtual decimal TotalValue { get; set; }
 
-        // Cost basis unit price
-        public virtual decimal UnitPrice { get; set; }
+        public virtual AccountType Account { get; set; }
+
+        // Useful for most recent unit price info in AssetSummaryVm.
+        [Required]
+        public virtual string LastUpdate { get; set; }
+
+        [Required]
+        [Range(0.01, 10000.00)]
+        // Cost/unit at time of purchase.
+        public virtual decimal UnitCost { get; set; }
 
         public virtual IList<Asset> Security { get; set; }
 
