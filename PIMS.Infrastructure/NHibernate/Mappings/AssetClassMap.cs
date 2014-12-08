@@ -7,7 +7,7 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
     {
         public AssetClassMap()
         {
-            Id(x => x.KeyId);
+            Id(x => x.KeyId,"AssetClassId");
             Map(x => x.Code);
             Map(x => x.Description);
             Table("AssetClass");

@@ -1,4 +1,5 @@
-﻿using FluentNHibernate.Mapping;
+﻿using System.Linq;
+using FluentNHibernate.Mapping;
 using PIMS.Core.Models;
 
 
@@ -22,34 +23,47 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             // Domain object identifier, matches table PK.
             Id(x => x.AssetId);
 
+
             // Income is in context of User for any given Asset. Collection
-            // that happens to have only 1 entity (Income).
-            References(x => x.Income, "IncomeId");
+            // happens to have only 1 entity (Income).
+            //References(x => x.Income, "IncomeId");
+
+            // AssetClass is in context of an Asset
+            References(x => x.AssetClass);
             
 
             // Profile is NOT in context of User.
             References(x => x.Profile, "ProfileId");
 
 
-            // Position is in context of User for any given Asset. Collection
-            // that happens to have only 1 entity (Position).
-            References(x => x.Position, "PositionId");
+            // Position is in context of Investor for any given Asset. Collection
+            // happens to have only 1 entity (Position).
+            //References(x => x.Positions, "PositionId");
             
 
-            // User is in context of an Asset
-            References(x => x.User, "UserId");
+            // Investor is in context of an Asset
+            References(x => x.Investor, "InvestorId");
 
-            
-            Map(x => x.AccountType);
+            // AccountType is in context of an Position
+            //Component(x => x.Positions);
+            //References(x => x.Positions.First().Account, "AccountTypeId");
+            //Map(x => x.AccountType);
 
 
-            //// 1:1 relationship; Classification is in context of Asset.
-            //Component(x => x.Classification, m => {
-            //                            m.Map(x => x.Code);
-            //                            m.Map(x => x.Description);
-            //                        }
+            // 1:many relationship; Position is in context of Asset.
+            // 11-22-14: NUnit test Error - NHibernate.MappingException : Could not determine type for: PIMS.Core.Models.AccountType, 
+            //           PIMS.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null, for columns: NHibernate.Mapping.Column(Account)
+            //Component(x => x.Revenue.FirstOrDefault(), m =>
+            //                                                {
+            //                                                    m.Map(x => x.Quantity);
+            //                                                    m.Map(x => x.PurchaseDate);
+            //                                                    m.Map(x => x.UnitCost);
+            //                                                    m.Map(x => x.Url);
+            //                                                    Component(x => x.Revenue.FirstOrDefault().Account,
+            //                                                        a => a.Map(x => x.AccountTypeDesc));
+            //                                                }
 
-            //    );
+            //        );
 
 
 

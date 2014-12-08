@@ -18,7 +18,7 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             // Cascade from Asset to these Income object(s).
             // DeleteOrphan() - prevents any orphaned records + provides cascade saves, updates, & deletes.
             // Inverse() - save responsibility to parent (Asset).
-            HasMany(x => x.Security).Cascade.DeleteOrphan().Inverse();
+            //HasMany(x => x.Security).Cascade.DeleteOrphan().Inverse();
 
         }
     }

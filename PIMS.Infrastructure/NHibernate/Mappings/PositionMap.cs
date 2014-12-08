@@ -13,9 +13,10 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             Id(x => x.PositionId);
             Map(x => x.PurchaseDate);
             Map(x => x.Quantity);
-            Map(x => x.UnitPrice).Precision(6);
-            Map(x => x.TotalValue).Precision(10);
-            Map(x => x.MarketPrice).Precision(6);
+            Map(x => x.UnitCost).Precision(6);
+            Map(x => x.Account);
+            Map(x => x.LastUpdate, "LastUpdate");
+
             // Bypass NH default and load this child aggregate entity.
             //Not.LazyLoad();
             HasMany(x => x.Security).Cascade.DeleteOrphan().Inverse();
