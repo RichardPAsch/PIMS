@@ -38,7 +38,7 @@ namespace PIMS.UnitTest
          */
 
 
-        //----------- Menu BUSINESS RULES ----------------------------------------------------------------------------------------------
+        //----------- Menu BUSINESS RULES : per Investor -------------------------------------------------------------------------------
         // * Asset/Retreive sub-menu *
         //      - Asset/Retreive/Summary - Will allow for summary view of : 
         //                                      a) all assets, e.g., [.../api/Asset?displayType=summary], OR
@@ -57,7 +57,8 @@ namespace PIMS.UnitTest
         // * Asset/Delete menu - relatively rare occurrence, as most investors will opt for "inactive" status on Assets *
         //      - removes all related Income, Position(s), Profile, and AccountType(s)
         //
-        // * Asset/Create menu - One or more Positions may be created at time of initial asset POSTing.
+        // * Asset/Create menu - One or more Positions may be created at time of initial asset POSTing. One or more
+        //                       Position(s) will be persisted as a composite entity via NHibernate trx.
         //----------------------------------------------------------------------------------------------------------------------------
 
 
