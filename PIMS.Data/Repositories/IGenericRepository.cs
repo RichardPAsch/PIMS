@@ -9,7 +9,7 @@ namespace PIMS.Data.Repositories
     {
         // UoW functionality is covered by NHibernate's ISession.
         IQueryable<T> RetreiveAll();
-        IQueryable<T> Retreive(Expression<Func<T, bool>> predicate); 
+        IQueryable<T> Retreive(Expression<Func<T, bool>> predicate, IQueryable<object> data = null); 
         T RetreiveById(Guid key);
         bool Create(T newEntity);
         bool Delete(Guid idGuid);

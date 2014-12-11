@@ -28,7 +28,7 @@ namespace PIMS.Data.Repositories
             throw new NotImplementedException();
         }
 
-        public IQueryable<Position> Retreive(Expression<Func<Position, bool>> predicate)
+        public IQueryable<Position> Retreive(Expression<Func<Position, bool>> predicate, IQueryable<object> data = null)
         {
             throw new NotImplementedException();
         }

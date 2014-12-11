@@ -26,12 +26,12 @@ namespace PIMS.Data.Repositories
             throw new NotImplementedException();
         }
 
-        public IQueryable<Income> Retreive(Expression<Func<Income, bool>> predicate)
+        public IQueryable<Income> Retreive(Expression<Func<Income, bool>> predicate, IQueryable<object> data = null)
         {
             throw new NotImplementedException();
         }
 
-        
+       
         public Income RetreiveById(Guid key)
         {
             throw new NotImplementedException();

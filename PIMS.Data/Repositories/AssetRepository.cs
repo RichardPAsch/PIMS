@@ -21,12 +21,12 @@ namespace PIMS.Data.Repositories
             throw new NotImplementedException();
         }
 
-        public IQueryable<Asset> Retreive(Expression<Func<Asset, bool>> predicate)
+        public IQueryable<Asset> Retreive(Expression<Func<Asset, bool>> predicate, IQueryable<object> data = null)
         {
             throw new NotImplementedException();
         }
 
-       
+        
         public Asset RetreiveById(Guid key)
         {
             throw new NotImplementedException();

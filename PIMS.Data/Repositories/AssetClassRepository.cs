@@ -49,10 +49,11 @@ namespace PIMS.Data.Repositories
             }
         }
 
-        public IQueryable<AssetClass> Retreive(Expression<Func<AssetClass, bool>> predicate)
+        public IQueryable<AssetClass> Retreive(Expression<Func<AssetClass, bool>> predicate, IQueryable<object> data = null)
         {
             throw new NotImplementedException();
         }
+
         
         public AssetClass RetreiveById(Guid idGuid)
         {

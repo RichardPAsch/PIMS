@@ -29,12 +29,12 @@ namespace PIMS.Data.Repositories
             }
         }
 
-        public IQueryable<AccountType> Retreive(Expression<Func<AccountType, bool>> predicate)
+        public IQueryable<AccountType> Retreive(Expression<Func<AccountType, bool>> predicate, IQueryable<object> data = null)
         {
             throw new NotImplementedException();
         }
 
-
+        
        
         public AccountType RetreiveById(Guid idGuid)
         {
