@@ -119,7 +119,7 @@ namespace PIMS.Data.FakeRepositories
             return profileListing.AsQueryable();
         }
 
-        public IQueryable<Profile> Retreive(Expression<Func<Profile, bool>> predicate)
+        public IQueryable<Profile> Retreive(Expression<Func<Profile, bool>> predicate, IQueryable<object> data = null)
         {
             try
             {

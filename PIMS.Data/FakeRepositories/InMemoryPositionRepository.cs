@@ -1,8 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using PIMS.Core.Models;
-using PIMS.Core.Security;
 using PIMS.Data.Repositories;
 
 
@@ -10,23 +10,19 @@ namespace PIMS.Data.FakeRepositories
 {
     public class InMemoryPositionRepository : IGenericRepository<Position>
     {
-        private readonly IPimsIdentityService _pimsIdentityService;
-        public InMemoryPositionRepository(IPimsIdentityService identityService)
+
+        private readonly InMemoryAssetRepository _repoInMemoryAssetRepository = new InMemoryAssetRepository();
+
+
+        public IQueryable<Position> RetreiveAll() {return null;}
+
+        public IQueryable<Position> Retreive(Expression<Func<Position, bool>> predicate, IQueryable<object> data = null)
         {
-            _pimsIdentityService = identityService;
+            var filteredAsset = (IQueryable<Asset>) data;
+            return filteredAsset != null ? filteredAsset.First().Positions.AsQueryable().Where(predicate) : null;
         }
 
 
-        public IQueryable<Position> RetreiveAll()
-        {
-            throw new NotImplementedException();
-        }
-
-        public IQueryable<Position> Retreive(Expression<Func<Position, bool>> predicate)
-        {
-            throw new NotImplementedException();
-        }
-        
         public Position RetreiveById(Guid key)
         {
             throw new NotImplementedException();
@@ -34,14 +30,10 @@ namespace PIMS.Data.FakeRepositories
         
         public bool Create(Position newEntity)
         {
-            var investorName = _pimsIdentityService.CurrentUser;
-            var newPosition = new Position
-                              {
-                                  PositionId = Guid.NewGuid(),
-                                  PurchaseDate = DateTime.UtcNow.ToString("d"),
-                                  Quantity = 100,
-
-                              };
+            // Mimic NHibernate trx Save().
+            var existingAsset = _repoInMemoryAssetRepository.Retreive(a => a.Investor.LastName == "Asch" && a.Profile.TickerSymbol == "VNR").AsQueryable();
+            existingAsset.First().Positions.Add(newEntity);
+            
             return true;
         }
 

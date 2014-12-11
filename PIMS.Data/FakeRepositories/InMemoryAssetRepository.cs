@@ -269,7 +269,7 @@ namespace PIMS.Data.FakeRepositories
                                                         Account = new AccountType
                                                                     {
                                                                         Url = "", //UrlAddress.Replace("Asset","AccountType") + "/IRA",
-                                                                        AccountTypeDesc = "Roth-IRA", 
+                                                                        AccountTypeDesc = "IRRA", 
                                                                         KeyId = new Guid("469491d0-3353-4d62-b4cb-f79ab0e2c9e0")
                                                                     }
                                                     },
@@ -283,7 +283,7 @@ namespace PIMS.Data.FakeRepositories
                                                         Account = new AccountType
                                                                         {
                                                                             Url = "", //UrlAddress.Replace("Asset","AccountType") + "/IRA",
-                                                                            AccountTypeDesc = "Roth-IRA", 
+                                                                            AccountTypeDesc = "ML-CMA", 
                                                                             KeyId = new Guid("09b1f08a-095c-4eb5-9add-8de106894945")
                                                                         }
                                                     },
@@ -315,7 +315,8 @@ namespace PIMS.Data.FakeRepositories
                 item.AssetClass.Url = "http://localhost/Pims.Web.Api/api/AssetClass/" + item.AssetClass.Code.Trim().ToUpper();
                 item.Profile.Url = "http://localhost/Pims.Web.Api/api/Profile/" + item.Profile.TickerSymbol.Trim().ToUpper();
                 foreach (var subitem in item.Positions) {
-                    subitem.Url = "http://localhost/Pims.Web.Api/api/Position/" + subitem.PositionId;
+                    subitem.Url = "http://localhost/Pims.Web.Api/api/Asset/" + item.Profile.TickerSymbol.ToUpper().Trim() +"/Position/" 
+                        + subitem.Account.AccountTypeDesc.Trim();
                     subitem.Account.Url = "http://localhost/Pims.Web.Api/api/Position/Account/" + Guid.NewGuid();
                 }
                 foreach (var subitem in item.Revenue)
@@ -324,8 +325,9 @@ namespace PIMS.Data.FakeRepositories
 
             return assetListing.AsQueryable();
         }
+
         
-        public IQueryable<Asset> Retreive(Expression<Func<Asset, bool>> predicate)
+        public IQueryable<Asset> Retreive(Expression<Func<Asset, bool>> predicate, IQueryable<object> data = null)
        {
            return RetreiveAll().Where(predicate);
        }

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using NHibernate.Criterion;
 using PIMS.Core.Models;
 using PIMS.Data.Repositories;
 
@@ -45,6 +44,12 @@ namespace PIMS.Data.FakeRepositories
                             };
 
             return listing.AsQueryable();
+        }
+
+        
+       
+        public IQueryable<AssetClass> Retreive(Expression<Func<AssetClass, bool>> predicate, IQueryable<object> data = null) {
+            return RetreiveAll().Where(predicate);
         }
 
         public IQueryable<AssetClass> RetreiveByCriteria(object property)
@@ -125,11 +130,6 @@ namespace PIMS.Data.FakeRepositories
 
         public string UrlAddress { get; set; }
 
-
-        // TODO: Implement in IGenericRepository
-        public IQueryable<AssetClass> Retreive(Expression<Func<AssetClass, bool>> predicate) {
-            return RetreiveAll().Where(predicate);
-        }
 
         //public AssetClass TestFind(Expression<Func<AssetClass, bool>> predicate) {
         //    return RetreiveAll().FirstOrDefault(predicate);

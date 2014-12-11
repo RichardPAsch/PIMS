@@ -94,8 +94,8 @@ namespace PIMS.Data.FakeRepositories
             return investorListing.AsQueryable();
         }
 
-
-        public IQueryable<Investor> Retreive(Expression<Func<Investor, bool>> predicate)
+       
+        public IQueryable<Investor> Retreive(Expression<Func<Investor, bool>> predicate, IQueryable<object> data = null)
         {
             return RetreiveAll().Where(predicate);
         }
