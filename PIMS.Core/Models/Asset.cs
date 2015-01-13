@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 
 
 namespace PIMS.Core.Models
@@ -28,13 +27,13 @@ namespace PIMS.Core.Models
 
         public virtual Profile Profile { get; set; }
 
-        // Unique per Investor/Asset/AccountType
+        // Unique per Investor/Asset/AccountType                // e.g., Roth-IRA
         public virtual IList<Position> Positions { get; set; }
 
         // Unique per Investor/Asset/AccountType
         public virtual IList<Income> Revenue { get; set; }
    
-        
+        // public virtual string Status {get; set;}             // (A)ctive, (I)nactive
        
 
 
