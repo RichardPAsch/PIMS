@@ -61,6 +61,7 @@
     <Compile Include="VerifyAsset.cs" />
     <Compile Include="VerifyAssetClass.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="VerifyIncome.cs" />
     <Compile Include="VerifyPosition.cs" />
     <Compile Include="VerifyProfile.cs" />
   </ItemGroup>
