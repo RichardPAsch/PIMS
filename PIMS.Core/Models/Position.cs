@@ -10,6 +10,8 @@ namespace PIMS.Core.Models
         // Considered as child object of Aggregate root (Asset).
         public virtual string Url { get; set; }
 
+        public virtual string InvestorKey { get; set; }
+
         [Required]
         public virtual Guid PositionId { get; set; }
 
@@ -29,8 +31,7 @@ namespace PIMS.Core.Models
 
         [Required]
         [Range(0.01, 10000.00)]
-        // Cost/unit at time of purchase.
-        public virtual decimal UnitCost { get; set; }
+        public virtual decimal MarketPrice { get; set; }
 
         public virtual IList<Asset> Security { get; set; }
 
