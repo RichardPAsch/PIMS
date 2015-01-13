@@ -19,22 +19,25 @@ namespace PIMS.UnitTest
     {
         private PositionController _ctrl;
         private Mock<InMemoryPositionRepository> _mockRepo;
-        private const string UrlBase = "http://localhost/PIMS.Web.API/api/Asset/<ticker>/Position";
         private Mock<PimsIdentityService> _mockIdentitySvc;
         private Mock<InMemoryAssetRepository> _mockRepoAsset;
+        
 
 
         //----------- Menu BUSINESS RULES : per Investor ---------------------------------------------------------------------------------
-        //  Asset/Create - One or more Positions can be created client-side, and POSTed as an aggregate at time of initial Asset creation.
+        //  Asset/Create -> One or more Positions can be created client-side, and POSTed as an aggregate at time of initial Asset creation.
         //                 See VerifyAsset.
-        //  Position/Create - Adds new Position to existing Asset.
-        //  Position/Retreive-Update - Adds to or modifies existing Position. Each Position is uniquely identified by its' Account type.
-        //  Position/Delete - Removes appropriate Position(s) per Asset.
+        //  Position/Create -> Adds new Position to existing Asset.
+        //  Position/Retreive-Edit -> Adds to or modifies existing Position. Each Position is uniquely identified by its' Account type.
+        //                           - 'Purchase Date' : Read-Only, set during Position creation
+        //                           - 'Last Update'   : Read-Only, updated whenever any changes in Position are made
+        //                           - 'Market Price'  : Read/Write, income projections based on this current market-adjusted rate
+        //                           - 'Quantity'      : Read/Write, adjusted total 
+        //  Position/Delete -> Removes appropriate Position(s) per Asset.
         //
         //---------------------------------------------------------------------------------------------------------------------------------
 
-        // TODO: (C)reate - done,  (R)etreive - done 12/10
-       
+        
         [SetUp]
         public void Init()
         {
@@ -49,24 +52,44 @@ namespace PIMS.UnitTest
         public async Task Controller_Can_GET_a_single_fake_position_for_an_Asset_via_ticker_symbol_and_account() {
 
             // Arrange - SUT
-            _ctrl = new PositionController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoAsset.Object)
-            {
+            _ctrl = new PositionController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoAsset.Object) {
                 Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Asset/AAPL/Position/Roth-IRA") },
                 Configuration = new HttpConfiguration()
             };
 
             // Act 
-            var assetPosition = await _ctrl.GetPositionByAccount("AAPL", "Roth-IRA") as OkNegotiatedContentResult<IQueryable<Position>>;
+            var assetPosition = await _ctrl.GetPositionByAccount("IBM", "ML-CMA") as OkNegotiatedContentResult<IQueryable<Position>>;
 
 
             // Assert
             Assert.IsNotNull(assetPosition);
             Assert.That(assetPosition.Content.Count(), Is.EqualTo(1));
-            Assert.That(assetPosition.Content.First().Account.AccountTypeDesc, Is.EqualTo("Roth-IRA"));
-          
+            Assert.That(assetPosition.Content.First().Account.AccountTypeDesc, Is.EqualTo("ML-CMA"));
+            Assert.That(assetPosition.Content.First().Url, Is.EqualTo("http://localhost/Pims.Web.Api/api/Asset/IBM/Position/ML-CMA"));
         }
 
 
+        [Test]
+        // ReSharper disable once InconsistentNaming
+        public async Task Controller_Can_GET_a_single_fake_Account_for_a_Position_via_an_Account_key() {
+
+            // Arrange 
+            _ctrl = new PositionController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoAsset.Object) {
+                Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/Pims.Web.Api/api/Asset/AAPL/Position/Account/33f4b62f-bcd4-4d5f-8b2d-373d628a5dfc") },
+                Configuration = new HttpConfiguration()
+            };
+
+            // Act 
+            var positionAccountType =
+                await _ctrl.GetAccountByAccountKey(new Guid("33f4b62f-bcd4-4d5f-8b2d-373d628a5dfc")) as OkNegotiatedContentResult<AccountType>;
+
+
+            // Assert
+            Assert.IsNotNull(positionAccountType);
+            Assert.That(positionAccountType.Content.KeyId, Is.EqualTo(new Guid("33f4b62f-bcd4-4d5f-8b2d-373d628a5dfc")));
+        }
+
+        
         [Test]
         // ReSharper disable once InconsistentNaming
         public async Task Controller_Can_GET_all_fake_positions_for_an_Asset_via_ticker_symbol() {
@@ -85,13 +108,13 @@ namespace PIMS.UnitTest
             Assert.IsNotNull(assetPositions);
             Assert.That(assetPositions.Content.Count(), Is.GreaterThanOrEqualTo(3));
             Assert.That(assetPositions.Content.Last().Account.AccountTypeDesc, Is.EqualTo("Roth-IRA"));
-
+           
         }
 
 
         [Test]
         // ReSharper disable once InconsistentNaming
-        public async Task Controller_can_not_POST_a_new_duplicate_fake_Position_for_a_given_users_asset() {
+        public async Task Controller_can_not_POST_a_new_fake_duplicate_Position_for_an_existing_asset() {
 
             // Arrange - SUT
             _ctrl = new PositionController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoAsset.Object) {
@@ -101,15 +124,15 @@ namespace PIMS.UnitTest
 
             var newPosition = new Position
                                 {
-                                    Url = "http://localhost/PIMS.Web.Api/api/Asset/IBM/Position",
+                                    Url = "http://localhost/PIMS.Web.Api/api/Asset/IBM/Position/Roth-IRA",
                                     PositionId = Guid.NewGuid(), 
                                     PurchaseDate = DateTime.UtcNow.ToString("d"), 
                                     Quantity = 109,
-                                    UnitCost = 162.99M,
+                                    MarketPrice = 162.99M,
                                     LastUpdate = DateTime.UtcNow.ToString("g"),
                                     Account = new AccountType
                                             {
-                                                Url = "http://localhost/PIMS.Web.Api/api/Asset/AAPL/Position/Account/IRRA",
+                                                Url = "http://localhost/PIMS.Web.Api/api/Asset/IBM/Position/Account/" + Guid.NewGuid(),
                                                 AccountTypeDesc = "Roth-IRA",
                                                 KeyId = Guid.NewGuid()
                                             }
@@ -129,7 +152,7 @@ namespace PIMS.UnitTest
 
         [Test]
         // ReSharper disable once InconsistentNaming
-        public async Task Controller_can_POST_an_additional_fake_Position_for_an_existing_asset() {
+        public async Task Controller_can_POST_a_new_fake_Position_for_an_existing_asset() {
 
             // Arrange - SUT
             _ctrl = new PositionController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoAsset.Object) {
@@ -141,10 +164,10 @@ namespace PIMS.UnitTest
             var newPosition = new Position {
                 Url = "http://localhost/PIMS.Web.Api/api/Asset/VNR/Position/Roth-IRA",
                 PositionId = Guid.NewGuid(),
-                PurchaseDate = DateTime.UtcNow.ToString("d"),
+                PurchaseDate = DateTime.UtcNow.AddDays(-13).ToString("d"),
                 LastUpdate = DateTime.UtcNow.ToString("g"),
                 Quantity = 500,
-                UnitCost = 17.05M,
+                MarketPrice = 15.22M,
                 Account = new AccountType {
                     Url = "http://localhost/PIMS.Web.Api/api/Asset/VNR/Position/Account/" + newAcctId,
                     AccountTypeDesc = "Roth-IRA",
@@ -156,7 +179,7 @@ namespace PIMS.UnitTest
 
             // Act
             var positionActionResult = await _ctrl.CreateNewPosition(newPosition) as CreatedNegotiatedContentResult<Position>;
-            
+           
 
             // Assert
             Assert.IsNotNull(positionActionResult);
@@ -169,45 +192,66 @@ namespace PIMS.UnitTest
 
         [Test]
         // ReSharper disable once InconsistentNaming
-        public async Task Controller_can_POST_a_new_fake_Position_as_part_of_the_new_asset_creation_process()
+        public async Task Controller_can_DELETE_a_fake_Position_for_an_existing_asset()
         {
-            // Arrange -  
+            // Arrange 
             _ctrl = new PositionController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoAsset.Object) {
-                Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Asset/PFE/Position?newAsset=true") },
+                Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Asset/VNR/Position/4a2e9df2-7de0-4285-9234-a193adcb5449") },
                 Configuration = new HttpConfiguration()
             };
 
+
+            // Act
+            var deleteResult = await _ctrl.DeletePosition(new Guid("4a2e9df2-7de0-4285-9234-a193adcb5449")) as OkResult;
+
+
+            // Assert
+            Assert.IsNotNull(deleteResult);
+        }
+        
+
+        [Test]
+        // ReSharper disable once InconsistentNaming
+        public async Task Controller_can_PUT_update_a_fake_Position_for_an_existing_asset() 
+        {
+            // Arrange - SUT
+            _ctrl = new PositionController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoAsset.Object) {
+                Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Asset/VNR/Position/Roth-IRA") },
+                Configuration = new HttpConfiguration()
+            };
+
+            // Updated Position - example: increased holding.
             var newAcctId = Guid.NewGuid();
-            var newPosition = new Position {
-                Url = "http://localhost/PIMS.Web.Api/api/Asset/PFE/Position/ML-CMA",
+            var updatedPosition = new Position {
+                Url = "http://localhost/PIMS.Web.Api/api/Asset/VNR/Position/ML-CMA",
                 PositionId = Guid.NewGuid(),
-                PurchaseDate = DateTime.UtcNow.ToString("d"),
+                PurchaseDate = DateTime.UtcNow.AddMonths(-14).ToString("d"),
+                InvestorKey = "Asch",
                 LastUpdate = DateTime.UtcNow.ToString("g"),
-                Quantity = 250,
-                UnitCost = 31.86M,
+                Quantity = 1000,        // new total
+                MarketPrice = 16.88M,   // new unit price based on current market conditions
                 Account = new AccountType {
-                    Url = "http://localhost/PIMS.Web.Api/api/Asset/PFE/Position/Account/" + newAcctId,
+                    Url = "http://localhost/PIMS.Web.Api/api/Asset/VNR/Position/Account/" + newAcctId,
                     AccountTypeDesc = "ML-CMA",
                     KeyId = Guid.NewGuid()
                 }
             };
 
-            //var debugJsonForFiddler = TestHelpers.ObjectToJson(newPosition);
+            //var debugJsonForFiddler = TestHelpers.ObjectToJson(updatedPosition);
 
             // Act
-            var positionActionResult = await _ctrl.CreateNewPosition(newPosition, true) as CreatedNegotiatedContentResult<Position>;
+            var positionActionResult = await _ctrl.UpdatePositionsByAsset(updatedPosition) as OkNegotiatedContentResult<Position>;
 
-
+            
             // Assert
             Assert.IsNotNull(positionActionResult);
-            Assert.That(positionActionResult.Content.Account.AccountTypeDesc, Is.EqualTo("ML-CMA"));
-            Assert.That(positionActionResult.Location.AbsoluteUri, Is.EqualTo("http://localhost/PIMS.Web.Api/api/Asset/PFE/Position/ML-CMA"));
-            Assert.That(positionActionResult.Content.Quantity, Is.EqualTo(250));
+            Assert.That(positionActionResult.Content.Url, Is.EqualTo("http://localhost/PIMS.Web.Api/api/Asset/VNR/Position/ML-CMA"));
+            Assert.That(positionActionResult.Content.Quantity, Is.EqualTo(1000));
 
         }
 
         
-
+        
 
 
     }

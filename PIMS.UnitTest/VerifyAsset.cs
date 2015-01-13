@@ -59,6 +59,8 @@ namespace PIMS.UnitTest
         //
         // * Asset/Create menu - One or more Positions may be created at time of initial asset POSTing. One or more
         //                       Position(s) will be persisted as a composite entity via NHibernate trx.
+        //                     - One or more Income records may be created at time of initial asset POSTing, and posted
+        //                       as such, provided no duplicate entries e.g.,  Asset-Account-Date Reeceived, are found.
         //----------------------------------------------------------------------------------------------------------------------------
 
 
@@ -102,6 +104,7 @@ namespace PIMS.UnitTest
            
         }
 
+
         [Test]
         // ReSharper disable once InconsistentNaming
         public async Task Controller_Can_GET_detail_info_for_All_Fake_Assets_for_an_investor_using_displayType_queryString() {
@@ -124,6 +127,7 @@ namespace PIMS.UnitTest
 
         }
 
+
         [Test]
         // ReSharper disable once InconsistentNaming
         public async Task Controller_Can_GET_detail_info_for_All_Fake_Assets_for_an_investor_with_no_queryString() {
@@ -145,6 +149,7 @@ namespace PIMS.UnitTest
             Assert.IsTrue(assetListing.Content.ElementAt(1).Investor.LastName == _mockIdentitySvc.Object.CurrentUser);
 
         }
+
 
         [Test]
         // ReSharper disable once InconsistentNaming
@@ -169,6 +174,7 @@ namespace PIMS.UnitTest
             
         }
 
+
         [Test]
         // ReSharper disable once InconsistentNaming
         public async Task Controller_Can_GET_summary_or_detail_info_for_a_fake_Asset_for_an_investor_via_ticker_symbol() {
@@ -192,6 +198,7 @@ namespace PIMS.UnitTest
             Assert.IsTrue(assetListing.Content.First().DividendFrequency == "Q");
             Assert.IsTrue(assetListing.Content.First().CurrentInvestor == _mockIdentitySvc.Object.CurrentUser);
         }
+
 
         [Test]
         // ReSharper disable once InconsistentNaming
@@ -234,6 +241,7 @@ namespace PIMS.UnitTest
                                     Is.LessThan(assetListing.Content.Last().AssetClassification.ToUpper().Trim()));
         }
 
+
         [Test]
         // ReSharper disable once InconsistentNaming
         public async Task Controller_Can_GET_summary_info_for_all_Fake_Assets_for_an_investor_sorted_by_AccountType() 
@@ -259,6 +267,7 @@ namespace PIMS.UnitTest
 
         }
 
+
         [Test]
         // ReSharper disable once InconsistentNaming
         public async Task Controller_Can_GET_summary_info_for_all_Fake_Assets_for_an_investor_sorted_by_date_Income_received()
@@ -279,6 +288,7 @@ namespace PIMS.UnitTest
 
         }
 
+
         [Test]
         // ReSharper disable once InconsistentNaming
         public async Task Controller_Can_GET_summary_info_for_all_Fake_Assets_for_an_investor_sorted_by_Income_received()
@@ -298,6 +308,7 @@ namespace PIMS.UnitTest
             Assert.That(assetListing.Content.First().IncomeRecvd, Is.GreaterThanOrEqualTo(assetListing.Content.First().IncomeRecvd));
         }
         
+
         [Test]
         // ReSharper disable once InconsistentNaming
         public async void Controller_Can_POST_a_Fake_Asset_excluding_Income_data()
@@ -313,7 +324,7 @@ namespace PIMS.UnitTest
                                     PositionId = Guid.NewGuid(),
                                     PurchaseDate = DateTime.UtcNow.ToString("d"),
                                     Quantity = 50,
-                                    UnitCost = 122.93M,
+                                    MarketPrice = 122.93M,
                                     Account = new AccountType
                                     {   AccountTypeDesc = "Roth-IRA",
                                         KeyId = Guid.NewGuid()
@@ -357,6 +368,147 @@ namespace PIMS.UnitTest
             Assert.That(actionResult.Content.Positions.First().Account.AccountTypeDesc, Is.EqualTo("Roth-IRA"));
         }
 
+
+        [Test]
+        // ReSharper disable once InconsistentNaming
+        public async void Controller_can_not_POST_a_Fake_Asset_containing_duplicate_positions()
+        {
+            // Arrange 
+            var newAsset = new Asset
+            {
+                AssetId = Guid.NewGuid(),
+                AssetClass = new AssetClass { Code = "PFD", Description = "Preferred Stock", KeyId = Guid.NewGuid() },
+                Positions = new List<Position>
+                    { new Position
+                                {
+                                    PositionId = Guid.NewGuid(),
+                                    PurchaseDate = DateTime.UtcNow.ToString("d"),
+                                    Quantity = 50,
+                                    MarketPrice = 122.93M,
+                                    Account = new AccountType
+                                    {   AccountTypeDesc = "Roth-IRA",
+                                        KeyId = Guid.NewGuid()
+                                    },
+                                    LastUpdate = DateTime.UtcNow.AddMonths(-5).ToString("d")
+                                },
+                      new Position
+                                {
+                                    PositionId = Guid.NewGuid(),
+                                    PurchaseDate = DateTime.UtcNow.ToString("d"),
+                                    Quantity = 235,
+                                    MarketPrice = 132.14M,
+                                    Account = new AccountType
+                                    {   AccountTypeDesc = "Roth-IRA",
+                                        KeyId = Guid.NewGuid()
+                                    },
+                                    LastUpdate = DateTime.UtcNow.AddMonths(-5).ToString("d")
+                                }
+                    },
+                Profile = new Profile {
+                    AssetId = Guid.NewGuid(),
+                    DividendFreq = "M",
+                    DividendRate = 1.0592M,
+                    DividendYield = 6.1M,
+                    ExDividendDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 14).ToString("d"),
+                    DividendPayDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 18).ToString("d"),
+                    EarningsPerShare = 6.21M,
+                    LastUpdate = DateTime.UtcNow.ToString("g"),
+                    PE_Ratio = 11.06M,
+                    ProfileId = Guid.NewGuid(),
+                    TickerDescription = "Intel Inc.",
+                    TickerSymbol = "INTC"
+                }
+            };
+
+            //var debugJsonForFiddler = TestHelpers.ObjectToJson(newAsset);
+
+            _ctrl = new AssetController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoInvestor.Object) {
+                                    Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Asset") },
+                                    Configuration = new HttpConfiguration()
+            };
+            
+            // Act 
+            var actionResult = await _ctrl.CreateNewAsset(newAsset) as CreatedNegotiatedContentResult<Asset>;
+
+            // Assert
+            Assert.IsTrue(actionResult == null);
+        }
+
+
+        [Test]
+        // ReSharper disable once InconsistentNaming
+        public async void Controller_can_not_POST_a_Fake_Asset_containing_duplicate_income()
+        {
+            // Arrange 
+            var newAsset = new Asset {
+                AssetId = Guid.NewGuid(),
+                AssetClass = new AssetClass { Code = "PFD", Description = "Preferred Stock", KeyId = Guid.NewGuid() },
+                Positions = new List<Position>
+                    { 
+                        new Position
+                            {
+                                PositionId = Guid.NewGuid(),
+                                PurchaseDate = DateTime.UtcNow.ToString("d"),
+                                Quantity = 50,
+                                MarketPrice = 122.93M,
+                                Account = new AccountType
+                                {   AccountTypeDesc = "Roth-IRA",
+                                    KeyId = Guid.NewGuid()
+                                },
+                                LastUpdate = DateTime.UtcNow.AddMonths(-5).ToString("d")
+                            }
+                    },
+                Revenue = new List<Income>
+                          {
+                              new Income
+                              {
+                                 Account = "Roth-IRA",
+                                 Actual = 55.50M,
+                                 DateRecvd = DateTime.UtcNow.AddDays(-5).ToString("d"),
+                                 AssetId = Guid.NewGuid(),
+                                 Projected = 52.25M
+                              },
+                              new Income
+                              {
+                                 Account = "Roth-IRA",
+                                 Actual = 55.50M,
+                                 DateRecvd = DateTime.UtcNow.AddDays(-5).ToString("d"),
+                                 AssetId = Guid.NewGuid(),
+                                 Projected = 52.25M
+                              }
+                          },
+                Profile = new Profile {
+                    AssetId = Guid.NewGuid(),
+                    DividendFreq = "M",
+                    DividendRate = 1.0592M,
+                    DividendYield = 6.1M,
+                    ExDividendDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 14).ToString("d"),
+                    DividendPayDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 18).ToString("d"),
+                    EarningsPerShare = 6.21M,
+                    LastUpdate = DateTime.UtcNow.ToString("g"),
+                    PE_Ratio = 11.06M,
+                    ProfileId = Guid.NewGuid(),
+                    TickerDescription = "Intel Inc.",
+                    TickerSymbol = "INTC"
+                }
+            };
+
+            //var debugJsonForFiddler = TestHelpers.ObjectToJson(newAsset);
+
+            _ctrl = new AssetController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoInvestor.Object) {
+                Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Asset") },
+                Configuration = new HttpConfiguration()
+            };
+
+            // Act - dups checked per Asset, Account, and DateReceived.
+            var actionResult = await _ctrl.CreateNewAsset(newAsset) as CreatedNegotiatedContentResult<Asset>;
+
+            // Assert
+            Assert.IsTrue(actionResult == null);
+
+        }
+        
+
         [Test]
         // ReSharper disable once InconsistentNaming
         public async void Controller_Can_POST_a_new_Fake_Asset_containing_a_minimum_of_just_required_Profile_and_Position_data() 
@@ -371,7 +523,7 @@ namespace PIMS.UnitTest
                                                 PositionId = Guid.NewGuid(),
                                                 PurchaseDate = DateTime.UtcNow.AddMonths(-2).ToString("d"),
                                                 Quantity = 606,
-                                                UnitCost = 22.86M,
+                                                MarketPrice = 22.86M,
                                                 Account = new AccountType
                                                 {   AccountTypeDesc = "Roth-IRA",
                                                     KeyId = Guid.NewGuid()
@@ -414,6 +566,7 @@ namespace PIMS.UnitTest
             Assert.That(actionResult.Content.Positions.First().Account.AccountTypeDesc, Is.EqualTo("Roth-IRA"));
         }
 
+
         [Test]
         // ReSharper disable once InconsistentNaming
         public async void Controller_Can_POST_a_new_Fake_Asset_with_verification_of_generated_URLs()
@@ -425,10 +578,12 @@ namespace PIMS.UnitTest
                 Positions = new List<Position>
                                 {new Position
                                     {
+                                        Url = string.Empty,
+                                        InvestorKey = string.Empty,
                                         PositionId = Guid.NewGuid(),
                                         PurchaseDate = DateTime.UtcNow.ToString("d"),
                                         Quantity = 453,
-                                        UnitCost = 50.64M,
+                                        MarketPrice = 50.64M,
                                         Account = new AccountType
                                         {   AccountTypeDesc = "Roth-IRA",
                                             KeyId = Guid.NewGuid()
@@ -437,12 +592,15 @@ namespace PIMS.UnitTest
                                     },
                                     new Position
                                     {
+                                        Url = string.Empty,
+                                        InvestorKey = string.Empty,
                                         PositionId = Guid.NewGuid(),
                                         PurchaseDate = DateTime.UtcNow.AddDays(-10).ToString("d"),
                                         Quantity = 200,
-                                        UnitCost = 48.90M,
+                                        MarketPrice = 48.90M,
                                         Account = new AccountType
-                                        {   AccountTypeDesc = "ML-CMA",
+                                        {   
+                                            AccountTypeDesc = "ML-CMA",
                                             KeyId = Guid.NewGuid()
                                         },
                                         LastUpdate = DateTime.UtcNow.AddDays(-10).ToString("d"),
@@ -465,7 +623,7 @@ namespace PIMS.UnitTest
                           {
                               new Income
                               {
-                                  IncomeId = Guid.NewGuid(),
+                                  AssetId = Guid.NewGuid(),
                                   Account = "Roth-IRA",
                                   Actual = 87.88M,
                                   DateRecvd = DateTime.UtcNow.AddMonths(-10).ToString("g"),
@@ -473,7 +631,7 @@ namespace PIMS.UnitTest
                               },
                               new Income
                               {
-                                  IncomeId = Guid.NewGuid(),
+                                  AssetId = Guid.NewGuid(),
                                   Account = "ML-CMA",
                                   Actual = 87.88M,
                                   DateRecvd = DateTime.UtcNow.AddMonths(-5).ToString("g"),
@@ -481,7 +639,7 @@ namespace PIMS.UnitTest
                               },
                               new Income
                               {
-                                  IncomeId = Guid.NewGuid(),
+                                  AssetId = Guid.NewGuid(),
                                   Account = "Roth-IRA",
                                   Actual = 88.88M,
                                   DateRecvd = DateTime.UtcNow.AddMonths(-3).ToString("g"),
@@ -507,11 +665,12 @@ namespace PIMS.UnitTest
             Assert.IsTrue(actionResult.Content.Investor.LastName == "Asch");
             Assert.IsTrue(String.Equals(actionResult.Content.Investor.Url, "http://localhost/Pims.Web.Api/api/Investor/RichardPAsch", StringComparison.CurrentCultureIgnoreCase));
             Assert.IsTrue(String.Equals(actionResult.Content.AssetClass.Url, "http://localhost/Pims.Web.Api/api/AssetClass/MLP", StringComparison.CurrentCultureIgnoreCase));
-            Assert.That(actionResult.Content.Positions.First().Url, Contains.Substring("/api/Position/"));
+            Assert.That(actionResult.Content.Positions.First().Url, Contains.Substring("/Position/Roth-IRA"));
             Assert.That(actionResult.Content.Profile.Url.ToUpper(), Is.EqualTo("http://localhost/Pims.Web.Api/api/Profile/ETP".ToUpper()));
             if (actionResult.Content.Revenue == null) return;
             Assert.That(actionResult.Content.Revenue.First().Url, Contains.Substring("/api/Income/"));
         }
+
 
         [Test]
         // ReSharper disable once InconsistentNaming
@@ -527,7 +686,7 @@ namespace PIMS.UnitTest
                                                 PositionId = Guid.NewGuid(),
                                                 PurchaseDate = DateTime.UtcNow.AddMonths(-2).ToString("d"),
                                                 Quantity = 0,
-                                                UnitCost = 22.86M,
+                                                MarketPrice = 22.86M,
                                                 Account = new AccountType
                                                 {   AccountTypeDesc = "Roth-IRA",
                                                     KeyId = Guid.NewGuid()
@@ -569,14 +728,15 @@ namespace PIMS.UnitTest
            
         }
 
+
         [Test]
         // ReSharper disable once InconsistentNaming
         public async void Controller_Can_POST_a_Fake_Asset_including_Income_data()
         {
             // Arrange - URLs generated by server (ctrl) in integration testing.
             // "Investor" to be initialized via controller, based on currently logged in user.
-            // New POST would only create 1 position, new positions added via Update.
-            var newAsset = new Asset {
+            var newAsset = new Asset
+            {
                 Url = "http://localhost/Pims.Web.Api/api/Asset/CTX",
                 AssetId = Guid.NewGuid(),
                 AssetClass = new AssetClass {
@@ -586,50 +746,36 @@ namespace PIMS.UnitTest
                     KeyId = Guid.NewGuid()
                 },
                 Positions = new List<Position>
-                        {
-                            new Position
-                                {
-                                    PositionId = Guid.NewGuid(),
-                                    PurchaseDate = DateTime.UtcNow.ToString("d"),
-                                    Quantity = 280,
-                                    UnitCost = 72.13M,
-                                    Url =  UrlBase + "/CTX/Position",
-                                    Account = new AccountType
-                                    {   AccountTypeDesc = "CMA",
-                                        KeyId = Guid.NewGuid()
-                                    },
-                                    LastUpdate = DateTime.UtcNow.ToString("d"),
+                    {
+                        new Position
+                            {
+                                PositionId = Guid.NewGuid(),
+                                PurchaseDate = DateTime.UtcNow.ToString("d"),
+                                Quantity = 280,
+                                MarketPrice = 72.13M,
+                                Url =  UrlBase + "/CTX/Position",
+                                Account = new AccountType
+                                {   AccountTypeDesc = "ML-CMA",
+                                    KeyId = Guid.NewGuid()
                                 },
-                            new Position
-                                {
-                                    PositionId = Guid.NewGuid(),
-                                    PurchaseDate = DateTime.UtcNow.AddMonths(-3).ToString("d"),
-                                    Quantity = 70,
-                                    UnitCost = 79.00M,
-                                    Url =  UrlBase + "/CTX/Position",
-                                    Account = new AccountType
-                                    {   AccountTypeDesc = "ROTH-IRA",
-                                        KeyId = Guid.NewGuid()
-                                    },
-                                    LastUpdate = DateTime.UtcNow.AddMonths(-1).ToString("d"),
-                                }
-                        },
+                                LastUpdate = DateTime.UtcNow.ToString("d"),
+                            }
+                    },
                 Revenue = new List<Income> 
                 {
                     new Income
                     {
                         Actual = 79.05M,
                         DateRecvd = DateTime.UtcNow.ToString("g"),
-                        IncomeId = Guid.NewGuid(),
+                        AssetId = Guid.NewGuid(),
                         Projected = 126.11M,
                         Url = UrlBase + "/CTX/Income" ,
-                        Account = "Roth-IRA"
+                        Account = "ML-CMA"
                     }
-                   
                 },
                 Profile = new Profile {
                     DividendFreq = "S",
-                    DividendRate = .05932M,
+                    DividendRate = 1.059379M,
                     DividendYield = 6.1M,
                     ExDividendDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 14).ToString("d"),
                     DividendPayDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 18).ToString("d"),
@@ -638,7 +784,8 @@ namespace PIMS.UnitTest
                     PE_Ratio = 11.06M,
                     ProfileId = Guid.NewGuid(),
                     TickerDescription = "Qwest Inc.",
-                    TickerSymbol = "CTX"
+                    TickerSymbol = "CTX",
+                    AssetId = new Guid()
                 }
             };
 
@@ -659,13 +806,13 @@ namespace PIMS.UnitTest
             Assert.That(actionResult.Content.Profile.TickerSymbol.ToUpper(), Is.EqualTo("CTX"));
             Assert.IsTrue(actionResult.Content.Revenue.First().Actual == 79.05M);
             Assert.That(actionResult.Content.Revenue.Count, Is.EqualTo(1));
-            Assert.That(actionResult.Content.Positions[0].Account.AccountTypeDesc, Is.EqualTo("CMA"));
-            Assert.That(actionResult.Content.Positions[1].Account.AccountTypeDesc, Is.EqualTo("ROTH-IRA"));
+            Assert.That(actionResult.Content.Positions[0].Account.AccountTypeDesc, Is.EqualTo("ML-CMA"));
 
         }
 
+
         [Test]
-        //// ReSharper disable once InconsistentNaming
+        // ReSharper disable once InconsistentNaming
         public async void Controller_Can_not_POST_a_duplicate_Fake_Asset()
         {
             // Arrange - duplicate = same ticker, investor, and account type.
@@ -679,10 +826,11 @@ namespace PIMS.UnitTest
                                                      PositionId = Guid.NewGuid(),
                                                      PurchaseDate = DateTime.UtcNow.ToString("d"),
                                                      Quantity = 40,
-                                                     UnitCost = 7.10M,
+                                                     MarketPrice = 7.10M,
                                                      Url =  UrlBase + "/IBM/Position",
                                                      Account = new AccountType
-                                                        {   AccountTypeDesc = "ROTH-IRA",
+                                                        {   AccountTypeDesc = "ML-CMA",
+                                                            //AccountTypeDesc = "ROTH-IRA",
                                                             KeyId = Guid.NewGuid()
                                                         },
                                                      LastUpdate = DateTime.UtcNow.AddMonths(-7).ToString("g")
@@ -724,8 +872,52 @@ namespace PIMS.UnitTest
 
         [Test]
         // ReSharper disable once InconsistentNaming
+        public async void Controller_Can_not_POST_a_Fake_Asset_with_missing_Position_data()
+        {
+            // Arrange 
+            var newAsset = new Asset {
+                Url = "http://localhost/Pims.Web.Api/api/Asset/IBM",
+                AssetId = Guid.NewGuid(),
+                Profile = new Profile {
+                    DividendFreq = "Q",
+                    DividendYield = 4.9M,
+                    ExDividendDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 10).ToString("d"),
+                    DividendPayDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 19).ToString("d"),
+                    EarningsPerShare = 3.21M,
+                    LastUpdate = DateTime.UtcNow.AddDays(-4).ToString("g"),
+                    PE_Ratio = 15.66M,
+                    ProfileId = Guid.NewGuid(),
+                    TickerDescription = "International Business Machines",
+                    TickerSymbol = "IBM",
+                    Url = "",
+                    DividendRate = 1.097M
+                }
+            };
+
+            _ctrl = new AssetController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoInvestor.Object) {
+                Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Asset") },
+                Configuration = new HttpConfiguration()
+            };
+
+            // Act 
+            //var debugJsonForFiddler = TestHelpers.ObjectToJson(newAsset);
+            var actionResult = await _ctrl.CreateNewAsset(newAsset) as CreatedNegotiatedContentResult<Asset>;
+
+
+            // Assert
+            Assert.IsTrue(actionResult == null);
+
+        }
+        
+
+        [Test]
+        // ReSharper disable once InconsistentNaming
         public async void Controller_Can_PUT_update_a_Fake_Asset_with_AccountType_and_Quantity_and_DateRecvd_changes()
         {
+            // Asset - Summary:
+            // Selected Asset data for all Assets may be viewed and updated via each AssetSummaryVM grid record; each grid row 
+            // represents data elements from various aggregate child objects comprising an Asset aggregate root.
+
             // Arrange - "assetViewModel" maps to http content, while ticker maps to "existingTicker" in ctrl.
             var dateRecvd = DateTime.UtcNow;
             _ctrl = new AssetController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoInvestor.Object)
@@ -734,31 +926,31 @@ namespace PIMS.UnitTest
                                                     Configuration = new HttpConfiguration()
                                                 };
 
-            var editedAsset = new AssetSummaryVm
+            var editedAssetSummary = new AssetSummaryVm
                                       {
-                                          AccountTypePreEdit = "IRRA",
+                                          AccountTypePreEdit = "ML-CMA",
                                           AccountType = "Roth-IRA",
                                           Quantity = 500,
                                           DateRecvd = dateRecvd.AddDays(2).ToString("g")
                                       };
-            //var debugTest = TestHelpers.ObjectToJson(editedAsset);
+            var debugTest = TestHelpers.ObjectToJson(editedAssetSummary);
 
             // Act - "UpdateByTicker()" allows for PUT/PATCH updates.
-            var updatedAsset = await _ctrl.UpdateByTicker(editedAsset, "VNR") as OkNegotiatedContentResult<Asset>;
+            var updatedAsset = await _ctrl.UpdateByTicker(editedAssetSummary, "VNR") as OkNegotiatedContentResult<Asset>;
 
 
             // Assert
             Assert.IsTrue(updatedAsset != null);
-            Assert.That(editedAsset.Quantity, Is.EqualTo(updatedAsset.Content.Positions.First().Quantity));
+            Assert.That(editedAssetSummary.Quantity, Is.EqualTo(updatedAsset.Content.Positions.First().Quantity));
             Assert.That(updatedAsset.Content.Positions.First().Account.AccountTypeDesc.ToUpper(), Is.EqualTo("ROTH-IRA"));
-            Assert.That(updatedAsset.Content.Revenue.First().DateRecvd, Is.EqualTo(editedAsset.DateRecvd));
-            Assert.That(updatedAsset.Content.Positions.First().Quantity, Is.EqualTo(editedAsset.Quantity));
+            Assert.That(updatedAsset.Content.Revenue.First().DateRecvd, Is.EqualTo(editedAssetSummary.DateRecvd));
+            Assert.That(updatedAsset.Content.Positions.First().Quantity, Is.EqualTo(editedAssetSummary.Quantity));
         }
 
 
         [Test]
         // ReSharper disable once InconsistentNaming
-        public async void Controller_Can_not_PUT_update_a_Fake_Asset_with_a_bad_AccountType()
+        public async void Controller_can_not_PUT_update_a_Fake_Asset_with_a_bad_AccountType()
         {
             // Arrange 
             _ctrl = new AssetController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoInvestor.Object)
@@ -769,6 +961,7 @@ namespace PIMS.UnitTest
 
             // AccountTypePreEdit value initialized by server and sent unmodified by the client.
             var editedAsset = new AssetSummaryVm {AccountTypePreEdit  = "IRRA", AccountType = ""};
+            //var debugTest = TestHelpers.ObjectToJson(editedAsset);
 
             // Act 
             //var debugTest = TestHelpers.ObjectToJson(editedAsset);
