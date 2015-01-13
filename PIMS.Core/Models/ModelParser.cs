@@ -36,7 +36,7 @@ namespace PIMS.Core.Models
                 filteredPreEditAsset.Positions.First().Quantity = assetVmWithEdits.Quantity;
                 if (!isModified) isModified = true;
             }
-            if (assetVmWithEdits.UnitPrice != default(decimal) && filteredPreEditAsset.Positions.First().UnitCost != assetVmWithEdits.UnitPrice) {
+            if (assetVmWithEdits.UnitPrice != default(decimal) && filteredPreEditAsset.Positions.First().MarketPrice != assetVmWithEdits.UnitPrice) {
                 filteredPreEditAsset.Positions.First().Quantity = assetVmWithEdits.Quantity;
                 if (!isModified) isModified = true;
             }
