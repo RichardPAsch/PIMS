@@ -45,6 +45,7 @@
   <ItemGroup>
     <Compile Include="FakeRepositories\InMemoryAssetClassRepository.cs" />
     <Compile Include="FakeRepositories\InMemoryAssetRepository.cs" />
+    <Compile Include="FakeRepositories\InMemoryIncomeRepository.cs" />
     <Compile Include="FakeRepositories\InMemoryInvestorRepository.cs" />
     <Compile Include="FakeRepositories\InMemoryPositionRepository.cs" />
     <Compile Include="FakeRepositories\InMemoryProfileRepository.cs" />
@@ -52,6 +53,7 @@
     <Compile Include="Repositories\AccountTypeRepository.cs" />
     <Compile Include="Repositories\AssetRepository.cs" />
     <Compile Include="Repositories\AssetClassRepository.cs" />
+    <Compile Include="Repositories\IGenericAggregateRepository.cs" />
     <Compile Include="Repositories\IAssetRepository.cs" />
     <Compile Include="Repositories\IGenericRepository.cs" />
     <Compile Include="Repositories\ICreateSessionTest.cs" />
