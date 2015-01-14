@@ -29,7 +29,7 @@ namespace PIMS.Data.Repositories
             }
         }
 
-        public IQueryable<AccountType> Retreive(Expression<Func<AccountType, bool>> predicate, IQueryable<object> data = null)
+        public IQueryable<AccountType> Retreive(Expression<Func<AccountType, bool>> predicate)
         {
             throw new NotImplementedException();
         }
@@ -137,7 +137,7 @@ namespace PIMS.Data.Repositories
         }
 
 
-
+       
     }
 
 }
