@@ -37,7 +37,7 @@ namespace PIMS.Data.Repositories
             }
         }
 
-        public IQueryable<Profile> Retreive(Expression<Func<Profile, bool>> predicate, IQueryable<object> data = null)
+        public IQueryable<Profile> Retreive(Expression<Func<Profile, bool>> predicate)
         {
             try {
                 return RetreiveAll().Where(predicate);
