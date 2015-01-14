@@ -17,47 +17,78 @@ namespace PIMS.Web.Api.Controllers
         private static IGenericRepository<Position> _repository;
         private static IGenericRepository<Asset> _repositoryAsset;
         private readonly IPimsIdentityService _identityService;
+    
 
-
-        public PositionController(IGenericRepository<Position> repositoryPosition, IPimsIdentityService identitySvc, IGenericRepository<Asset> repositoryAsset)
-        {
+        public PositionController(IGenericRepository<Position> repositoryPosition, IPimsIdentityService identitySvc, IGenericRepository<Asset> repositoryAsset) {
             _repositoryAsset = repositoryAsset;
             _repository = repositoryPosition;
             _identityService = identitySvc;
         }
 
-
-
         [HttpGet]
-        [Route("{tickerSymbol}/Position/{account?}")]
-         public async Task<IHttpActionResult> GetPositionByAccount(string tickerSymbol, string account)
+        [Route("{tickerSymbol}/Position/{accountType}")]
+        public async Task<IHttpActionResult> GetPositionByAccount(string tickerSymbol, string accountType)
         {
             _repositoryAsset.UrlAddress = ControllerContext.Request.RequestUri.ToString();
             var currentInvestor = _identityService.CurrentUser;
-            
-            var currentAsset = await Task.FromResult(_repositoryAsset.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == tickerSymbol.ToUpper().Trim() 
-                                                                                 && a.Investor.LastName.Trim() == currentInvestor.Trim()).AsQueryable() );
+
+            var matchingPosition = await Task.FromResult(_repositoryAsset.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == tickerSymbol &&
+                                                                                                     a.Investor.LastName.Trim() == currentInvestor.Trim())
+                                                                                     .AsQueryable()
+                                                                                     .SelectMany(a => a.Positions.Where(p => p.Account.AccountTypeDesc.Trim() ==
+                                                                                                        accountType.Trim()))
+                                                         );
+
+            if (matchingPosition.Any())
+                return Ok(matchingPosition);
 
 
-           var currentPosition = await Task.FromResult(_repository.Retreive(p => String.Equals(p.Account.AccountTypeDesc.Trim(), account.Trim(),
-                                                            StringComparison.CurrentCultureIgnoreCase), currentAsset).AsQueryable());
-            
-            if (currentPosition.Any())
-                return Ok(currentPosition);
+            return BadRequest(string.Format("No Position found matching {0} under Asset: {1} ", accountType, tickerSymbol.ToUpper()));
 
-
-            return BadRequest(string.Format("No Position found matching {0} for investor {1} under account {2}", 
-                                                                                                tickerSymbol.ToUpper(), 
-                                                                                                currentInvestor.ToUpper(),
-                                                                                                account));
-                                                                                     
         }
 
+
+        [HttpGet]
+        [Route("{tickerSymbol}/Position/Account/{accountKeyId}")]
+        public async Task<IHttpActionResult> GetAccountByAccountKey(Guid accountKeyId)
+        {
+            _repositoryAsset.UrlAddress = ControllerContext.Request.RequestUri.ToString();
+            var currentInvestor = _identityService.CurrentUser;
+
+            var matchingAccount = await Task.FromResult(_repositoryAsset.Retreive(a => a.Investor.LastName.Trim() == currentInvestor.Trim())
+                                                                                 .AsQueryable()
+                                                                                 .SelectMany(p => p.Positions.Where(x => x.Account.KeyId == accountKeyId))
+                                                                                 .First().Account
+                                                        );
+
+            var currentTicker = ParseUrlForTicker(matchingAccount.Url);
+            if (matchingAccount.KeyId == accountKeyId)
+                return Ok(matchingAccount);
+
+
+            return BadRequest(string.Format("No Position found matching Account {0} under Asset: {1} ", matchingAccount.KeyId, currentTicker.ToUpper()));
+
+        }
 
         [HttpGet]
         [Route("{tickerSymbol}/Position")]
         public async Task<IHttpActionResult> GetPositionsByAsset(string tickerSymbol)
         {
+
+            // Playing with interfaces: casting to correct interface is necessary, as injected instance (via IoC) has no reference to derived interface.
+            //-----------------------------------------------------------------------------------------------------------------------------------------
+            //var itfTest = (ITestProfileRepository) _repositoryAsset;
+            //itfTest.TestProfileMethod();
+
+            // ok
+            //var itfTest2 = (IGenericAggregateRepository)_repositoryAsset;
+            //itfTest2.AggregateRetreive<Position>(p => p.Quantity == 300);
+            
+            //var repo = new InMemoryAssetRepository();
+            //repo.TestProfileMethod2();
+            //------------------------------------------------------------------------------------------------------------------------------------------
+
+
             _repositoryAsset.UrlAddress = ControllerContext.Request.RequestUri.ToString();
             var currentInvestor = _identityService.CurrentUser;
 
@@ -78,83 +109,110 @@ namespace PIMS.Web.Api.Controllers
 
         [HttpPost]
         [Route("{tickerSymbol}/Position")]
-        public async Task<IHttpActionResult> CreateNewPosition([FromBody]Position positionData, [FromUri] bool newAsset=false)
+        public async Task<IHttpActionResult> CreateNewPosition([FromBody]Position positionData)
         {
             var currentInvestor = _identityService.CurrentUser;
-            string newLocation;
-            
-            if (!ModelState.IsValid)
-            {
+            positionData.InvestorKey = currentInvestor.Trim();
+
+            if (!ModelState.IsValid) {
                 return ResponseMessage(new HttpResponseMessage {
                                             StatusCode = HttpStatusCode.BadRequest,
                                             ReasonPhrase = "Invalid data received for Position creation."
-                                        });
+                                      });
             }
 
-            // Check for duplicate entry via: ticker, user, and account, ONLY if not part of the Asset/Create menu process.
             var ticker = ParseUrlForTicker(ControllerContext.Request.RequestUri.ToString());
-            if (!newAsset)
-            {
-                newLocation = ControllerContext.Request.RequestUri + "/" + positionData.Account.AccountTypeDesc.Trim();
-                var currentAsset = await Task.FromResult(_repositoryAsset.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == ticker.ToUpper().Trim()
-                                                                                && a.Investor.LastName.Trim() == currentInvestor.Trim()).AsQueryable());
-                
-                var currentPosition = await Task.FromResult(_repository.Retreive(p => String.Equals(p.Account.AccountTypeDesc.Trim(), positionData.Account.AccountTypeDesc.Trim(),
-                                                               StringComparison.CurrentCultureIgnoreCase), currentAsset).AsQueryable());
-
-                if (currentPosition.Any())
-                    return BadRequest(string.Format("No additional Position has been added, due to Position {0} already existing for {1} ",
-                                                                                                    positionData.Account.AccountTypeDesc.Trim(),
-                                                                                                    ticker.ToUpper()));
-
-                var isCreated = await Task<bool>.Factory.StartNew(() => _repository.Create(positionData));
-
-                if (!isCreated) return BadRequest(string.Format("Unable to add Position to: {0} ", ticker.ToUpper()));
-                return Created(newLocation, positionData);
-            }
-
-            // TODO: When adding Positions during new Asset creation, we'll have to make sure no duplicate Positions have been added!
-            // TODO: This should be enforced during the Asset Save() of AssetRepository (or AssetController)?
-            var isNewlyCreated = await Task<bool>.Factory.StartNew(() => _repository.Create(positionData));
 
             // TODO: Investigate using route data for building links instead.
-            newLocation = ParseForNewPositionUrl(ControllerContext.Request.RequestUri.AbsoluteUri, positionData.Account.AccountTypeDesc.Trim());
-            return !isNewlyCreated ? (IHttpActionResult) BadRequest(string.Format("Unable to add Position to: {0} ", ticker.ToUpper()))
-                                   : Created(newLocation, positionData );
+            var newLocation = ParseForNewPositionUrl(ControllerContext.Request.RequestUri.AbsoluteUri, positionData.Account.AccountTypeDesc.Trim())
+                                    + "/" + positionData.Account.AccountTypeDesc;
+            var matchingPosition = await Task.FromResult(_repositoryAsset.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == ticker.ToUpper().Trim() &&
+                                                                                                     a.Investor.LastName.Trim() == currentInvestor.Trim())
+                                                                                    .AsQueryable()
+                                                                                    .SelectMany(a => a.Positions.Where(p => p.Account.AccountTypeDesc.Trim() == 
+                                                                                                        positionData.Account.AccountTypeDesc.Trim()))
+                                                            );
+
+            // var matchingPosition = currentAsset.SelectMany(a => a.Positions.Where(p => p.Account.AccountTypeDesc == positionData.Account.AccountTypeDesc.Trim()));
+            if (matchingPosition.Any())
+                return BadRequest(string.Format("No Position created, due to Position {0} already exists for {1} ",
+                                                                                                positionData.Account.AccountTypeDesc.Trim(),
+                                                                                                ticker.ToUpper()));
+
+            positionData.Url = newLocation;
+            var isCreated = await Task<bool>.Factory.StartNew(
+                        () => ((IGenericAggregateRepository) _repositoryAsset).AggregateCreate<Position>(positionData, currentInvestor, ticker));
+               
+            if (!isCreated) return BadRequest(string.Format("Unable to add Position to: {0} ", ticker.ToUpper()));
+            return Created(newLocation, positionData);
+            
         }
+        
 
-
-
-        // GET api/position/5
-        public string Get(int id)
+        [HttpPut]
+        [Route("{tickerSymbol}/Position/{account}")]
+        public async Task<IHttpActionResult> UpdatePositionsByAsset([FromBody]Position editedPosition)
         {
-            return "value";
+            // Replace entire Position.
+            var currentInvestor = _identityService.CurrentUser;
+            if (currentInvestor.Trim() != editedPosition.InvestorKey.Trim())
+                return BadRequest("Cuurent Position does not belong to investor " + currentInvestor);
+
+            var ticker = ParseUrlForTicker(editedPosition.Url.Trim());
+            _repositoryAsset.UrlAddress = ControllerContext.Request.RequestUri.ToString();
+            var matchingPosition = await Task.FromResult(_repositoryAsset.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == ticker &&
+                                                                                                     a.Investor.LastName.Trim() == currentInvestor.Trim())
+                                                                                     .AsQueryable()
+                                                                                     .SelectMany(a => a.Positions.Where(p => p.Account.AccountTypeDesc.Trim() ==
+                                                                                                        editedPosition.Account.AccountTypeDesc.Trim()))
+                                                         );
+
+            if (!matchingPosition.Any())
+                return BadRequest(string.Format("No matching Position found to update, for {0} under account {1} ", ticker, editedPosition.Account.AccountTypeDesc.Trim()));
+
+            
+
+            var isUpdated = await Task<bool>.Factory.StartNew(
+                           () => ((IGenericAggregateRepository)_repositoryAsset).AggregateUpdate<Position>(editedPosition, currentInvestor, ticker));
+
+            if (!isUpdated) return BadRequest(string.Format("Unable to edit Position : {0} for Asset {1}", 
+                                                                       editedPosition.Account.AccountTypeDesc, ticker  ));
+
+            return Ok(editedPosition);
+
         }
 
 
-        // PUT api/position/5
-        public void Put(int id, [FromBody]string value)
+        [HttpDelete]
+        [Route("{tickerSymbol}/Position/{accountKey}")]
+        public async Task<IHttpActionResult> DeletePosition([FromUri] Guid accountKey)
         {
+            var isDeleted = await Task<bool>.Factory.StartNew(
+                       () => ((IGenericAggregateRepository)_repositoryAsset).AggregateDelete<Position>(accountKey));
+
+            return isDeleted ? Ok() : (IHttpActionResult)BadRequest("Error: unable to delete Position/Account: " + accountKey);
+            
         }
 
-        // DELETE api/position/5
-        public void Delete(int id)
-        {
-        }
+        
 
 
 
         private static string ParseUrlForTicker(string urlToParse)
         {
-            var pos1 = urlToParse.IndexOf("Asset/", System.StringComparison.Ordinal) + 6;
-            var pos2 = urlToParse.IndexOf("/Position", System.StringComparison.Ordinal);
+            var pos1 = urlToParse.IndexOf("Asset/", StringComparison.Ordinal) + 6;
+            var pos2 = urlToParse.IndexOf("/Position", StringComparison.Ordinal);
             return urlToParse.Substring(pos1, pos2 - pos1);
         }
 
+
         private static string ParseForNewPositionUrl(string urlForPosition, string accountType)
         {
-            var pos1 = urlForPosition.IndexOf("Position?", System.StringComparison.Ordinal);
+            if (urlForPosition.IndexOf("?", StringComparison.Ordinal) <= 0) return urlForPosition;
+            var pos1 = urlForPosition.IndexOf("Position?", StringComparison.Ordinal);
             return urlForPosition.Substring(0, pos1 + 8) + "/" + accountType.Trim();
         }
+
+        
     }
 }
