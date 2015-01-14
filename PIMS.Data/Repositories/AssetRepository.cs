@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Linq.Expressions;
 using PIMS.Core.Models;
+using PIMS.Data.FakeRepositories;
 
 
 namespace PIMS.Data.Repositories
@@ -21,7 +22,7 @@ namespace PIMS.Data.Repositories
             throw new NotImplementedException();
         }
 
-        public IQueryable<Asset> Retreive(Expression<Func<Asset, bool>> predicate, IQueryable<object> data = null)
+        public IQueryable<Asset> Retreive(Expression<Func<Asset, bool>> predicate)
         {
             throw new NotImplementedException();
         }
@@ -48,5 +49,11 @@ namespace PIMS.Data.Repositories
         }
 
         public string UrlAddress { get; set; }
+
+
+        public void TestProfileMethod()
+        {
+            throw new NotImplementedException();
+        }
     }
 }
