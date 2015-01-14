@@ -8,7 +8,7 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
     {
         public IncomeMap() {
 
-            Id(x => x.IncomeId);
+            Id(x => x.AssetId);
             Map(x => x.Actual).Precision(6);
             Map(x => x.Projected).Precision(6);
             Map(x => x.DateRecvd, "DateReceived");

@@ -13,7 +13,7 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             Id(x => x.PositionId);
             Map(x => x.PurchaseDate);
             Map(x => x.Quantity);
-            Map(x => x.UnitCost).Precision(6);
+            Map(x => x.MarketPrice).Precision(6);
             Map(x => x.Account);
             Map(x => x.LastUpdate, "LastUpdate");
 

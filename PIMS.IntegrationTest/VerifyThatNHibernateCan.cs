@@ -104,7 +104,7 @@ namespace PIMS.IntegrationTest
                             Actual = decimal.Parse("74.50"),
                             DateRecvd = currentDateTimeUtc.ToString("g"),
                             Projected = decimal.Parse("75.11"),
-                            IncomeId = new Guid(),
+                            AssetId = new Guid(),
                             Account = "Roth-IRA"
                         }
                     })
@@ -115,7 +115,7 @@ namespace PIMS.IntegrationTest
                                 PositionId = new Guid(),
                                 PurchaseDate = currentDateTimeUtc.ToString("d"),
                                 Quantity = int.Parse("125"),
-                                UnitCost = decimal.Parse("53.11"),
+                                MarketPrice = decimal.Parse("53.11"),
                                 Account = new AccountType{AccountTypeDesc = "Roth-IRA", KeyId = Guid.NewGuid(), Url = "api/at"},
                                 LastUpdate = "10/11/2013 15:44"
                             },
@@ -124,7 +124,7 @@ namespace PIMS.IntegrationTest
                                 PositionId = new Guid(),
                                 PurchaseDate = currentDateTimeUtc.ToString("d"),
                                 Quantity = int.Parse("19"),
-                                UnitCost = decimal.Parse("84.90"),
+                                MarketPrice = decimal.Parse("84.90"),
                                 Account = new AccountType{AccountTypeDesc = "CMA", KeyId = Guid.NewGuid(), Url = "api/at"},
                                 LastUpdate = "11/21/2014 10:04"
                             }
@@ -227,7 +227,7 @@ namespace PIMS.IntegrationTest
 
             switch (x.GetType().Name) {
                   case "Income": {
-                      objectsAreEqual = (x is Income && y is Income) ? ((Income)x).IncomeId == ((Income)y).IncomeId : x.Equals(y);
+                      objectsAreEqual = (x is Income && y is Income) ? ((Income)x).AssetId == ((Income)y).AssetId : x.Equals(y);
                       break;
                   }
                   case "Position": {
