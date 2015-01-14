@@ -8,13 +8,13 @@ using PIMS.Data.Repositories;
 
 namespace PIMS.Data.FakeRepositories
 {
-    public class InMemoryAssetRepository : IGenericRepository<Asset>
+    public class InMemoryAssetRepository : IGenericRepository<Asset>,  IGenericAggregateRepository
     {
-        
-
         public static string UrlAddress { get; set; }
         private readonly InMemoryInvestorRepository _repoInMemoryInvestorRepository = new InMemoryInvestorRepository();
         private readonly InMemoryProfileRepository _repoInMemoryProfileRepository = new InMemoryProfileRepository();
+        private readonly InMemoryPositionRepository _repoInMemoryPositionRepository = new InMemoryPositionRepository();
+        private readonly InMemoryIncomeRepository _repoInMemoryIncomeRepository = new InMemoryIncomeRepository();
 
 
         string IGenericRepository<Asset>.UrlAddress
@@ -23,7 +23,7 @@ namespace PIMS.Data.FakeRepositories
             set { UrlAddress =  value ; }
         }
 
-
+        // TODO: 1-5-15 -> implement 1. controller, 2. unit tests
 
         public IQueryable<Asset> RetreiveAll()
         {
@@ -41,67 +41,8 @@ namespace PIMS.Data.FakeRepositories
                                                         Description = "Corporate Bond", 
                                                         KeyId = new Guid("75a3983f-da08-4ee6-bfbb-664088133483")
                                                     },
-                                    Revenue = new List<Income>
-                                              {
-                                                 new Income
-                                                    {
-                                                        Url = "",
-                                                        Actual = 56.11M, 
-                                                        DateRecvd = new DateTime(2014,04,17,17,20,0).ToString("g"),
-                                                        IncomeId = new Guid("34b9d8cb-2952-4409-87bc-91470d00b763"), 
-                                                        Projected = 52.56M,
-                                                        Account = "Roth-IRA"
-                                                    },
-                                                 new Income
-                                                    {
-                                                        Url = "",// UrlAddress + "/AAPL/Income",
-                                                        Actual = 73.19M, 
-                                                        DateRecvd = new DateTime(2014,05,15,12,29,0).ToString("g"),
-                                                        IncomeId = new Guid("229ce910-e4f7-41e3-a93e-9d674ffb07af"), 
-                                                        Projected = 72.56M,
-                                                        Account = "ML-CMA"
-                                                    } ,
-                                                 new Income
-                                                    {
-                                                        Url = "",// UrlAddress + "/AAPL/Income",
-                                                        Actual = 53.19M, 
-                                                        DateRecvd = new DateTime(2014,07,10,18,09,0).ToString("g"),
-                                                        IncomeId = new Guid("b0d08fe8-200f-450c-8761-6a9ff7da177d"), 
-                                                        Projected = 72.56M,
-                                                        Account = "Roth-IRA"
-                                                    } 
-                                              },
-                                    Positions = new List<Position>
-                                                {
-                                                    new Position
-                                                    {
-                                                        Url = "", //UrlAddress + "/AAPL/Position",
-                                                        PositionId = new Guid("96b5f8bd-21f2-4921-bc5b-bcff6e39cbdb"), 
-                                                        PurchaseDate = DateTime.UtcNow.AddYears(-3).ToString("d"), 
-                                                        Quantity = 50,
-                                                        UnitCost = 109.13M,
-                                                        Account = new AccountType
-                                                                {
-                                                                    Url = "",
-                                                                    AccountTypeDesc = "Roth-IRA", 
-                                                                    KeyId = new Guid("be364e77-2e99-442c-904d-f50a8781a749")
-                                                                }
-                                                    },
-                                                    new Position
-                                                    {
-                                                        Url = "", //UrlAddress + "/AAPL/Position",
-                                                        PositionId = new Guid("11f5afe6-7fb9-429c-877a-a3c700a4e8aa"), 
-                                                        PurchaseDate = DateTime.UtcNow.AddYears(-2).ToString("d"), 
-                                                        Quantity = 100,
-                                                        UnitCost = 142.94M,
-                                                        Account = new AccountType
-                                                                {
-                                                                    Url = "",
-                                                                    AccountTypeDesc = "ML-CMA", 
-                                                                    KeyId = new Guid("89f93743-dffa-43e5-b775-3b91fe9839db")
-                                                                }
-                                                    }
-                                                },
+                                    Revenue = _repoInMemoryIncomeRepository.Retreive(i => i.AssetId == new Guid("55224b18-5777-48b1-a9a1-28fb74d385f3")).ToList(),
+                                    Positions = _repoInMemoryPositionRepository.Retreive(p => p.InvestorKey == "Asch" && p.Url.Contains("IBM") ).ToList(),
                                     Profile = _repoInMemoryProfileRepository.Retreive(p => p.TickerSymbol == "IBM").Single()
                                 },
                                 new Asset
@@ -116,35 +57,8 @@ namespace PIMS.Data.FakeRepositories
                                                         Description = "Common Stock", 
                                                         KeyId = new Guid("f63ae3d2-6e5d-425a-8424-ffc3d375eec1")
                                                     },
-                                    Revenue = new List<Income>
-                                              {
-                                                 new Income
-                                                    {
-                                                        Url = "", //UrlAddress + "/YHO/Income",
-                                                        Actual = 5.31M, 
-                                                        DateRecvd = new DateTime(2012,01,10,08,09,0).ToString("g"), 
-                                                        IncomeId = new Guid("abe7c0c6-e691-4c34-804f-0fb422856999"), 
-                                                        Projected = 62.26M,
-                                                        Account = "ML-CMA"
-                                                    } 
-                                              },
-                                    Positions = new List<Position>
-                                                {
-                                                    new Position
-                                                    {
-                                                        Url = "" , //UrlAddress + "/YHO/Position",
-                                                        PositionId = new Guid("0409fcc8-f12b-49f9-86fd-c572560cfe15"), 
-                                                        PurchaseDate = DateTime.UtcNow.AddDays(-2).ToString("d"), 
-                                                        Quantity = 200,
-                                                        UnitCost = 109.13M,
-                                                        Account = new AccountType
-                                                                    {
-                                                                        Url = "", //UrlAddress.Replace("Asset","AccountType") + "/IRA",
-                                                                        AccountTypeDesc = "CMA", 
-                                                                        KeyId = new Guid("fed3a363-2280-4d64-8640-440963290744")
-                                                                    }
-                                                    }
-                                                },  
+                                    Revenue = _repoInMemoryIncomeRepository.Retreive(i => i.AssetId ==  new Guid("f9cea918-798b-4323-884f-917090b23858")).ToList(),
+                                    Positions = _repoInMemoryPositionRepository.Retreive(p => p.InvestorKey == "Motheral"  && p.Url.Contains("YHO") ).ToList(),
                                     Profile = _repoInMemoryProfileRepository.Retreive(p => p.TickerSymbol == "YHO").Single()
                                 },
                                 new Asset
@@ -159,35 +73,8 @@ namespace PIMS.Data.FakeRepositories
                                                         Description = "Master Limited Partnership", 
                                                         KeyId = new Guid("25c33d28-327c-4cbb-858e-1d85224e68c9")
                                                     },
-                                     Revenue = new List<Income>
-                                              {
-                                                 new Income
-                                                    {
-                                                        Url = "", //UrlAddress + "/ETP//Income",
-                                                        Actual = 191.09M, 
-                                                        DateRecvd = new DateTime(2014,01,7,10,59,0).ToString("g"), 
-                                                        IncomeId = new Guid("4adbb38c-0811-45a2-9908-f0cdada6cdf1"), 
-                                                        Projected = 198.44M,
-                                                        Account = "IRRA"
-                                                    } 
-                                              },
-                                    Positions = new List<Position>
-                                                {
-                                                    new Position
-                                                    {
-                                                        Url = "", //UrlAddress + "/ETP/Position",
-                                                        PositionId = new Guid("d427c6be-37e4-45f2-93d9-a97956fd3931"), 
-                                                        PurchaseDate = DateTime.UtcNow.AddDays(-8).ToString("d"),
-                                                        Quantity = 300,
-                                                        UnitCost = 192.98M,
-                                                        Account = new AccountType
-                                                                    {
-                                                                        Url = "", //UrlAddress.Replace("Asset","AccountType") + "/ML-CMA",
-                                                                        AccountTypeDesc = "IRRA", 
-                                                                        KeyId = new Guid("63fe441d-7fa4-4366-92b9-d0cda2d0bdbf")
-                                                                    }
-                                                    }
-                                                },
+                                    Revenue = _repoInMemoryIncomeRepository.Retreive(i => i.AssetId ==  new Guid("cc950e42-1f08-49b9-880b-a35f4d60b317")).ToList(),
+                                    Positions = _repoInMemoryPositionRepository.Retreive(p => p.InvestorKey == "Pinkston"  && p.Url.Contains("ETP") ).ToList(),
                                     Profile = _repoInMemoryProfileRepository.Retreive(p => p.TickerSymbol == "ETP").Single()                                                    
                                 },
                                 new Asset
@@ -202,35 +89,8 @@ namespace PIMS.Data.FakeRepositories
                                                         Description = "Exchange Traded Fund", 
                                                         KeyId = new Guid("28f8a3d2-42a2-4d39-b503-54a9a3143dcb")
                                                     },
-                                    Revenue = new List<Income>
-                                              {
-                                                 new Income
-                                                    {
-                                                        Url = "", //UrlAddress + "/VNR/Income",
-                                                        Actual = 216.91M, 
-                                                        DateRecvd = new DateTime(2014,04,30,19,50,0).ToString("g"), 
-                                                        IncomeId = new Guid("445f7e72-2018-4762-9924-145c1d72488b"), 
-                                                        Projected = 212.56M,
-                                                        Account = "IRRA"
-                                                    } 
-                                              },
-                                    Positions = new List<Position>
-                                                {
-                                                    new Position
-                                                    {
-                                                       Url = "", //UrlAddress + "/VNR/Position",
-                                                       PositionId = new Guid("6172313a-20d1-47b6-9a7e-de1fe80a9cc8"), 
-                                                       PurchaseDate = DateTime.UtcNow.AddDays(-1).ToString("d"), 
-                                                       Quantity = 50,
-                                                       UnitCost = 14.93M,
-                                                       Account = new AccountType
-                                                                    {
-                                                                        Url = "", //UrlAddress.Replace("Asset","AccountType") + "/401(k)",
-                                                                        AccountTypeDesc = "IRRA", 
-                                                                        KeyId = new Guid("776286c8-6e5f-4496-a135-8e69bb8b81b4")
-                                                                    }
-                                                    }
-                                                },
+                                    Revenue = _repoInMemoryIncomeRepository.Retreive(i => i.AssetId ==  new Guid("1a4edffd-bc30-44be-a1df-98e096308ac9")).ToList(),
+                                    Positions = _repoInMemoryPositionRepository.Retreive(p => p.InvestorKey == "Asch"  && p.Url.Contains("VNR") ).ToList(),
                                     Profile = _repoInMemoryProfileRepository.Retreive(p => p.TickerSymbol == "VNR").Single()
                                 },
                                 new Asset
@@ -245,64 +105,9 @@ namespace PIMS.Data.FakeRepositories
                                                         Description = "Corporate Bond", 
                                                         KeyId = new Guid("da329599-a301-411d-8167-b8e571a531d1")
                                                     },
-                                    Revenue = new List<Income>
-                                              {
-                                                 new Income
-                                                    {
-                                                        Url = "", //UrlAddress + "/AAPL/Income",
-                                                        Actual = 56.29M, 
-                                                        DateRecvd = new DateTime(2013,12,19,09,52,0).ToString("g"), 
-                                                        IncomeId = new Guid("6389dbd1-174c-436e-a7d5-327ba6ea1980"), 
-                                                        Projected = 52.56M,
-                                                        Account = "Roth-IRA"
-                                                    } 
-                                              },
-                                    Positions = new List<Position>
-                                                {
-                                                    new Position
-                                                    {
-                                                        Url = "", //UrlAddress + "/AAPL/Position",
-                                                        PositionId = new Guid("96b5f8bd-21f2-4921-bc5b-bcff6e39cbdb"), 
-                                                        PurchaseDate = DateTime.UtcNow.AddYears(-3).ToString("d"), 
-                                                        Quantity = 50,
-                                                        UnitCost = 109.13M,
-                                                        Account = new AccountType
-                                                                    {
-                                                                        Url = "", //UrlAddress.Replace("Asset","AccountType") + "/IRA",
-                                                                        AccountTypeDesc = "IRRA", 
-                                                                        KeyId = new Guid("469491d0-3353-4d62-b4cb-f79ab0e2c9e0")
-                                                                    }
-                                                    },
-                                                    new Position
-                                                    {
-                                                        Url = "", //UrlAddress + "/AAPL/Position",
-                                                        PositionId = new Guid("a03174a3-d5cc-49b1-99aa-62f993bff553"), 
-                                                        PurchaseDate = DateTime.UtcNow.AddYears(-2).ToString("d"), 
-                                                        Quantity = 100,
-                                                        UnitCost = 142.93M,
-                                                        Account = new AccountType
-                                                                        {
-                                                                            Url = "", //UrlAddress.Replace("Asset","AccountType") + "/IRA",
-                                                                            AccountTypeDesc = "ML-CMA", 
-                                                                            KeyId = new Guid("09b1f08a-095c-4eb5-9add-8de106894945")
-                                                                        }
-                                                    },
-                                                    new Position
-                                                    {
-                                                        Url = "", //UrlAddress + "/AAPL/Position",
-                                                        PositionId = new Guid("11f5afe6-7fb9-429c-877a-a3c700a4e8aa"), 
-                                                        PurchaseDate = DateTime.UtcNow.AddMonths(-9).ToString("d"), 
-                                                        Quantity = 350,
-                                                        UnitCost = 82.93M,
-                                                        Account = new AccountType
-                                                                        {
-                                                                            Url = "", //UrlAddress.Replace("Asset","AccountType") + "/IRA",
-                                                                            AccountTypeDesc = "Roth-IRA", 
-                                                                            KeyId = new Guid("b7b010e1-e880-411c-9f0b-d135fcc7b2d5")
-                                                                        }
-                                                    }
-                                                },
-                                     Profile = _repoInMemoryProfileRepository.Retreive(p => p.TickerSymbol == "AAPL").Single()
+                                    Revenue = _repoInMemoryIncomeRepository.Retreive(i => i.AssetId ==  new Guid("216d1d40-e63c-4fc8-bee9-0dddf343c0aa")).ToList(),
+                                    Positions = _repoInMemoryPositionRepository.Retreive(p => p.InvestorKey == "Asch"  && p.Url.Contains("AAPL") ).ToList(),
+                                    Profile = _repoInMemoryProfileRepository.Retreive(p => p.TickerSymbol == "AAPL").Single()
                                 }
 
                     };
@@ -314,20 +119,15 @@ namespace PIMS.Data.FakeRepositories
                 item.Investor.Url = "http://localhost/Pims.Web.Api/api/Investor/" + item.Investor.FirstName + item.Investor.MiddleInitial + item.Investor.LastName;
                 item.AssetClass.Url = "http://localhost/Pims.Web.Api/api/AssetClass/" + item.AssetClass.Code.Trim().ToUpper();
                 item.Profile.Url = "http://localhost/Pims.Web.Api/api/Profile/" + item.Profile.TickerSymbol.Trim().ToUpper();
-                foreach (var subitem in item.Positions) {
-                    subitem.Url = "http://localhost/Pims.Web.Api/api/Asset/" + item.Profile.TickerSymbol.ToUpper().Trim() +"/Position/" 
-                        + subitem.Account.AccountTypeDesc.Trim();
-                    subitem.Account.Url = "http://localhost/Pims.Web.Api/api/Position/Account/" + Guid.NewGuid();
-                }
+                
                 foreach (var subitem in item.Revenue)
-                    subitem.Url = "http://localhost/Pims.Web.Api/api/Income/" + subitem.IncomeId;
+                    subitem.Url = item.Url + "/Income/" + subitem.IncomeId;
             }
 
             return assetListing.AsQueryable();
         }
-
         
-        public IQueryable<Asset> Retreive(Expression<Func<Asset, bool>> predicate, IQueryable<object> data = null)
+        public IQueryable<Asset> Retreive(Expression<Func<Asset, bool>> predicate)
        {
            return RetreiveAll().Where(predicate);
        }
@@ -352,7 +152,6 @@ namespace PIMS.Data.FakeRepositories
             return true;
         }
 
-        // TODO: implementation pending
         public bool Delete(Guid idGuid)
         {
             //
@@ -369,7 +168,7 @@ namespace PIMS.Data.FakeRepositories
             if (id != null && (entity == null || string.IsNullOrEmpty(id.ToString()))) return false;
 
             // Mimic a real update - useful for debug/testing.
-            var assets = Retreive(a => a.Profile.TickerSymbol == id.ToString().Trim().ToUpper()).AsQueryable();
+            var assets = Retreive(a => a.AssetId == (id is Guid ? (Guid) id : new Guid())).AsQueryable();
             var assetToUpdate = assets.First();
             assetToUpdate.Profile.TickerSymbol = entity.Profile.TickerSymbol;
             assetToUpdate.Profile.TickerDescription = entity.Profile.TickerDescription;
@@ -382,6 +181,130 @@ namespace PIMS.Data.FakeRepositories
 
 
 
+        //---------------------------------------------------------------------------------------------------------
+        // Child aggregate object [Profile, Position, and Income] methods under the control of the aggregate root 
+        // (InMemoryAssetRepository -or- AssetRepository), and are NOT dependent on their respective individual
+        // repositories for these idempotent actions.
+        //---------------------------------------------------------------------------------------------------------
+
+        public bool AggregateCreate<T>(T newEntity, string forInvestor, string forTicker)
+        {
+            // Case "Profile": - N/A. Creation processed via Yahoo GETs, with persistence handled via aggregate root (AssetRepository) 
+            //                   during new asset creation.
+            try
+            {
+                switch (typeof(T).Name)
+                {
+                    case "Position":
+                        {
+                            var currentAsset = Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == forTicker.ToUpper().Trim() &&
+                                                                                                        a.Investor.LastName.Trim() == forInvestor.Trim())
+                                              .AsQueryable();
+                            
+                            currentAsset.First().Positions.Add(newEntity as Position);
+                            break;
+                        }
+                   case "Income":
+                        {
+                            var incomeToAdd = newEntity as Income;
+                            var currentAsset = Retreive(a => a.AssetId == incomeToAdd.AssetId).AsQueryable();
+                            currentAsset.First().Revenue.Add(incomeToAdd);
+                            break;
+                        }
+                }
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+            
+            return true;
+        }
+
+        public bool AggregateDelete<T>(Guid keyId)
+        {
+            try {
+                switch (typeof(T).Name)
+                {
+                    case "Position": 
+                    {
+                        var existingPosition = RetreiveAll().AsQueryable()
+                                                            .SelectMany(a => a.Positions.Where(p => p.Account.KeyId == keyId)).ToList();
+                        existingPosition.RemoveAt(0);
+                        return true;
+                    }
+                    case "Profile":
+                    {
+                        // Mimic Profile removal from a database table.
+                        var existingProfile = _repoInMemoryProfileRepository.Retreive(p => p.ProfileId == keyId).AsQueryable().ToList();
+                        existingProfile.RemoveAt(0);
+                        break;
+                    }
+                    case "Income":
+                    {
+                        var existingIncome = _repoInMemoryIncomeRepository.Retreive(i => i.IncomeId == keyId).AsQueryable().ToList();
+                        existingIncome.RemoveAt(0);
+                        break;
+                    }
+                }
+            }
+            catch (Exception) {
+                return false;
+            }
+
+            return true;
+        }
+
+        public bool AggregateUpdate<T>(T editedEntity, string forInvestor, string forTicker)
+        {
+            try {
+                switch (typeof(T).Name)
+                {
+                    case "Position":
+                    {
+                        var recvdPosition = editedEntity as Position;
+                        var existingPosition = Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == forTicker.ToUpper().Trim()
+                                                          && a.Investor.LastName.Trim() == forInvestor.Trim())
+                            .AsQueryable()
+                            .SelectMany(a => a.Positions.Where(p => recvdPosition != null && p.Account.AccountTypeDesc.Trim() ==
+                                                                    recvdPosition.Account.AccountTypeDesc.Trim()));
+
+                        if (recvdPosition != null)
+                        {
+                            existingPosition.First().Quantity = recvdPosition.Quantity;
+                            existingPosition.First().Account = recvdPosition.Account;
+                            existingPosition.First().MarketPrice = recvdPosition.MarketPrice;
+                        }
+                        break;
+                    }
+                    case "Profile":
+                    {
+                        var recvdProfile = editedEntity as Profile;
+                        var existingAsset = Retreive(a => a.Profile.TickerSymbol.Trim() == forTicker.ToUpper().Trim())
+                                             .AsQueryable().First();
+                        // Persistence would go here in PROD.
+                        existingAsset.Profile = recvdProfile;
+                        break;
+                    }
+                    case "Income":
+                    {
+                        var recvdIncome = editedEntity as Income;
+                        var matchingAsset = Retreive(a => a.AssetId == recvdIncome.AssetId).AsQueryable().First();
+                        // Persistence would go here in PROD.
+                        matchingAsset.Revenue.Add(recvdIncome);
+                        break;
+                    }
+                }
+            }
+            catch (Exception) {
+                return false;
+            }
+
+            return true;
+        }
+
     }
+
+    
 }
 

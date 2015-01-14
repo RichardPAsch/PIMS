@@ -48,7 +48,7 @@ namespace PIMS.Data.FakeRepositories
 
         
        
-        public IQueryable<AssetClass> Retreive(Expression<Func<AssetClass, bool>> predicate, IQueryable<object> data = null) {
+        public IQueryable<AssetClass> Retreive(Expression<Func<AssetClass, bool>> predicate) {
             return RetreiveAll().Where(predicate);
         }
 

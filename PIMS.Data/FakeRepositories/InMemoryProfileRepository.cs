@@ -10,6 +10,9 @@ namespace PIMS.Data.FakeRepositories
 {
     public class InMemoryProfileRepository : IGenericRepository<Profile>
     {
+        public string UrlAddress { get; set; }
+
+        // Retreive() used by Aggregate root repository linking, when fetching child aggregate Profiles.
         public IQueryable<Profile> RetreiveAll()
         {
             var profileListing = new List<Profile>
@@ -40,7 +43,7 @@ namespace PIMS.Data.FakeRepositories
                                     ExDividendDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 10).ToString("d"),
                                     DividendPayDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 19).ToString("d"),
                                     EarningsPerShare = 3.21M,
-                                    LastUpdate = DateTime.UtcNow.AddDays(-4).ToString("g"),
+                                    LastUpdate = DateTime.UtcNow.AddHours(-4).ToString("g"),
                                     PE_Ratio = 15.66M,
                                     ProfileId = new Guid("9e5cced5-76ec-4533-8b89-619e64859415"),
                                     TickerDescription = "International Business Machines.",
@@ -119,7 +122,7 @@ namespace PIMS.Data.FakeRepositories
             return profileListing.AsQueryable();
         }
 
-        public IQueryable<Profile> Retreive(Expression<Func<Profile, bool>> predicate, IQueryable<object> data = null)
+        public IQueryable<Profile> Retreive(Expression<Func<Profile, bool>> predicate)
         {
             try
             {
@@ -136,47 +139,22 @@ namespace PIMS.Data.FakeRepositories
             return null;
         }
 
+
+        // The following 3 methods are superceeded by Aggregate functionality located with the
+        // aggregate root, e.g., AssetRepository or InMemoryAssetRepository.
         public bool Create(Profile newEntity)
         {
-            // In PROD: check against SQL Server for existing record; Profile created as part of new Asset creation only.
             return false;
         }
         
         public bool Update(Profile updatedProfile, object id = null)
         {
-            bool resp = true;
-            try
-            {
-                // Mimic a real update.
-                var profiles = RetreiveAll().ToList();
-                var oldProfile = profiles.First(p => p.TickerSymbol == updatedProfile.TickerSymbol);
-                profiles.Remove(oldProfile);
-                profiles.Add(updatedProfile);
-            }
-            catch (Exception) {
-                // Mimic failed update due to some exception.
-                resp = false;
-            }
-            
-            return resp;
+            return false;
         }
-
-        public string UrlAddress { get; set; }
-
+        
         public bool Delete(Guid idGuid)
         {
-           
-            var profiles = RetreiveAll().ToList();
-            var oldCount = profiles.Count();
-            try
-            {
-                profiles.Remove(profiles.First(p => p.ProfileId == idGuid));
-                return oldCount -1 == profiles.Count();
-            }
-            catch
-            {
-                return false;
-            }
+            return false;
         }
 
 

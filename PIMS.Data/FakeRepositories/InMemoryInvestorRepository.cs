@@ -33,6 +33,7 @@ namespace PIMS.Data.FakeRepositories
                                             BirthDay = new DateTime(1950,10,30).ToString("d"),
                                             MiddleInitial = "P",
                                             AspNetUsersId = Guid.NewGuid(),
+                                            InvestorId = Guid.NewGuid(),
                                             DateAdded = new DateTime(2014,09,12,15,22,0).ToString("g")
                                         },
                                         new Investor
@@ -51,6 +52,7 @@ namespace PIMS.Data.FakeRepositories
                                             BirthDay = new DateTime(1957,6,21).ToString("d"),
                                             MiddleInitial = "A",
                                             AspNetUsersId = Guid.NewGuid(),
+                                            InvestorId = Guid.NewGuid(),
                                             DateAdded = new DateTime(2014,02,2,11,32,0).ToString("g")
                                         },
                                         new Investor
@@ -67,6 +69,7 @@ namespace PIMS.Data.FakeRepositories
                                             Mobile = "7028747673",
                                             EMailAddr = "opinkston@comcast.net",
                                             BirthDay = new DateTime(1952,2,20).ToString("d"),
+                                            InvestorId = Guid.NewGuid(),
                                             MiddleInitial = "M.",
                                             AspNetUsersId = Guid.NewGuid(),
                                             DateAdded = new DateTime(2013,03,11,15,29,0).ToString("g")
@@ -85,6 +88,7 @@ namespace PIMS.Data.FakeRepositories
                                             Mobile = "9259849654",
                                             EMailAddr = "jw94507@yahoo.com",
                                             BirthDay = new DateTime(1963,12,22).ToString("d"),
+                                            InvestorId = Guid.NewGuid(),
                                             MiddleInitial = "M",
                                             AspNetUsersId = Guid.NewGuid(),
                                             DateAdded = new DateTime(2014,11,17,14,32,0).ToString("g")
@@ -95,7 +99,7 @@ namespace PIMS.Data.FakeRepositories
         }
 
        
-        public IQueryable<Investor> Retreive(Expression<Func<Investor, bool>> predicate, IQueryable<object> data = null)
+        public IQueryable<Investor> Retreive(Expression<Func<Investor, bool>> predicate)
         {
             return RetreiveAll().Where(predicate);
         }
