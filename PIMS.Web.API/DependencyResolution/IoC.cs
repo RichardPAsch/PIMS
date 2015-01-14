@@ -50,7 +50,7 @@ namespace PIMS.Web.Api.DependencyResolution {
                             // x.For<IAssetRepository>().Use<AssetRepository>(); //.Ctor<string>("connectionString").EqualToAppSetting("Connection-String");
                             x.For<UserManager<ApplicationUser>>().Use<UserManager<ApplicationUser>>();
                             x.For<IUserStore<ApplicationUser>>().Use<UserStore<ApplicationUser>>();
-                            x.For<IPimsIdentityService>().Use<PimsIdentityService>(); 
+                            x.For<IPimsIdentityService>().Use<PimsIdentityService>();
                             //x.For<IUserStore<ApplicationUser>>().Use<Core.Security.UserStore<ApplicationUser>>();
                             //x.For<IMembershipAdapter>().Use<MembershipAdapter>();
                             //x.For<IUserMapper>().Use<UserMapper>();
@@ -58,15 +58,15 @@ namespace PIMS.Web.Api.DependencyResolution {
                             /*  --------------- UNIT TESTING only, via Fiddler --------------------------------- */
                             x.For<IGenericRepository<Asset>>().Use<InMemoryAssetRepository>();
                             x.For<IGenericRepository<Investor>>().Use<InMemoryInvestorRepository>();
-                            x.For<IGenericRepository<Profile>>().Use<InMemoryProfileRepository>();
-                            x.For<IGenericRepository<Position>>().Use<InMemoryPositionRepository>();  
+                            x.For<IGenericRepository<Position>>().Use<InMemoryPositionRepository>();
+                            x.For<IGenericRepository<Income>>().Use<InMemoryIncomeRepository>();
                             /*  -------------------------------------------------------------------------------- */
 
                             x.For<IGenericRepository<AssetClass>>().Use<AssetClassRepository>(); 
                             //x.For<IGenericRepository<Profile>>().Use<ProfileRepository>();
                             //x.For<IGenericRepository<Profile>>().Use<InMemoryProfileRepository>(); [10/24/14: not needed due to unit test configurations]
                             //x.For<IGenericRepository<Position>>().Use<PositionRepository>();
-                            x.For<IGenericRepository<Income>>().Use<IncomeRepository>();
+                            //x.For<IGenericRepository<Income>>().Use<IncomeRepository>();
 
                          
 
