@@ -23,7 +23,6 @@ namespace PIMS.UnitTest
         private Mock<InMemoryAssetRepository> _mockRepoAsset;
 
 
-
         //----------- Menu BUSINESS RULES : per Investor ---------------------------------------------------------------------------------
         //  (Asset/Create) -> Allows for recording an Income event during initial Asset creation, and does NOT involve Income controller.
         //                 -> New income info created client-side & handled as a composite entity during NHibernate Asset POSTing trx.
@@ -50,18 +49,20 @@ namespace PIMS.UnitTest
         }
 
 
+
+        #region Non-asset specific tests
         [Test]
         // ReSharper disable once InconsistentNaming
         public async Task Controller_Can_GET_all_fake_revenue_by_dates()
         {
             // Arrange 
-            _ctrl = new IncomeController( _mockIdentitySvc.Object, _mockRepoAsset.Object) {
+            _ctrl = new IncomeController(_mockIdentitySvc.Object, _mockRepoAsset.Object) {
                 Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Income/4-1-2014/4-30-2014") },
                 Configuration = new HttpConfiguration()
             };
 
             // Act 
-            var byDatesRevenue = await _ctrl.GetMonthlyIncomeForAllAssets("4-1-2014", "4-30-2014") as OkNegotiatedContentResult<decimal>;
+            var byDatesRevenue = await _ctrl.GetRevenueTotalForAllAssetsByDates("4-1-2014", "4-30-2014") as OkNegotiatedContentResult<decimal>;
 
 
             // Assert
@@ -70,18 +71,44 @@ namespace PIMS.UnitTest
             Assert.That(byDatesRevenue.Content, Is.TypeOf<decimal>());
         }
 
+
         [Test]
         // ReSharper disable once InconsistentNaming
-        public async Task Controller_Can_GET_all_fake_revenue_for_an_asset_for_the_last_2_years_with_no_wildcard_ticker_designation()
+        public async Task Controller_Can_GET_all_fake_revenue_averages_for_YTD()
         {
             // Arrange 
-            _ctrl = new IncomeController( _mockIdentitySvc.Object, _mockRepoAsset.Object) {
+            _ctrl = new IncomeController(_mockIdentitySvc.Object, _mockRepoAsset.Object) {
+                Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Income/Averages") },
+                Configuration = new HttpConfiguration()
+            };
+
+            // Act 
+            var averagesRevenue = await _ctrl.GetRevenueYtdMonthlyAverages() as OkNegotiatedContentResult<IOrderedQueryable<RevenueYtdVm>>;
+            
+
+            // Assert
+            Assert.IsNotNull(averagesRevenue);
+            Assert.That(averagesRevenue.Content.Count(), Is.GreaterThanOrEqualTo(4)); // Minimum needed for adequate test.
+            var last3MosTotal = averagesRevenue.Content.ElementAt(3).AmountRecvd + averagesRevenue.Content.ElementAt(2).AmountRecvd +
+                                     averagesRevenue.Content.ElementAt(1).AmountRecvd;
+            var runningTotal = averagesRevenue.Content.ElementAt(3).AmountRecvd + averagesRevenue.Content.ElementAt(2).AmountRecvd +
+                                     averagesRevenue.Content.ElementAt(1).AmountRecvd + averagesRevenue.Content.ElementAt(0).AmountRecvd;
+            Assert.That(averagesRevenue.Content.ElementAt(3).Rolling3MonthAverage, Is.EqualTo(Math.Round(last3MosTotal / 3, 2)));
+            Assert.That(averagesRevenue.Content.ElementAt(3).YtdAverage, Is.EqualTo(Math.Round(runningTotal / 4, 2)));
+        }
+
+
+        [Test]
+        // ReSharper disable once InconsistentNaming
+        public async Task Controller_Can_GET_all_fake_revenue_for_an_asset_for_the_last_2_years_with_no_wildcard_ticker_designation() {
+            // Arrange 
+            _ctrl = new IncomeController(_mockIdentitySvc.Object, _mockRepoAsset.Object) {
                 Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Asset/VNR/Income") },
                 Configuration = new HttpConfiguration()
             };
 
             // Act 
-            var revenueByAsset = await _ctrl.GetAssetRevenueForLastTwoYears("VNR") as OkNegotiatedContentResult<IOrderedQueryable<AssetRevenueForLastTwoYearsVm>>;
+            var revenueByAsset = await _ctrl.GetSingleAssetRevenueForLastTwoYears("VNR") as OkNegotiatedContentResult<IOrderedQueryable<AssetRevenueVm>>;
 
 
             // Assert
@@ -94,13 +121,13 @@ namespace PIMS.UnitTest
         // ReSharper disable once InconsistentNaming
         public async Task Controller_Can_GET_all_fake_revenue_for_an_asset_for_the_last_2_years_with_a_wildcard_ticker_designation() {
             // Arrange 
-            _ctrl = new IncomeController( _mockIdentitySvc.Object, _mockRepoAsset.Object) {
+            _ctrl = new IncomeController(_mockIdentitySvc.Object, _mockRepoAsset.Object) {
                 Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Asset/VN/Income") },
                 Configuration = new HttpConfiguration()
             };
 
             // Act 
-            var revenueByAsset = await _ctrl.GetAssetRevenueForLastTwoYears("VN") as OkNegotiatedContentResult<IOrderedQueryable<AssetRevenueForLastTwoYearsVm>>;
+            var revenueByAsset = await _ctrl.GetSingleAssetRevenueForLastTwoYears("VN") as OkNegotiatedContentResult<IOrderedQueryable<AssetRevenueVm>>;
 
 
             // Assert
@@ -108,30 +135,98 @@ namespace PIMS.UnitTest
             Assert.That(revenueByAsset.Content.All(r => r.Ticker.Contains("VN")));
 
         }
+        
+        
+        [Test]
+        // ReSharper disable once InconsistentNaming
+        public async Task Controller_Can_GET_total_revenue_and_payment_freq_by_asset_ToDate()
+        {
+            // Arrange 
+            _ctrl = new IncomeController(_mockIdentitySvc.Object, _mockRepoAsset.Object) {
+                Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Income?completeRevenue=true") },
+                Configuration = new HttpConfiguration()
+            };
+
+            // Act - [dates used: 1-1-1990 -> current]
+            var totalRevenueInfo = await _ctrl.GetTotalRevenueAndPymtFreqByAssetToDate(true)
+                                                    as OkNegotiatedContentResult<IOrderedQueryable<TotalRevenueAndPymtFreqByAssetVm>>;
+
+            // Assert
+            Assert.IsNotNull(totalRevenueInfo);
+            Assert.That(totalRevenueInfo.Content.Count(), Is.GreaterThanOrEqualTo(3));
+            Assert.That(totalRevenueInfo.Content.ElementAt(0).DatePurchased, Is.GreaterThan(default(DateTime).ToString("d")));
+            Assert.That(totalRevenueInfo.Content.ElementAt(0).TotalIncome, Is.GreaterThan(0));
+            Assert.That(totalRevenueInfo.Content, Is.Ordered.Descending.By("TotalIncome"));
+        }
+
 
         [Test]
         // ReSharper disable once InconsistentNaming
-        public async Task Controller_Can_GET_all_fake_Profile_dividend_yield_data()
+        public async Task Controller_Can_GET_Total_Revenue_for_all_Assets_with_frequency()
         {
             // Arrange 
-            _ctrl = new IncomeController( _mockIdentitySvc.Object, _mockRepoAsset.Object) {
+            _ctrl = new IncomeController(_mockIdentitySvc.Object, _mockRepoAsset.Object) {
+                Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Income/Freq/1-1-2014/12-31-2014") },
+                Configuration = new HttpConfiguration()
+            };
+
+            // Act
+            var revenueFreqInfo = await _ctrl.GetRevenueForAllAssetsBasedOnDateRangeAndGroupedByFrequency("1-1-2014", "12-31-2014")
+                                                                        as OkNegotiatedContentResult<IOrderedQueryable<RevenuePymtFreqVm>>;
+
+            // Assert
+            Assert.IsNotNull(revenueFreqInfo);
+            Assert.That(revenueFreqInfo.Content.Where(a => a.IncomeFrequency != ""), Is.Ordered.By("IncomeFrequency"));
+            Assert.IsTrue(revenueFreqInfo.Content.All(i => i.TotalRecvd > 0));
+        }
+
+
+        [Test]
+        // ReSharper disable once InconsistentNaming
+        public async Task Controller_does_not_GET_any_revenue_history_using_default_YTD_criteria()
+        {
+            // Arrange 
+            _ctrl = new IncomeController(_mockIdentitySvc.Object, _mockRepoAsset.Object) {
                 Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Income") },
                 Configuration = new HttpConfiguration()
             };
 
             // Act 
-            var dividendInfo = await _ctrl.GetProfileDividendInfoForAssets() as OkNegotiatedContentResult<IOrderedQueryable<AssetsBasedOnYieldsVm>>;
+            var assetRevenueHx = await _ctrl.GetRevenueHistoryForEachAssetByDates() as OkNegotiatedContentResult<IOrderedQueryable<AssetRevenueVm>>;
 
 
             // Assert
-            Assert.IsNotNull(dividendInfo);
-            Assert.That(dividendInfo.Content.All(p => p.DividendYield >= 0));
-            Assert.That(dividendInfo.Content, Is.TypeOf<EnumerableQuery<AssetsBasedOnYieldsVm>>());
+            Assert.IsNull(assetRevenueHx); // no 2015 revenue
+        
         }
 
 
+        [Test]
+        // ReSharper disable once InconsistentNaming
+        public async Task Controller_does_GET_all_revenue_history_using_last_6_months_as_criteria()
+        {
+            // TODO: re-eval need to use [FromUri], when we can differentiate method calls via differing URLs, as is done here
+            // TODO: to differentiate call from GetRevenueTotalForAllAssetsByDates().
+            // Arrange 
+            _ctrl = new IncomeController(_mockIdentitySvc.Object, _mockRepoAsset.Object)
+                    {
+                        Request = new HttpRequestMessage {RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Income/All/6-1-2014/12-31-2014")},
+                        Configuration = new HttpConfiguration()
+                    };
 
+            // Act - 1st boolean arg used 
+            var assetRevenueHx = await _ctrl.GetRevenueHistoryForEachAssetByDates("6-1-2014", "12-31-2014")
+                                                                as OkNegotiatedContentResult<IOrderedQueryable<AssetRevenueVm>>;
+            
+            // Assert
+            Assert.IsNotNull(assetRevenueHx); // 2014 revenue
+            Assert.IsTrue(assetRevenueHx.Content.Count(a => a.Ticker == "IBM").Equals(2));
+            Assert.That(assetRevenueHx.Content.Where(a => a.Ticker == "IBM"), Is.Ordered.By("Ticker"));
+            Assert.That(assetRevenueHx.Content.Where(a => a.Ticker == "IBM"), Is.Ordered.Descending.By("DateReceived") );
+        }
 
+        #endregion
+        
 
 
 
@@ -217,7 +312,7 @@ namespace PIMS.UnitTest
             // Assert
             Assert.IsNotNull(assetRevenue);
             Assert.That(assetRevenue.Content.Count(), Is.GreaterThanOrEqualTo(3));
-            Assert.That(assetRevenue.Content.First().Actual, Is.EqualTo(53.19));
+            Assert.That(assetRevenue.Content.First().Actual, Is.EqualTo(60.99));
             Assert.That(assetRevenue.Content.All(i => i.Actual > 0), Is.True);
 
         }

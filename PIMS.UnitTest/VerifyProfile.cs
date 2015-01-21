@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -46,6 +47,27 @@ namespace PIMS.UnitTest
         }
 
 
+        [Test]
+        // ReSharper disable once InconsistentNaming
+        public async Task Controller_Can_GET_all_fake_Profile_data()
+        {
+            // Arrange 
+            _ctrl = new ProfileController(_mockIdentitySvc.Object, _mockRepoAsset.Object)
+            {
+                Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Profile") },
+                Configuration = new HttpConfiguration()
+            };
+
+            // Act 
+            var profileInfo = await _ctrl.GetExistingProfiles() as OkNegotiatedContentResult<IOrderedQueryable<Profile>>;
+
+
+            // Assert
+            Assert.IsNotNull(profileInfo);
+            Assert.That(profileInfo.Content.All(p => p.DividendYield >= 0));
+            Assert.That(profileInfo.Content, Is.TypeOf<EnumerableQuery<Profile>>());
+        }
+        
         [Test]
         // ReSharper disable once InconsistentNaming
         public async void Controller_can_GET_new_Profile_data_mimicking_new_fake_asset_as_part_of_the_asset_creation_process()
