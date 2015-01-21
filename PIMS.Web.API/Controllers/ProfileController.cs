@@ -56,6 +56,25 @@ namespace PIMS.Web.Api.Controllers
             return BadRequest(string.Format("Error creating Profile for {0}, check ticker symbol.", tickerForProfile));
             
         }
+
+
+        [HttpGet]
+        [Route("")]
+        public async Task<IHttpActionResult> GetExistingProfiles()
+        {
+            // Includes ALL Profiles, even those missing some info.
+            var currentInvestor = _identityService.CurrentUser;
+            var persistedProfiles = await Task.FromResult(_repositoryAsset.Retreive(a => a.Investor.LastName.Trim() == currentInvestor.Trim() )
+                                                                       .AsQueryable()
+                                                                       .Select(a => a.Profile).Where(p => p.AssetId != default(Guid))
+                                                                       .OrderBy(p => p.TickerSymbol));
+
+            if (persistedProfiles.Any())
+                return Ok(persistedProfiles);
+
+            return BadRequest(string.Format("Unable to retreive existing saved Profile(s). "));
+            
+        }
         
        
         [HttpDelete]
