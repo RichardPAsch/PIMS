@@ -36,8 +36,8 @@ namespace PIMS.Data.FakeRepositories
                                 new Profile
                                 {
                                     Url = "",
-                                    AssetId = new Guid("4617d721-86f0-4c44-93fa-023fcad31ae2"), 
-                                    DividendFreq = "Q",
+                                    AssetId = new Guid("55224b18-5777-48b1-a9a1-28fb74d385f3"), 
+                                    DividendFreq = "S",
                                     DividendRate = 1.32M,
                                     DividendYield = 4.9M,
                                     ExDividendDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 10).ToString("d"),
@@ -83,7 +83,7 @@ namespace PIMS.Data.FakeRepositories
                                 new Profile
                                 {
                                     Url = "", 
-                                    DividendFreq = "Q",
+                                    DividendFreq = "M",
                                     DividendRate = 1.92M,
                                     DividendYield = 6.69M,
                                     ExDividendDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 14).ToString("d"),
@@ -94,7 +94,7 @@ namespace PIMS.Data.FakeRepositories
                                     ProfileId = new Guid("66e5cd2f-8cec-4453-8920-af91589decd2"),
                                     TickerDescription = "Vanguard National Resources",
                                     TickerSymbol = "VNR",
-                                    AssetId = new Guid("be54c339-687c-4576-9cad-522a6f6fe4f4") 
+                                    AssetId = new Guid("1a4edffd-bc30-44be-a1df-98e096308ac9") 
                                 },
                                 new Profile
                                 {
@@ -110,7 +110,7 @@ namespace PIMS.Data.FakeRepositories
                                     ProfileId = new Guid("e577110b-67bc-4d0c-a367-725369a4b471"),
                                     TickerDescription = "Apple Inc.",
                                     TickerSymbol = "AAPL",
-                                    AssetId = new Guid("1968516e-e2b7-42ea-9675-c8c7e1d69b6b") 
+                                    AssetId = new Guid("216d1d40-e63c-4fc8-bee9-0dddf343c0aa") 
                                 }
                           };
 
