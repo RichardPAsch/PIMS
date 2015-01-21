@@ -208,6 +208,7 @@
     <Compile Include="Controllers\AccountTypeController.cs" />
     <Compile Include="Controllers\AssetClassController.cs" />
     <Compile Include="Controllers\AssetController.cs" />
+    <Compile Include="Controllers\AssetProfilesVm.cs" />
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\IncomeController.cs" />
     <Compile Include="Controllers\PositionController.cs" />
