@@ -131,8 +131,6 @@ namespace PIMS.Data.FakeRepositories
         public string UrlAddress { get; set; }
 
 
-        //public AssetClass TestFind(Expression<Func<AssetClass, bool>> predicate) {
-        //    return RetreiveAll().FirstOrDefault(predicate);
-        //}
+        
     }
 }
