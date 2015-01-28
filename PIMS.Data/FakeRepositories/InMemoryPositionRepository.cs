@@ -172,7 +172,7 @@ namespace PIMS.Data.FakeRepositories
                             MarketPrice = 63.10M,
                             Account = new AccountType
                                     {
-                                        Url = "http://localhost/Pims.Web.Api/api/Asset/AAPL/Position/Account/4a2e9df2-7de0-4285-9234-a193adcb5449",
+                                        Url = "http://localhost/Pims.Web.Api/api/Asset/VNR/Position/Account/4a2e9df2-7de0-4285-9234-a193adcb5449",
                                         AccountTypeDesc = "ML-CMA", 
                                         KeyId = new Guid("4a2e9df2-7de0-4285-9234-a193adcb5449")
                                     }
