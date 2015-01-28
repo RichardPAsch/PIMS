@@ -153,6 +153,14 @@ namespace PIMS.Web.Api.Controllers
         [Route("{tickerSymbol}/Position/{account}")]
         public async Task<IHttpActionResult> UpdatePositionsByAsset([FromBody]Position editedPosition)
         {
+            if (!ModelState.IsValid) {
+                return ResponseMessage(new HttpResponseMessage {
+                                                        StatusCode = HttpStatusCode.BadRequest,
+                                                        ReasonPhrase = "Invalid data received for Position update(s)."
+                                                    }
+                );
+            }
+
             // Replace entire Position.
             var currentInvestor = _identityService.CurrentUser;
             if (currentInvestor.Trim() != editedPosition.InvestorKey.Trim())
