@@ -18,7 +18,6 @@ namespace PIMS.UnitTest
     public class VerifyPosition
     {
         private PositionController _ctrl;
-        private Mock<InMemoryPositionRepository> _mockRepo;
         private Mock<PimsIdentityService> _mockIdentitySvc;
         private Mock<InMemoryAssetRepository> _mockRepoAsset;
         
@@ -41,7 +40,6 @@ namespace PIMS.UnitTest
         [SetUp]
         public void Init()
         {
-            _mockRepo = new Mock<InMemoryPositionRepository>();
             _mockIdentitySvc = new Mock<PimsIdentityService>();
             _mockRepoAsset = new Mock<InMemoryAssetRepository>();
         }
@@ -51,8 +49,8 @@ namespace PIMS.UnitTest
         // ReSharper disable once InconsistentNaming
         public async Task Controller_Can_GET_a_single_fake_position_for_an_Asset_via_ticker_symbol_and_account() {
 
-            // Arrange - SUT
-            _ctrl = new PositionController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoAsset.Object) {
+            // Arrange - SUT  _mockRepo.Object,
+            _ctrl = new PositionController( _mockIdentitySvc.Object, _mockRepoAsset.Object) {
                 Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Asset/AAPL/Position/Roth-IRA") },
                 Configuration = new HttpConfiguration()
             };
@@ -73,8 +71,8 @@ namespace PIMS.UnitTest
         // ReSharper disable once InconsistentNaming
         public async Task Controller_Can_GET_a_single_fake_Account_for_a_Position_via_an_Account_key() {
 
-            // Arrange 
-            _ctrl = new PositionController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoAsset.Object) {
+            // Arrange  
+            _ctrl = new PositionController( _mockIdentitySvc.Object, _mockRepoAsset.Object) {
                 Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/Pims.Web.Api/api/Asset/AAPL/Position/Account/33f4b62f-bcd4-4d5f-8b2d-373d628a5dfc") },
                 Configuration = new HttpConfiguration()
             };
@@ -94,8 +92,8 @@ namespace PIMS.UnitTest
         // ReSharper disable once InconsistentNaming
         public async Task Controller_Can_GET_all_fake_positions_for_an_Asset_via_ticker_symbol() {
 
-            // Arrange - SUT
-            _ctrl = new PositionController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoAsset.Object) {
+            // Arrange 
+            _ctrl = new PositionController( _mockIdentitySvc.Object, _mockRepoAsset.Object) {
                 Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Asset/AAPL/Position") },
                 Configuration = new HttpConfiguration()
             };
@@ -116,8 +114,8 @@ namespace PIMS.UnitTest
         // ReSharper disable once InconsistentNaming
         public async Task Controller_can_not_POST_a_new_fake_duplicate_Position_for_an_existing_asset() {
 
-            // Arrange - SUT
-            _ctrl = new PositionController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoAsset.Object) {
+            // Arrange 
+            _ctrl = new PositionController( _mockIdentitySvc.Object, _mockRepoAsset.Object) {
                                     Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Asset/IBM/Position") },
                                     Configuration = new HttpConfiguration()
             };
@@ -154,8 +152,8 @@ namespace PIMS.UnitTest
         // ReSharper disable once InconsistentNaming
         public async Task Controller_can_POST_a_new_fake_Position_for_an_existing_asset() {
 
-            // Arrange - SUT
-            _ctrl = new PositionController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoAsset.Object) {
+            // Arrange 
+            _ctrl = new PositionController( _mockIdentitySvc.Object, _mockRepoAsset.Object) {
                 Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Asset/VNR/Position") },
                 Configuration = new HttpConfiguration()
             };
@@ -195,7 +193,7 @@ namespace PIMS.UnitTest
         public async Task Controller_can_DELETE_a_fake_Position_for_an_existing_asset()
         {
             // Arrange 
-            _ctrl = new PositionController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoAsset.Object) {
+            _ctrl = new PositionController( _mockIdentitySvc.Object, _mockRepoAsset.Object) {
                 Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Asset/VNR/Position/4a2e9df2-7de0-4285-9234-a193adcb5449") },
                 Configuration = new HttpConfiguration()
             };
@@ -214,8 +212,8 @@ namespace PIMS.UnitTest
         // ReSharper disable once InconsistentNaming
         public async Task Controller_can_PUT_update_a_fake_Position_for_an_existing_asset() 
         {
-            // Arrange - SUT
-            _ctrl = new PositionController(_mockRepo.Object, _mockIdentitySvc.Object, _mockRepoAsset.Object) {
+            // Arrange 
+            _ctrl = new PositionController( _mockIdentitySvc.Object, _mockRepoAsset.Object) {
                 Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Asset/VNR/Position/Roth-IRA") },
                 Configuration = new HttpConfiguration()
             };
