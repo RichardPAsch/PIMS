@@ -51,7 +51,7 @@ namespace PIMS.Web.Api
            );
 
             config.Routes.MapHttpRoute(
-                name: "AssetClassRoute",
+                name: "AssetClassRoute2",
                 routeTemplate: "api/{controller}/{assetClassCode}",
                 defaults: new { controller = "AssetClass"},
                 constraints: new { assetClassCode = "^[a-zA-Z]+$" }
