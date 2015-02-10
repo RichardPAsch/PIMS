@@ -36,6 +36,7 @@ namespace PIMS.Data
 
         public static Profile UpdateProfile(Profile recvdProfile, Profile yahooProfile)
         {
+            
             // Handle BOTH new and existing Profile info.
             if (recvdProfile.ProfileId == default(Guid))
                 recvdProfile.ProfileId = Guid.NewGuid();
@@ -45,9 +46,9 @@ namespace PIMS.Data
 
             if (string.IsNullOrWhiteSpace(recvdProfile.DividendFreq))
                 recvdProfile.DividendFreq = "TBD";
-            if ((recvdProfile.DividendRate == default(int) && yahooProfile.DividendRate != default(int))
-                                          || (recvdProfile.DividendRate != default(int) && yahooProfile.DividendRate != default(int)))
-                recvdProfile.DividendRate = yahooProfile.DividendRate;
+            if ((recvdProfile.Price == default(int) && yahooProfile.Price != default(int))
+                                          || (recvdProfile.Price != default(int) && yahooProfile.Price != default(int)))
+                recvdProfile.Price = yahooProfile.Price;
             if ((recvdProfile.DividendYield == default(int) && yahooProfile.DividendYield != default(int))
                                           || (recvdProfile.DividendYield != default(int) && yahooProfile.DividendYield != default(int)))
                 recvdProfile.DividendYield = yahooProfile.DividendYield;
