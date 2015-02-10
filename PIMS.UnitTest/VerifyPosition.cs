@@ -32,7 +32,15 @@ namespace PIMS.UnitTest
         //                           - 'Last Update'   : Read-Only, updated whenever any changes in Position are made
         //                           - 'Market Price'  : Read/Write, income projections based on this current market-adjusted rate
         //                           - 'Quantity'      : Read/Write, adjusted total 
-        //  Position/Delete -> Removes appropriate Position(s) per Asset.
+        //                           - 'Account'       : Read/Write, allows for modifying existing account type; if consolidating with
+        //                                               an existing account type:
+        //                                                  a. Qty = total of summations
+        //                                                  b. Unit Cost = market value at time of consolidation
+        //                                                  c. Purchase Date = Date of consolidation
+        //                                                  d. existing Position to be removed
+        //
+        //  Position/Delete -> Removes appropriate Position(s) per Asset, e.g., as per Account type consolidation or explicit Position
+        //                     removal.
         //
         //---------------------------------------------------------------------------------------------------------------------------------
 
@@ -78,8 +86,7 @@ namespace PIMS.UnitTest
             };
 
             // Act 
-            var positionAccountType =
-                await _ctrl.GetAccountByAccountKey(new Guid("33f4b62f-bcd4-4d5f-8b2d-373d628a5dfc")) as OkNegotiatedContentResult<AccountType>;
+            var positionAccountType = await _ctrl.GetAccountByAccountKey(new Guid("33f4b62f-bcd4-4d5f-8b2d-373d628a5dfc")) as OkNegotiatedContentResult<AccountType>;
 
 
             // Assert
@@ -194,17 +201,18 @@ namespace PIMS.UnitTest
         {
             // Arrange 
             _ctrl = new PositionController( _mockIdentitySvc.Object, _mockRepoAsset.Object) {
-                Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Asset/VNR/Position/4a2e9df2-7de0-4285-9234-a193adcb5449") },
+                Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Asset/VNR/Position/2a64098f-e408-45ac-969f-6cfe566ef249") },
                 Configuration = new HttpConfiguration()
             };
 
 
             // Act
-            var deleteResult = await _ctrl.DeletePosition(new Guid("4a2e9df2-7de0-4285-9234-a193adcb5449")) as OkResult;
+            var deleteResult = await _ctrl.DeletePosition(new Guid("2a64098f-e408-45ac-969f-6cfe566ef249")) as OkNegotiatedContentResult<string>;
 
 
             // Assert
             Assert.IsNotNull(deleteResult);
+            Assert.IsTrue(deleteResult.Content == "deleted");
         }
         
 
@@ -214,7 +222,7 @@ namespace PIMS.UnitTest
         {
             // Arrange 
             _ctrl = new PositionController( _mockIdentitySvc.Object, _mockRepoAsset.Object) {
-                Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Asset/VNR/Position/Roth-IRA") },
+                Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Asset/VNR/Position/ML-CMA") },
                 Configuration = new HttpConfiguration()
             };
 
@@ -247,10 +255,46 @@ namespace PIMS.UnitTest
             Assert.That(positionActionResult.Content.Quantity, Is.EqualTo(1000));
 
         }
-
-        
         
 
+        [Test]
+        // ReSharper disable once InconsistentNaming
+        public async Task Controller_can_PUT_update_a_fake_Position_via_account_type_consolidation_for_an_existing_asset()
+        {
+ 
+            // Arrange 
+            _ctrl = new PositionController(_mockIdentitySvc.Object, _mockRepoAsset.Object) {
+                Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/PIMS.Web.Api/api/Asset/AAPL/Position/IRRA") },
+                Configuration = new HttpConfiguration()
+            };
+
+            // merge Positions:  converting IRRA -> Roth-IRA example
+            var updatedPosition = new Position {
+                Url = "http://localhost/PIMS.Web.Api/api/Asset/AAPL/Position/IRRA",
+                PositionId = new Guid("6172313a-20d1-47b6-9a7e-de1fe80a9cc8"), 
+                PurchaseDate = DateTime.UtcNow.ToString("d"),
+                InvestorKey = "Asch",
+                LastUpdate = DateTime.UtcNow.ToString("g"),
+                Quantity = 50,          
+                MarketPrice = 118.96M,   // new unit price based on current market conditions- per Yahoo Finance
+                Account = new AccountType {
+                    Url = "http://localhost/PIMS.Web.Api/api/Asset/AAPL/Position/Account/98228ef0-c3f1-43b1-b640-9c84e13bb99b",
+                    AccountTypeDesc = "Roth-IRA",  // new account type
+                    KeyId = new Guid("98228ef0-c3f1-43b1-b640-9c84e13bb99b")
+                }
+            };
+
+            //var debugJsonForFiddler = TestHelpers.ObjectToJson(updatedPosition);
+
+            // Act
+            var positionActionResult = await _ctrl.UpdatePositionsByAsset(updatedPosition) as OkNegotiatedContentResult<IQueryable<Position>>;
+
+
+            // Assert
+            Assert.IsNotNull(positionActionResult);
+            Assert.That(positionActionResult.Content.First().Url, Is.EqualTo("http://localhost/Pims.Web.Api/api/Asset/AAPL/Position/Roth-IRA"));
+
+        }
 
     }
 }

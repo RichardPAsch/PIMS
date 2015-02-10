@@ -334,7 +334,7 @@ namespace PIMS.UnitTest
                     },
                 Profile = new Profile {
                     DividendFreq = "M",
-                    DividendRate = .05932M,
+                    Price = .05932M,
                     DividendYield = 6.1M,
                     ExDividendDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 14).ToString("d"),
                     DividendPayDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 18).ToString("d"),
@@ -407,7 +407,7 @@ namespace PIMS.UnitTest
                 Profile = new Profile {
                     AssetId = Guid.NewGuid(),
                     DividendFreq = "M",
-                    DividendRate = 1.0592M,
+                    Price = 1.0592M,
                     DividendYield = 6.1M,
                     ExDividendDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 14).ToString("d"),
                     DividendPayDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 18).ToString("d"),
@@ -480,7 +480,7 @@ namespace PIMS.UnitTest
                 Profile = new Profile {
                     AssetId = Guid.NewGuid(),
                     DividendFreq = "M",
-                    DividendRate = 1.0592M,
+                    Price = 1.0592M,
                     DividendYield = 6.1M,
                     ExDividendDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 14).ToString("d"),
                     DividendPayDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 18).ToString("d"),
@@ -533,7 +533,7 @@ namespace PIMS.UnitTest
                                         },
                 Profile = new Profile {
                     DividendFreq = "M",
-                    DividendRate = .1563M,
+                    Price = .1563M,
                     DividendYield = 8.55M,
                     ExDividendDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 16).ToString("d"),
                     DividendPayDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 19).ToString("d"),
@@ -608,7 +608,7 @@ namespace PIMS.UnitTest
                                 },
                 Profile = new Profile {
                     DividendFreq = "Q",
-                    DividendRate = 3.962M,
+                    Price = 3.962M,
                     DividendYield = 7.05M,
                     ExDividendDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 12).ToString("d"),
                     DividendPayDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 21).ToString("d"),
@@ -696,7 +696,7 @@ namespace PIMS.UnitTest
                                         },
                 Profile = new Profile {
                     DividendFreq = "M",
-                    DividendRate = 0,
+                    Price = 0,
                     DividendYield = 8.55M,
                     ExDividendDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 16).ToString("d"),
                     DividendPayDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 19).ToString("d"),
@@ -775,7 +775,7 @@ namespace PIMS.UnitTest
                 },
                 Profile = new Profile {
                     DividendFreq = "S",
-                    DividendRate = 1.059379M,
+                    Price = 1.059379M,
                     DividendYield = 6.1M,
                     ExDividendDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 14).ToString("d"),
                     DividendPayDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 18).ToString("d"),
@@ -848,7 +848,7 @@ namespace PIMS.UnitTest
                                     TickerDescription = "International Business Machines",
                                     TickerSymbol = "IBM",
                                     Url = "",
-                                    DividendRate = 1.097M
+                                    Price = 1.097M
                                 }
                     };
 
@@ -890,7 +890,7 @@ namespace PIMS.UnitTest
                     TickerDescription = "International Business Machines",
                     TickerSymbol = "IBM",
                     Url = "",
-                    DividendRate = 1.097M
+                    Price = 1.097M
                 }
             };
 
