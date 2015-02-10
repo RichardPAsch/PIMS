@@ -43,6 +43,7 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FakeRepositories\InMemoryAccountTypeRepository.cs" />
     <Compile Include="FakeRepositories\InMemoryAssetClassRepository.cs" />
     <Compile Include="FakeRepositories\InMemoryAssetRepository.cs" />
     <Compile Include="FakeRepositories\InMemoryIncomeRepository.cs" />

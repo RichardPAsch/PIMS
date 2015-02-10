@@ -229,7 +229,7 @@ namespace PIMS.Data.FakeRepositories
                     case "Position": 
                     {
                         var existingPosition = RetreiveAll().AsQueryable()
-                                                            .SelectMany(a => a.Positions.Where(p => p.Account.KeyId == keyId)).ToList();
+                                                            .SelectMany(a => a.Positions.Where(p => p.PositionId == keyId)).ToList();
                         existingPosition.RemoveAt(0);
                         return true;
                     }
