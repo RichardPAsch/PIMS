@@ -58,6 +58,7 @@
   <ItemGroup>
     <Compile Include="Security\VerifyAuthentication.cs" />
     <Compile Include="TestHelpers.cs" />
+    <Compile Include="VerifyAccountType.cs" />
     <Compile Include="VerifyAsset.cs" />
     <Compile Include="VerifyAssetClass.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
