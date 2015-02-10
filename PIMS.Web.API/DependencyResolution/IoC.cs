@@ -61,9 +61,10 @@ namespace PIMS.Web.Api.DependencyResolution {
                             x.For<IGenericRepository<Position>>().Use<InMemoryPositionRepository>();
                             x.For<IGenericRepository<Income>>().Use<InMemoryIncomeRepository>();
                             x.For<IGenericRepository<AccountType>>().Use<InMemoryAccountTypeRepository>();
+                            x.For<IGenericRepository<AssetClass>>().Use<InMemoryAssetClassRepository>();
                             /*  -------------------------------------------------------------------------------- */
 
-                            x.For<IGenericRepository<AssetClass>>().Use<AssetClassRepository>(); 
+                            //x.For<IGenericRepository<AssetClass>>().Use<AssetClassRepository>(); 
                             //x.For<IGenericRepository<Profile>>().Use<ProfileRepository>();
                             //x.For<IGenericRepository<Profile>>().Use<InMemoryProfileRepository>(); [10/24/14: not needed due to unit test configurations]
                             //x.For<IGenericRepository<Position>>().Use<PositionRepository>();
