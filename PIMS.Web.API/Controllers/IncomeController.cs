@@ -46,7 +46,7 @@ namespace PIMS.Web.Api.Controllers
             //             15. Show YTD total revenue received (see 9/25/14 Activity Summary design) - //TODO: DONE
             // TODO:   (U)pdate - DONE
             // TODO:   (D)elete - DONE
-            // TODO: ModelState.IsValid checks with Position controller - POSTs ?
+            // TODO: ModelState.IsValid checks with Position controller - POSTs  - DONE
             // TODO: Allow for date range as part of (R)etreive query - DONE
 
         #endregion
@@ -319,7 +319,7 @@ namespace PIMS.Web.Api.Controllers
                                                                            Ticker = p.Profile.TickerSymbol,
                                                                            TickerDescription = p.Profile.TickerDescription,
                                                                            DividendYield = (decimal)p.Profile.DividendYield,
-                                                                           DividendRate = p.Profile.DividendRate
+                                                                           DividendRate = p.Profile.Price
                                                                        })
                                                                        .OrderBy(p => p.Ticker));
 

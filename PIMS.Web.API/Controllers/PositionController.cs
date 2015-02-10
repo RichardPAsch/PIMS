@@ -4,8 +4,10 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Results;
 using PIMS.Core.Models;
 using PIMS.Core.Security;
+using PIMS.Data;
 using PIMS.Data.Repositories;
 
 
@@ -14,14 +16,12 @@ namespace PIMS.Web.Api.Controllers
     [RoutePrefix("api/Asset")]
     public class PositionController : ApiController
     {
-        private static IGenericRepository<Position> _repository;
         private static IGenericRepository<Asset> _repositoryAsset;
         private readonly IPimsIdentityService _identityService;
-    
 
-        public PositionController(IGenericRepository<Position> repositoryPosition, IPimsIdentityService identitySvc, IGenericRepository<Asset> repositoryAsset) {
+
+        public PositionController( IPimsIdentityService identitySvc, IGenericRepository<Asset> repositoryAsset) {
             _repositoryAsset = repositoryAsset;
-            _repository = repositoryPosition;
             _identityService = identitySvc;
         }
 
@@ -161,48 +161,80 @@ namespace PIMS.Web.Api.Controllers
                 );
             }
 
-            // Replace entire Position.
             var currentInvestor = _identityService.CurrentUser;
-            if (currentInvestor.Trim() != editedPosition.InvestorKey.Trim())
-                return BadRequest("Cuurent Position does not belong to investor " + currentInvestor);
+            string ticker;
+            if(editedPosition.Account.AccountTypeDesc.Trim() != ParseUrlForAccount(editedPosition.Url).Trim())
+            {
+                ticker = ParseUrlForTicker(editedPosition.Url);
 
-            var ticker = ParseUrlForTicker(editedPosition.Url.Trim());
-            _repositoryAsset.UrlAddress = ControllerContext.Request.RequestUri.ToString();
-            var matchingPosition = await Task.FromResult(_repositoryAsset.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == ticker &&
-                                                                                                     a.Investor.LastName.Trim() == currentInvestor.Trim())
-                                                                                     .AsQueryable()
-                                                                                     .SelectMany(a => a.Positions.Where(p => p.Account.AccountTypeDesc.Trim() ==
-                                                                                                        editedPosition.Account.AccountTypeDesc.Trim()))
-                                                         );
+                // Consolidation. Example: [Roth-IRA <- from IRRA].
+                var consolidateToPosition = await Task.FromResult(_repositoryAsset.Retreive(a => a.Investor.LastName == currentInvestor.Trim() &&
+                                                                                                 a.Profile.TickerSymbol == ticker)
+                                                                    .AsQueryable()
+                                                                    .SelectMany(a => a.Positions.Where(p => p.Account.AccountTypeDesc.Trim()
+                                                                                     == editedPosition.Account.AccountTypeDesc.Trim())));
 
-            if (!matchingPosition.Any())
-                return BadRequest(string.Format("No matching Position found to update, for {0} under account {1} ", ticker, editedPosition.Account.AccountTypeDesc.Trim()));
+                if (!consolidateToPosition.Any())
+                    return BadRequest(string.Format("No matching Position found to consolidate with, for {0} ", editedPosition.Account.AccountTypeDesc));
 
-            
+                // Purchase date ALWAYS reflects date of consolidation.
+                consolidateToPosition.First().PurchaseDate = DateTime.UtcNow.ToString("d");
+                consolidateToPosition.First().Quantity = consolidateToPosition.First().Quantity + editedPosition.Quantity;
+                consolidateToPosition.First().MarketPrice = await GetCurrentMarketPrice(ticker);
+                consolidateToPosition.First().Account = editedPosition.Account;
+                consolidateToPosition.First().LastUpdate = DateTime.UtcNow.ToString("d");
 
-            var isUpdated = await Task<bool>.Factory.StartNew(
-                           () => ((IGenericAggregateRepository)_repositoryAsset).AggregateUpdate<Position>(editedPosition, currentInvestor, ticker));
+                var deleteResult = await DeletePosition(editedPosition.PositionId) as OkNegotiatedContentResult<string>;
 
-            if (!isUpdated) return BadRequest(string.Format("Unable to edit Position : {0} for Asset {1}", 
-                                                                       editedPosition.Account.AccountTypeDesc, ticker  ));
+                if (deleteResult != null && deleteResult.Content == "deleted")
+                    return Ok(consolidateToPosition);
 
-            return Ok(editedPosition);
+                return BadRequest("Unable to consolidate account types for " + consolidateToPosition.First().Account.AccountTypeDesc.Trim());
+            }
+            else
+            {
+                // Replace entire Position.
+                if (currentInvestor.Trim() != editedPosition.InvestorKey.Trim())
+                    return BadRequest("Cuurent Position does not belong to investor " + currentInvestor);
+
+                ticker = ParseUrlForTicker(editedPosition.Url.Trim());
+                _repositoryAsset.UrlAddress = ControllerContext.Request.RequestUri.ToString();
+                var matchingPosition = await Task.FromResult(_repositoryAsset.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == ticker &&
+                                                                                                         a.Investor.LastName.Trim() == currentInvestor.Trim())
+                                                                                         .AsQueryable()
+                                                                                         .SelectMany(a => a.Positions.Where(p => p.Account.AccountTypeDesc.Trim() ==
+                                                                                                          editedPosition.Account.AccountTypeDesc.Trim()))
+                                                             );
+
+                if (!matchingPosition.Any())
+                    return BadRequest(string.Format("No matching Position found to update, for {0} under account {1} ", ticker, editedPosition.Account.AccountTypeDesc.Trim()));
+
+
+
+                var isUpdated = await Task<bool>.Factory.StartNew(
+                               () => ((IGenericAggregateRepository)_repositoryAsset).AggregateUpdate<Position>(editedPosition, currentInvestor, ticker));
+
+                if (!isUpdated) return BadRequest(string.Format("Unable to edit Position : {0} for Asset {1}",
+                                                                           editedPosition.Account.AccountTypeDesc, ticker));
+
+                return Ok(editedPosition); 
+            }
 
         }
 
 
         [HttpDelete]
         [Route("{tickerSymbol}/Position/{accountKey}")]
-        public async Task<IHttpActionResult> DeletePosition([FromUri] Guid accountKey)
+        public async Task<IHttpActionResult> DeletePosition(Guid accountKey)
         {
             var isDeleted = await Task<bool>.Factory.StartNew(
                        () => ((IGenericAggregateRepository)_repositoryAsset).AggregateDelete<Position>(accountKey));
 
-            return isDeleted ? Ok() : (IHttpActionResult)BadRequest("Error: unable to delete Position/Account: " + accountKey);
+            return isDeleted ? Ok("deleted") : (IHttpActionResult)BadRequest("Error: unable to delete Position/Account: " + accountKey);
             
         }
 
-        
+
 
 
 
@@ -213,12 +245,26 @@ namespace PIMS.Web.Api.Controllers
             return urlToParse.Substring(pos1, pos2 - pos1);
         }
 
+        private static string ParseUrlForAccount(string urlToParse)
+        {
+            var pos1 = urlToParse.LastIndexOf("Position/", StringComparison.Ordinal) + 9;
+            return urlToParse.Substring(pos1, urlToParse.Length - pos1);
+        }
+
 
         private static string ParseForNewPositionUrl(string urlForPosition, string accountType)
         {
             if (urlForPosition.IndexOf("?", StringComparison.Ordinal) <= 0) return urlForPosition;
             var pos1 = urlForPosition.IndexOf("Position?", StringComparison.Ordinal);
             return urlForPosition.Substring(0, pos1 + 8) + "/" + accountType.Trim();
+        }
+
+
+        private static async Task<decimal> GetCurrentMarketPrice(string tickerSymbol)
+        {
+            var currentProfile = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfile(tickerSymbol, new Profile()));
+            return currentProfile == null ? 0 : currentProfile.Price;
+
         }
 
         

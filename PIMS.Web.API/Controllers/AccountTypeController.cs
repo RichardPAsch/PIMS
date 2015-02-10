@@ -1,135 +1,112 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using PIMS.Core.Models;
+using PIMS.Core.Security;
+using PIMS.Data.FakeRepositories;
 using PIMS.Data.Repositories;
-using StructureMap.Pipeline;
 
 
 namespace PIMS.Web.Api.Controllers
 {
-    [RoutePrefix("api/AccountType")]
+   [RoutePrefix("api")]
     public class AccountTypeController : ApiController
     {
-        private static AccountTypeRepository _repository;
-        public AccountTypeController(AccountTypeRepository repository)
+        private static IGenericRepository<AccountType> _repository;
+        private static IGenericRepository<Asset> _repositoryAssets;
+        private readonly IPimsIdentityService _identityService;
+
+
+        public AccountTypeController(IGenericRepository<AccountType> repository, IGenericRepository<Asset> repositoryAssets, IPimsIdentityService identityService)
         {
             _repository = repository;
+            _repositoryAssets = repositoryAssets;
+            _identityService = identityService;
         }
 
 
-        // GET api/accounttype
+
         [HttpGet]
         [Route("")]
-        public async Task<IEnumerable<AccountType>> Get()
-        {
-            return await Task<IEnumerable<AccountType>>.Factory.StartNew(() => _repository.RetreiveAll());
+        public async Task<IHttpActionResult> GetAllAccounts() {
+            var accounts = await Task.FromResult(_repository.RetreiveAll().AsQueryable());
+            if (accounts != null)
+                return Ok(accounts);
+
+            return BadRequest("Unable to retreive AccountType data.");
         }
-        
-        
-        // GET api/accounttype/IRA
+
+
         [HttpGet]
-        [Route("{acctTypeDesc?}")]
-        public async Task<IHttpActionResult> Get(string acctTypeDesc)
+        [Route("~/api/AccountType")]
+        public async Task<IHttpActionResult> GetLookUpAccounts([FromUri] bool lookUps = true)
         {
-            var acctType = await Task<AccountType>.Factory
-                                                  .StartNew(() => _repository.RetreiveAll()
-                                                            .First(at => String.Equals(at.AccountTypeDesc.Trim(),
-                                                                         acctTypeDesc.Trim(),
-                                                                         StringComparison.CurrentCultureIgnoreCase)));
-            if (acctType == null)
-                return NotFound();
+            // use of extension method.
+            var availableAccts = await Task.FromResult(_repository.RetreiveLookUpAccounts().AsQueryable());
 
-            return Ok(acctType);
+            if (availableAccts != null)
+                return Ok(availableAccts);
+
+            return BadRequest("Unable to retreive available lookup data.");
+        }
+
+
+        [HttpGet]
+        [Route("~/api/AccountType/{forTicker}")]
+        public async Task<IHttpActionResult> GetAllAccountsForInvestor(string forTicker = "")
+        {
+            var currentInvestor = _identityService.CurrentUser;
+            IQueryable<Position> matchingPositions;
+
+            if (forTicker.Trim().ToUpper() != "NONE")
+            {
+                matchingPositions = await Task.FromResult(_repositoryAssets.Retreive(a => a.Investor.LastName == currentInvestor.Trim() &&
+                                                                                          a.Url.Contains(forTicker.Trim().ToUpper()) )
+                                                                 .AsQueryable()
+                                                                 .SelectMany(a => a.Positions.Where(p => p.PositionId != default(Guid))));
+            }
+            else
+            {
+                matchingPositions = await Task.FromResult(_repositoryAssets.Retreive(a => a.Investor.LastName == currentInvestor.Trim())
+                                                                .AsQueryable()
+                                                                .SelectMany(a => a.Positions.Where(p => p.PositionId != default(Guid))));
+            }
+            
+
+            if (!matchingPositions.Any())
+                return BadRequest("No matching Position data found, or unable to retreive for: " + currentInvestor);
+
+            var matchingAccounts = await Task.FromResult(matchingPositions.Select(p => p.Account.AccountTypeDesc).Distinct().AsQueryable());
+            if (!matchingAccounts.Any())
+                return BadRequest("Unable to retreive matching Account type data for: " + currentInvestor);
+
+            return Ok(matchingAccounts);
         }
 
 
 
-        // POST api/AccounTtype
-        [HttpPost]
-        [Route("")]
-        public async Task<IHttpActionResult> Post([FromBody]AccountType newAcctType)
-        {
-            if (!ModelState.IsValid) return ResponseMessage(new HttpResponseMessage
-                                                                {
-                                                                    StatusCode = HttpStatusCode.BadRequest,
-                                                                    ReasonPhrase = "Invalid data received for Account Type."
-                                                                });
-
-            var existingAcctType = await Task<AccountType>.Factory
-                                                          .StartNew(() => _repository.RetreiveAll()
-                                                                                     .FirstOrDefault(at => String.Equals(at.AccountTypeDesc.Trim(),
-                                                                                         newAcctType.AccountTypeDesc.Trim(),
-                                                                                         StringComparison.CurrentCultureIgnoreCase)));
-
-            if (existingAcctType != null)
-                return ResponseMessage(new HttpResponseMessage
-                                            {
-                                                StatusCode = HttpStatusCode.Conflict,
-                                                ReasonPhrase = "Duplicate Account Type found."
-                                            });
-
-            var isCreated = await Task<bool>.Factory.StartNew(() => _repository.Create(newAcctType));
-
-            return ResponseMessage(isCreated
-                                    ? new HttpResponseMessage { StatusCode = HttpStatusCode.Created } 
-                                    : new HttpResponseMessage { StatusCode = HttpStatusCode.Conflict, 
-                                                                ReasonPhrase = "Error: Unable to save account type - " + newAcctType.AccountTypeDesc});
-        }
-        
-
-        // PUT ...Pims.Web.Api/api/AccountType  
         [HttpPut]
-        [Route("")]
-        public async Task<IHttpActionResult> Put([FromBody]AccountType updatedAcctType)
+        [Route("~/api/AccountType/{acctTypeId}")]
+        public async Task<IHttpActionResult> UpdateAccountType([FromBody]AccountType editedAcctType, Guid acctTypeId)
         {
-            if (!ModelState.IsValid) return ResponseMessage(new HttpResponseMessage {
-                StatusCode = HttpStatusCode.BadRequest,
-                ReasonPhrase = "Invalid data received for Account Type update."
-            });
+            var currentInvestor = _identityService.CurrentUser;
+            var existingPosition = await Task.FromResult(_repositoryAssets.Retreive(a => a.Investor.LastName == currentInvestor.Trim() )
+                                                                  .AsQueryable()
+                                                                  .SelectMany(a => a.Positions.Where(p => p.Account.PositionRefId == editedAcctType.PositionRefId )));
 
-            // Only account type descriptions may be modified.
-            var isModified = await Task<bool>.Factory.StartNew(() => _repository.Update(updatedAcctType, updatedAcctType.KeyId));
+            if (existingPosition == null)
+                return BadRequest("No matching Account Type found for :" + editedAcctType.AccountTypeDesc.Trim());
 
 
-            return ResponseMessage(isModified
-                                    ? new HttpResponseMessage {
-                                        StatusCode = HttpStatusCode.NoContent,  // HttpStatus code: 204 
-                                        ReasonPhrase = "Account type updated."
-                                    }
-                                    : new HttpResponseMessage {
-                                        StatusCode = HttpStatusCode.NotModified,
-                                        ReasonPhrase = "Error: Unable to update account type to - " + updatedAcctType.AccountTypeDesc
-                                    });
+            var isUpdated = await Task<bool>.Factory.StartNew(() => _repository.Update(existingPosition.First().Account, editedAcctType.PositionRefId));
 
+            if (isUpdated)
+                return Ok();
+
+            return BadRequest("Unable to update Account Type for: " + editedAcctType.AccountTypeDesc.Trim());
         }
-
-
-
-        // DELETE api/AccountType/IRA
-        [HttpDelete]
-        [Route("{acctType}")]
-        // ReSharper disable once InconsistentNaming
-        public async Task<IHttpActionResult> Delete(string acctType)
-        {
-            var isDeleted = await Task<bool>.Factory.StartNew(() => _repository.DeleteByType(acctType));
-
-            return ResponseMessage(isDeleted
-                                    ? new HttpResponseMessage {
-                                        StatusCode = HttpStatusCode.NoContent,  // HttpStatus code: 204 
-                                        ReasonPhrase = "Account type deleted."}
-                                    : new HttpResponseMessage {
-                                        StatusCode = HttpStatusCode.NotModified,
-                                        ReasonPhrase = "Error: Unable to delete account type id:  " + acctType
-                                    });
-        }
-
-
-      
+        
 
 
 
