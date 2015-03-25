@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 
@@ -9,9 +10,13 @@ namespace PIMS.Core.Models
         // Not considered as part of Aggregate root (Asset).
         public virtual string Url { get; set; }
 
+        // NH relational mapping for 'many' side of M:1 Asset/Profile.
+        public virtual IList<Profile> AssetProfile { get; set; }
+
         [Required]
         public virtual Guid ProfileId { get; set; }
 
+        //TODO: remove code references before deleting.
         [Required]
         public virtual Guid AssetId { get; set; }
 
@@ -42,6 +47,9 @@ namespace PIMS.Core.Models
         public virtual string ExDividendDate { get; set; }
 
         public virtual string DividendPayDate { get; set; }
+
+        // aka 'Ask Price' or todays' market price.
+        public virtual decimal Price { get; set; } 
 
     }
 }

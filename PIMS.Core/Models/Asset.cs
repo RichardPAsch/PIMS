@@ -19,7 +19,26 @@ namespace PIMS.Core.Models
         
         public virtual string Url { get; set; }
 
+        // NH FK mapping - IncomeAssetId
         public virtual Guid AssetId { get; set; }
+
+        // NH FK mapping - Asset - AssetClassId
+        public virtual Guid AssetClassId { get; set; }
+
+        // NH FK mapping - Asset-Profile
+        //public virtual Guid AssetProfileId { get; set; }
+
+        // 'Many' side for NH mapping re: M:M relationship.
+        public virtual IList<Investor> Investors { get; set; }
+
+        // Unique per Investor/Asset/AccountType e.g., Roth-IRA
+        public virtual IList<Position> Positions { get; set; }
+
+        // For NH mapping for 'many' side of 1:M 
+        public virtual IList<Income> Revenue { get; set; }
+
+        // Referenced by domain.
+        public virtual Guid InvestorId { get; set; }
         
         public virtual Investor Investor { get; set; }
         
@@ -27,14 +46,12 @@ namespace PIMS.Core.Models
 
         public virtual Profile Profile { get; set; }
 
-        // Unique per Investor/Asset/AccountType                // e.g., Roth-IRA
-        public virtual IList<Position> Positions { get; set; }
+        
 
-        // Unique per Investor/Asset/AccountType
-        public virtual IList<Income> Revenue { get; set; }
-   
+
+        // TODO - implement
         // public virtual string Status {get; set;}             // (A)ctive, (I)nactive
-       
+
 
 
         // TODO - reevaluate

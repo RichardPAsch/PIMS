@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using PIMS.Core.Interfaces;
+
 
 namespace PIMS.Core.Models
 {
@@ -8,14 +10,22 @@ namespace PIMS.Core.Models
 
     public class AccountType : IEntity
     {
-        public virtual string Url { get; set; }
-
+        // NH PK Mapping: AccountTypeId 
         [Key]
-        public virtual Guid KeyId { get; set; }  // Mapping: AccountTypeId
+        public virtual Guid KeyId { get; set; }
 
-       
+        [Required]
+        public virtual Guid PositionRefId { get; set; }  // initialized during Position creation
+
+        // NH 'many' side of 1:M Position/AccountType relationship mapping requirement.
+        public virtual IList<Position> Positions { get; set; }
+
         [Required]
         public virtual string AccountTypeDesc { get; set; }
+        
 
+        public virtual string Url { get; set; }
+        
+       
     }
 }

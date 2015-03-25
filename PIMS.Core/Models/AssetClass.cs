@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using PIMS.Core.Interfaces;
+
 
 namespace PIMS.Core.Models
 {
@@ -21,6 +23,11 @@ namespace PIMS.Core.Models
         // Example: "Common Stock"
         [Required]
         public virtual string Description { get; set; }
+
+
+        // NH relational mapping for 'many' side of M:1 Asset/AssetClassification.
+        public virtual IList<AssetClass> AssetClassifications { get; set; }
+    
 
     }
 }
