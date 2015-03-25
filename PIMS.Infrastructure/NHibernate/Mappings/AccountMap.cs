@@ -4,6 +4,7 @@ using PIMS.Core.Models;
 
 namespace PIMS.Infrastructure.NHibernate.Mappings
 {
+    //TODO: Re-evaluate need! 3-24-15
     public class AccountMap : ClassMap<Account>
     {
         public AccountMap() {

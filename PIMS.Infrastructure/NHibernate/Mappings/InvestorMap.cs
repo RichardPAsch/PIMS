@@ -6,25 +6,36 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
 {
     public class InvestorMap : ClassMap<Investor>
     {
-        public InvestorMap() {
+        public InvestorMap()
+        {
             Table("Investor");
-            Id(x => x.InvestorId);
+            Id(x => x.InvestorId)
+                .GeneratedBy
+                .GuidComb();
+
             Map(x => x.FirstName);
             Map(x => x.LastName);
             Map(x => x.Address1);
             Map(x => x.Address2);
+            Map(x => x.MiddleInitial);
             Map(x => x.City);
+            Map(x => x.State);
             Map(x => x.ZipCode);
             Map(x => x.Phone);
             Map(x => x.Mobile);
             Map(x => x.AspNetUsersId);
             Map(x => x.EMailAddr);
             Map(x => x.BirthDay);
+            Map(x => x.DateAdded, "LastUpdate");
+            Map(x => x.Url, "Link");
+            
 
-            //HasMany(x => x.Security).Cascade.DeleteOrphan().Inverse();
-
-
-
+            // NH required configuration.
+            HasManyToMany(x => x.Assets)
+                .Table("AssetInvestor")
+                .ParentKeyColumn("InvestorId")
+                .ChildKeyColumn("AssetId")
+                .Inverse(); // 'Asset' responsible for saving
 
         }
     }

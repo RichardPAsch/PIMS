@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using FluentNHibernate.Mapping;
+﻿using FluentNHibernate.Mapping;
 using PIMS.Core.Models;
 
 
@@ -21,55 +20,52 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
         public AssetMap()
         {
             // Domain object identifier, matches table PK.
-            Id(x => x.AssetId);
+            Table("Asset");
+            Id(x => x.AssetId)
+                .GeneratedBy
+                .GuidComb();
+
+            Map(x => x.InvestorId, "AssetInvestorId");
+
+            HasManyToMany(x => x.Investors)
+                .Table("AssetInvestor")
+                .ParentKeyColumn("AssetId")             // always current table containing this mapping
+                .ChildKeyColumn("InvestorId");          // table containing records for insertion into IList.
 
 
-            // Income is in context of User for any given Asset. Collection
-            // happens to have only 1 entity (Income).
-            //References(x => x.Income, "IncomeId");
+            // 1:M - Each Asset may have one or more Positions.
+            HasMany(x => x.Positions)
+                .Table("Position")
+                .KeyColumns.Add("PositionAssetId")       // references Position FK
+                .Cascade
+                .AllDeleteOrphan();
 
-            // AssetClass is in context of an Asset
-            References(x => x.AssetClass);
+
+            // 1:M
+            // Each Asset may have one or more Income items (Revenue).
+            HasMany(x => x.Revenue)
+                .Table("Income")
+                .KeyColumns.Add("IncomeAssetId")    // references FK in Income
+                .Cascade                            // cascade Income saves, updates, & deletes.
+                .AllDeleteOrphan();                 // prevents any orphaned records 
+
+
+
+            // M:1
+            References(x => x.AssetClass)
+                .Column("AssetClassId")
+                .Not.Update()
+                .Not.Insert();
+
+            // NH FK reference.
+            Map(x => x.AssetClassId);
+                
+
+
+            //  NH FK reference regarding M:1
+            References(x => x.Profile)
+                .Column("ProfileId");
             
-
-            // Profile is NOT in context of User.
-            References(x => x.Profile, "ProfileId");
-
-
-            // Position is in context of Investor for any given Asset. Collection
-            // happens to have only 1 entity (Position).
-            //References(x => x.Positions, "PositionId");
-            
-
-            // Investor is in context of an Asset
-            References(x => x.Investor, "InvestorId");
-
-            // AccountType is in context of an Position
-            //Component(x => x.Positions);
-            //References(x => x.Positions.First().Account, "AccountTypeId");
-            //Map(x => x.AccountType);
-
-
-            // 1:many relationship; Position is in context of Asset.
-            // 11-22-14: NUnit test Error - NHibernate.MappingException : Could not determine type for: PIMS.Core.Models.AccountType, 
-            //           PIMS.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null, for columns: NHibernate.Mapping.Column(Account)
-            //Component(x => x.Revenue.FirstOrDefault(), m =>
-            //                                                {
-            //                                                    m.Map(x => x.Quantity);
-            //                                                    m.Map(x => x.PurchaseDate);
-            //                                                    m.Map(x => x.UnitCost);
-            //                                                    m.Map(x => x.Url);
-            //                                                    Component(x => x.Revenue.FirstOrDefault().Account,
-            //                                                        a => a.Map(x => x.AccountTypeDesc));
-            //                                                }
-
-            //        );
-
-
-
-
-
-
         }
     }
 }

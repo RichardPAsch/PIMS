@@ -6,20 +6,26 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
 {
     public class IncomeMap : ClassMap<Income>
     {
-        public IncomeMap() {
+        public IncomeMap()
+        {
+            Id(i => i.IncomeId)
+                .GeneratedBy
+                .GuidComb();
 
-            Id(x => x.AssetId);
             Map(x => x.Actual).Precision(6);
             Map(x => x.Projected).Precision(6);
             Map(x => x.DateRecvd, "DateReceived");
-            //Not.LazyLoad();
+            Map(x => x.LastUpdate);
+            Map(x => x.AssetId, "IncomeAssetId");
+ 
 
-            // Creates other side (many) of Asset NH 1:M relationship.
-            // Cascade from Asset to these Income object(s).
-            // DeleteOrphan() - prevents any orphaned records + provides cascade saves, updates, & deletes.
-            // Inverse() - save responsibility to parent (Asset).
-            //HasMany(x => x.Security).Cascade.DeleteOrphan().Inverse();
+            // References other side (many) of Asset NH 1:M relationship.
+            References(x => x.IncomeAsset)   // NH mapping for '1' side of relation to Asset.
+                .Column("IncomeAssetId")     // NH FK column in Income table.
+                .Not.Update()
+                .Not.Insert();
 
+           
         }
     }
 }

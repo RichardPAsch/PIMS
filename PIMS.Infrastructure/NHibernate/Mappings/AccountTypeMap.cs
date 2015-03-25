@@ -8,9 +8,16 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
     {
         public AccountTypeMap()
         {
-            Id(x => x.KeyId, "AccountTypeId");
-            Map(x => x.AccountTypeDesc, "AccountType");
             Table("AccountType");
+            Id(x => x.KeyId, "AccountTypeId");
+  
+            Map(x => x.AccountTypeDesc, "AccountType");
+            
+            // 1:M 
+            // An AccountType can be associated with many Positions on many Assets.
+            HasMany(x => x.Positions)
+                .Inverse();
+
 
         }
 
