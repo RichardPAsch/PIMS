@@ -25,6 +25,8 @@ namespace PIMS.IntegrationTest
                 .Mappings(m => m.FluentMappings.AddFromAssemblyOf<ProfileMap>())
                 .Mappings(m => m.FluentMappings.AddFromAssemblyOf<PositionMap>())
                 .Mappings(m => m.FluentMappings.AddFromAssemblyOf<AssetMap>())
+                .Mappings(m => m.FluentMappings.AddFromAssemblyOf<AccountTypeMap>())
+                .Mappings(m => m.FluentMappings.AddFromAssemblyOf<InvestorMap>())
                 .BuildSessionFactory();
 
         }
