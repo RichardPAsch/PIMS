@@ -1,4 +1,5 @@
-﻿using FluentNHibernate.Cfg.Db;
+﻿using System.Web;
+using FluentNHibernate.Cfg.Db;
 using NHibernate;
 using NHibernate.Context;
 using PIMS.Core.Models;
@@ -10,6 +11,8 @@ namespace PIMS.Web.Api
 {
     public class NHibernateConfiguration
     {
+        private const string CurrentSessionKey = "nhibernate.current_session";  // added 3-31-15
+
         
         public static ISessionFactory CreateSessionFactory(string connString = "")
         {
@@ -26,13 +29,13 @@ namespace PIMS.Web.Api
                 //.Database(MsSqlConfiguration.MsSql2008.ConnectionString(c => c.FromConnectionStringWithKey("Connection-String"))
                 .ExposeConfiguration(cfg => cfg.AddDeserializedMapping(MappingHelper.GetIdentityMappings(appUsers), null))
                 .Database(MsSqlConfiguration.MsSql2008
-                .ConnectionString(c => c.Is(connString))
-                                //.ShowSql() // temp for testing/debugging.
-                                //.IsolationLevel(IsolationLevel.RepeatableRead)
-                                //.AdoNetBatchSize(10) // Limit batch inserts (etc) 
+                                            .ConnectionString(c => c.Is(connString))
+                                                    //.ShowSql() // temp for testing/debugging.
+                                                    //.IsolationLevel(IsolationLevel.RepeatableRead)
+                                                    //.AdoNetBatchSize(10) // Limit batch inserts (etc) 
                          )
                 .CurrentSessionContext("web")  // Use current HttpContext in managing NH ISession.
-                .Mappings(m => m.FluentMappings.AddFromAssemblyOf<InvestorMap>()
+                .Mappings(m => m.FluentMappings.AddFromAssemblyOf<AssetMap>()
                                 // Export current mappings for debug, if necessary - NOT WORKING
                                 //.ExportTo(@"C:\Development\VS2012\IncomeMgmtSystem\src\PIMS.Data\Documentation")  
                          )
@@ -51,7 +54,24 @@ namespace PIMS.Web.Api
 
             return sf.GetCurrentSession();
         }
-        
+
+
+        // added 3-31-15
+        public static ISession GetCurrentSession()
+        {
+            var context = HttpContext.Current;
+            var currentSession = context.Items[CurrentSessionKey] as ISession;
+
+            if (currentSession != null) return currentSession;
+            currentSession = CreateSessionFactory("").OpenSession(); // sessionFactory.OpenSession();
+            context.Items[CurrentSessionKey] = currentSession;
+
+            return currentSession;
+        }
+
+
+
+
     }
 
 
