@@ -1,6 +1,6 @@
 ﻿using Microsoft.Owin;       // Provides implementation of IAppBuilder
 using Owin;                 // Includes IAppBuilder as part of OWIN middleware
-using Microsoft.Owin.Cors;  // Defines CORS policy
+// Defines CORS policy
 using SharpArch.NHibernate.Web.Mvc;
 
 
