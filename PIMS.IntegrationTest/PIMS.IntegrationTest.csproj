@@ -105,6 +105,10 @@
       <Project>{053dd3c8-253e-438a-951f-77b7052c018a}</Project>
       <Name>PIMS.Infrastructure</Name>
     </ProjectReference>
+    <ProjectReference Include="..\PIMS.UnitTest\PIMS.UnitTest.csproj">
+      <Project>{5901704C-138B-437C-B9A9-72F6F0CB0339}</Project>
+      <Name>PIMS.UnitTest</Name>
+    </ProjectReference>
     <ProjectReference Include="..\PIMS.Web.API\PIMS.Web.API.csproj">
       <Project>{5ed25faf-292a-4c24-bba9-f9ef78c6bfae}</Project>
       <Name>PIMS.Web.API</Name>
