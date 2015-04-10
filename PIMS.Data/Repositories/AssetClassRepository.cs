@@ -6,6 +6,7 @@ using NHibernate.Linq;
 using PIMS.Core.Models;
 
 
+
 namespace PIMS.Data.Repositories
 {
     public class AssetClassRepository : IGenericRepository<AssetClass>
@@ -23,115 +24,108 @@ namespace PIMS.Data.Repositories
        
         //public string _connString = @"Data Source=RICHARD-VAIO\RICHARDDB;Initial Catalog='Lighthouse - PIMS - Test';Integrated Security=True";
 
-        private readonly ISessionFactory _sfFactory;
-        public AssetClassRepository(ISessionFactory sfFactory)
-        {
-            if (sfFactory == null)
-                throw new ArgumentNullException("sfFactory");
+        private readonly ISession _nhSession;
+        public string UrlAddress { get; set; }
 
-            _sfFactory = sfFactory;
+        public AssetClassRepository(ISessionFactory sessFactory)
+        {
+            if (sessFactory == null)
+                throw new ArgumentNullException("sessFactory");
+
+            _nhSession = sessFactory.OpenSession();
+            // Allow NH to determine when to clear the session.
+            _nhSession.FlushMode = FlushMode.Auto;
         }
 
-        public AssetClassRepository()
+        
+
+
+        public IQueryable<AssetClass> RetreiveAll()
         {
-          // TODO: Needed?
+            var classsificationsQuery = (from classification in _nhSession.Query<AssetClass>() select classification);
+            return classsificationsQuery.AsQueryable();
         }
 
 
-
-
-        public virtual IQueryable<AssetClass> RetreiveAll()
+        public AssetClass RetreiveById(Guid idGuid)
         {
-           using (var sess = _sfFactory.OpenSession())
-            {
-               var classsificationsQuery = (from classification in sess.Query<AssetClass>() select classification);
-               return classsificationsQuery.ToList().AsQueryable();
-            }
+            return _nhSession.Get<AssetClass>(idGuid);
         }
+
 
         public IQueryable<AssetClass> Retreive(Expression<Func<AssetClass, bool>> predicate)
         {
-            throw new NotImplementedException();
+            return RetreiveAll().Where(predicate);
         }
+        
 
-        
-        public AssetClass RetreiveById(Guid idGuid)
-        {
-            var listing = RetreiveAll();
-            var filteredListing = listing
-                .Where(ac => ac.KeyId == idGuid);
-            return filteredListing.FirstOrDefault();
-        }
-        
         public bool Create(AssetClass newEntity)
         {
-            var currListing = RetreiveAll().ToList();
-            if (currListing.Any(ac => ac.Code.ToUpper().Trim() == newEntity.Code.ToUpper().Trim())) return false;
-
-            using (var sess = _sfFactory.OpenSession())
+            using (var trx = _nhSession.BeginTransaction())
             {
-                using (var trx = sess.BeginTransaction())
+                try {
+                    _nhSession.Save(newEntity);
+                    trx.Commit();
+                }
+                catch {
+                    return false;
+                }
+
+                return true;
+            }
+
+        }
+
+
+        public bool Update(AssetClass entity, object id)
+        {
+            using (var trx = _nhSession.BeginTransaction())
+            {
+                try
                 {
-                    try
-                    {
-                        sess.Save(newEntity);
-                        trx.Commit();
-                    }
-                    catch{
-                        return false;
-                    }
+                    // NH session already contains a persistent cache instance with the same identifier, therefore we'll save our modifications
+                    // without knowing about the state of a session, using Merge(). Otherwise use of Update() generates an error.
+                    _nhSession.Merge(entity);
+                    trx.Commit();
+                }
+                catch(Exception)
+                {
+                    //var debug = ex.Message;
+                    return false;
                 }
             }
 
             return true;
         }
-       
-        public bool Delete(Guid cGuid) {
+        
 
+        public bool Delete(Guid cGuid)
+        {
             var deleteOk = true;
             var assetClassToDelete = RetreiveById(cGuid);
 
-            using (var sess = _sfFactory.OpenSession()) {
-                using (var trx = sess.BeginTransaction()) {
-                    try {
-                        sess.Delete(assetClassToDelete);
-                        trx.Commit();
-                    }
-                    catch (Exception) {
-                        // TODO: Candidate for logging.
-                        deleteOk = false;
-                    }
+            if(assetClassToDelete == null)
+                return false;
+
+
+            using (var trx = _nhSession.BeginTransaction())
+            {
+                try {
+                    _nhSession.Delete(assetClassToDelete);
+                    trx.Commit();
+                }
+                catch (Exception) {
+                    // TODO: Candidate for logging?
+                    deleteOk = false;
                 }
             }
+
 
             return deleteOk;
         }
 
-        public bool Update(AssetClass entity, object id)
-        {
-            // Each AssetClass is unique, therefore we'll only need to
-            // use the passed AssetClass's id to update the datastore.
-            using (var sess = _sfFactory.OpenSession()) {
+       
 
-                using (var trx = sess.BeginTransaction()) {
-
-                    try {
-                        var listings = RetreiveAll().ToList();
-                        var item = listings.Find(ac => ac.KeyId == (Guid)id); //entity.KeyId);
-                        item.Code = entity.Code.Trim().ToUpper();
-                        item.Description = entity.Description.Trim();
-
-                        sess.Update(item);
-                        trx.Commit();
-                    }
-                    catch {
-                        return false;
-                    }
-                }
-                return true;
-            }
-        }
-
-        public string UrlAddress { get; set; }
+        
     }
 }
