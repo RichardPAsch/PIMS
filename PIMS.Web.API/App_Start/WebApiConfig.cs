@@ -35,41 +35,41 @@ namespace PIMS.Web.Api
             
             // Give priority to attribute routing (WebApi 2)
             config.MapHttpAttributeRoutes();
-            
 
 
-            config.Routes.MapHttpRoute(
-                name: "ProfileRoute",
-                routeTemplate: "api/Asset/{ticker}/{controller}/{profileId}",
-                defaults: new { controller = "Profile", profileId = RouteParameter.Optional }
-             );
 
-            config.Routes.MapHttpRoute(
-                name: "AssetClassesRoute",
-                routeTemplate: "api/{controller}",
-                defaults: new { controller = "AssetClass" }
-           );
+            //config.Routes.MapHttpRoute(
+            //    name: "ProfileRoute",
+            //    routeTemplate: "api/Asset/{ticker}/{controller}/{profileId}",
+            //    defaults: new { controller = "Profile", profileId = RouteParameter.Optional }
+            // );
 
-            config.Routes.MapHttpRoute(
-                name: "AssetClassRoute2",
-                routeTemplate: "api/{controller}/{assetClassCode}",
-                defaults: new { controller = "AssetClass"},
-                constraints: new { assetClassCode = "^[a-zA-Z]+$" }
-           );
+           // config.Routes.MapHttpRoute(
+           //     name: "AssetClassesRoute",
+           //     routeTemplate: "api/{controller}",
+           //     defaults: new { controller = "AssetClass" }
+           //);
 
-            config.Routes.MapHttpRoute(
-                name: "AssetClassRouteById",
-                routeTemplate: "api/{controller}/{id}",
-                defaults: new { controller = "AssetClass" }
-            );
+           // config.Routes.MapHttpRoute(
+           //     name: "AssetClassRoute2",
+           //     routeTemplate: "api/{controller}/{assetClassCode}",
+           //     defaults: new { controller = "AssetClass"},
+           //     constraints: new { assetClassCode = "^[a-zA-Z]+$" }
+           //);
+
+            //config.Routes.MapHttpRoute(
+            //    name: "CreateNewAssetClassification",
+            //    routeTemplate: "api/AssetClass",
+            //    defaults: new { controller = "AssetClass" }
+            //);
 
 
-            config.Routes.MapHttpRoute(
-                name: "DefaultApi",
-                routeTemplate: "api/{controller}/{id}",
-                defaults: new { controller = "AssetClass" },
-                constraints: new { id = new RouteGuidConstraint() }
-            );
+            //config.Routes.MapHttpRoute(
+            //    name: "DefaultApi",
+            //    routeTemplate: "api/{controller}/{id}",
+            //    defaults: new { controller = "AssetClass" },
+            //    constraints: new { id = new RouteGuidConstraint() }
+            //);
 
 
 
