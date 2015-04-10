@@ -1,6 +1,10 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using FluentNHibernate.Conventions;
 using PIMS.Core.Models;
 using PIMS.Data.Repositories;
 
@@ -12,7 +16,6 @@ namespace PIMS.Web.Api.Controllers
     {
 
         private static IGenericRepository<AssetClass> _repository;
-
 
         public AssetClassController(IGenericRepository<AssetClass> repository )
         {
@@ -26,110 +29,124 @@ namespace PIMS.Web.Api.Controllers
         [Route("")]
         public async Task<IQueryable<AssetClass>> GetAll()
         {
-            return await Task<IQueryable<AssetClass>>.Factory.StartNew(() => _repository.RetreiveAll().OrderBy(ac => ac.Description));
+            return await Task<IQueryable<AssetClass>>.Factory.StartNew(() => _repository.RetreiveAll().OrderBy(ac => ac.Code));
+        }
+
+
+        [HttpGet] 
+        [Route("{assetClassId:guid}")]
+        public async Task<IHttpActionResult> GetByClassificationId( Guid assetClassId)
+        {
+            var matchingAssetClass = await Task.FromResult(_repository.RetreiveById(assetClassId));
+            return matchingAssetClass != null
+                ? (IHttpActionResult) Ok(matchingAssetClass)
+                : BadRequest("No AssetClassification found matching " + assetClassId);
         }
 
 
         [HttpGet]
-        [Route("{assetClass}")]
-        public async Task<IHttpActionResult> GetByClassification(string assetClass) 
+        [Route("{code}")]
+        public async Task<IHttpActionResult> GetByClassification(string code)
         {
-            var matchingAssetClass =  await Task.FromResult(_repository.Retreive(ac => ac.Code.Trim() == assetClass.Trim())
-                                                                       .AsQueryable());
+            var matchingAssetClass = await Task.FromResult(_repository.Retreive(ac => ac.Code.Trim() == code.Trim())
+                                                                      .AsQueryable());
 
             if (matchingAssetClass.Any())
                 return Ok(matchingAssetClass);
 
 
-            return BadRequest(string.Format("No Asset class found matching {0} ", assetClass.Trim().ToUpper()));
+            return BadRequest(string.Format("No Asset class found matching {0} ", code.Trim().ToUpper()));
         }
 
 
+        [HttpPost]
+        [Route("", Name = "CreateNewAssetClassification")]
+        public async Task<IHttpActionResult> CreateNewAssetClass([FromBody] AssetClass newClassification)
+        {
+            string newLocation;
+            if (!ModelState.IsValid) return ResponseMessage(new HttpResponseMessage {
+                StatusCode = HttpStatusCode.BadRequest,
+                ReasonPhrase = "Invalid data received for new Asset Class creation."
+            });
 
-        #region Deferred source - until needed
+            
+            var existingAssetClass = await Task.FromResult(_repository.Retreive(ac => ac.Code.Trim() == newClassification.Code.Trim())
+                                                                      .AsQueryable());
 
-            //        [HttpPost]
-            //        [Route("")]
-            //        public async Task<IHttpActionResult> CreateNewAssetClass([FromBody] AssetClass newClassification) {
-            //            if (!ModelState.IsValid) return ResponseMessage(new HttpResponseMessage {
-            //                StatusCode = HttpStatusCode.BadRequest,
-            //                ReasonPhrase = "Invalid data received for Asset Class."
-            //            });
+            if (existingAssetClass.Any())
+                return ResponseMessage(new HttpResponseMessage {
+                                        StatusCode = HttpStatusCode.Conflict,
+                                        ReasonPhrase = "Duplicate Asset Class found."
+                });
 
-            //            var existingAssetClass = await Task<AssetClass>.Factory
-            //                                                           .StartNew(() => _repository.RetreiveAll()
-            //                                                                                      .FirstOrDefault(ac => String.Equals(ac.Code.Trim(),
-            //                                                                                         newClassification.Code.Trim(),
-            //                                                                                         StringComparison.CurrentCultureIgnoreCase)));
+           
+            var isCreated = await Task.FromResult(_repository.Create(newClassification));
 
-            //            if (existingAssetClass != null)
-            //                return ResponseMessage(new HttpResponseMessage {
-            //                    StatusCode = HttpStatusCode.Conflict,
-            //                    ReasonPhrase = "Duplicate Asset Class found."
-            //                });
+            if (!isCreated) return BadRequest("Unable to create Asset Class for:  " + newClassification.Code);
 
-            //            var isCreated = await Task<bool>.Factory.StartNew(() => _repository.Create(newClassification));
+            var requestUri = ControllerContext.RequestContext.Url.Request.RequestUri.AbsoluteUri;
+            newClassification.Url = requestUri + "/" + newClassification.Code.Trim();
 
-            //            //var x = new UrlHelper(new HttpRequestMessage(HttpMethod.Post))
-            //#if DEBUG
-            //            var newLocation = "http://localhost/Pims.Web.Api/api/AssetClass/" + newClassification.Code.Trim();
-            //#else
-            //            var newLocation = ControllerContext.Request.RequestUri.AbsoluteUri + "/" + newClassification.Code.Trim();
-            //#endif
+            // Accomodate NUnit testing.
+            if (ControllerContext.RouteData == null) 
+            {
+                newLocation = newClassification.Url;
+                return Created(newLocation, newClassification); 
+            }
+            
 
-            //            if (isCreated)
-            //                return Created(newLocation, newClassification); // 201 status code
+            newLocation = Url.Link("CreateNewAssetClassification", new {newClassification.Code });
+            return Created(newLocation, newClassification); // 201 status code
 
-
-            //            return BadRequest("Unable to create Asset Class " + newClassification.Code);
-            //        }
-
-
-            //        [HttpPut]
-            //        [Route("{assetClassCode}")]
-            //        public async Task<IHttpActionResult> UpdateAssetClass([FromBody] AssetClass updatedClassification, string assetClassCode) {
-            //            // No UOW repository or interface is necessary, as "Classifcation" involves no
-            //            // logical transactions or object graphs, when used by itself.
-            //            if (!ModelState.IsValid) return ResponseMessage(new HttpResponseMessage {
-            //                StatusCode = HttpStatusCode.BadRequest,
-            //                ReasonPhrase = "Invalid data received for Asset Class."
-            //            });
-
-            //            // Confirm received code matches asset class to be updated.
-            //            var isCorrectAssetClass = _repository.RetreiveAll().Any(ac => ac.Code.ToUpper().Trim() == assetClassCode.ToUpper().Trim());
-            //            var isUpdated = true;
-
-            //            if (isCorrectAssetClass) {
-            //                isUpdated = await Task<bool>.Factory.StartNew(() => _repository.Update(updatedClassification, updatedClassification.KeyId));
-            //            }
+        }
 
 
-            //            if (isUpdated)
-            //                return Ok(updatedClassification);
+        [HttpPut]
+        [HttpPatch]
+        [Route("{assetClassCode}")]
+        public async Task<IHttpActionResult> UpdateAssetClass([FromBody] AssetClass updatedClassification, string assetClassCode)
+        {
+            var isUpdated = false;
+            if (!ModelState.IsValid || assetClassCode.IsEmpty()) return ResponseMessage(new HttpResponseMessage
+                                                                {
+                                                                    StatusCode = HttpStatusCode.BadRequest,
+                                                                    ReasonPhrase = "Invalid data or Asset Code received for Asset Class update."
+                                                                });
 
-            //            return BadRequest("Unable to update Asset Class " + updatedClassification.Code);
+            // Confirm received search-by code indeed matches correct asset class to be updated.
+            var fetchedAssetClass = _repository.RetreiveById(updatedClassification.KeyId);
+            var isCorrectAssetClass = fetchedAssetClass.Code.Trim() == updatedClassification.Code.Trim();
 
-            //        }
+            if (isCorrectAssetClass)
+            {
+                isUpdated = await Task.FromResult(_repository.Update(updatedClassification, updatedClassification.KeyId));
+                //isUpdated = await Task<bool>.Factory.StartNew(() => _repository.Update(updatedClassification, updatedClassification.KeyId));
+            }
 
 
-            //        // Guid parameter name (id) must match RouteTemplate name in WebApiConfig.
-            //        // Require Guid as only acceptable parameter for deletes.
-            //        [HttpDelete]
-            //        [Route("{id}")]
-            //        public async Task<IHttpActionResult> Delete(Guid id) {
-            //            var isDeleted = await Task<bool>.Factory.StartNew(() => _repository.Delete(id));
+            if (isUpdated)
+                return Ok(updatedClassification);
 
-            //            if (isDeleted)
-            //                return Ok("Delete successful");
+            return BadRequest("Unable to update Asset Class for: " + updatedClassification.Code);
 
-            //            return BadRequest(string.Format("Unable to delete, or {0} not found", id));
-
-            //        }
-
-        #endregion
-
+        }
         
 
+
+        // Require Guid as only acceptable parameter for deletes.
+        [HttpDelete]
+        [Route("{id}")]
+        public async Task<IHttpActionResult> Delete(Guid id)
+        {
+            //var isDeleted = await Task<bool>.Factory.StartNew(() => _repository.Delete(id));
+            var isDeleted = await Task.FromResult(_repository.Delete(id));
+
+            if (isDeleted)
+                return Ok("Delete successful");
+
+            return BadRequest(string.Format("Unable to delete Asset Class, or id:  {0} , not found", id));
+
+        }
 
 
     }
