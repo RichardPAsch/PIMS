@@ -6,13 +6,14 @@ namespace PIMS.Web.Api
 {
     public class RouteConfig
     {
-        public static void RegisterRoutes(RouteCollection routes) {
+        public static void RegisterRoutes(RouteCollection routes)
+        {
             routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
 
             //routes.MapRoute(
-            //    name: "GetAssetClass",
-            //    url: "{controller}/{Code}",
-            //    defaults: new { controller = "AssetClass", Code = UrlParameter.Optional }
+            //    name: "CreateNewAssetClassification",
+            //    url: "api/AssetClass",
+            //    defaults: new { controller = "AssetClass"}
             //);
 
             //routes.MapRoute(
