@@ -1,13 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
-using Newtonsoft.Json;
+using System.Threading.Tasks;
+using System.Web.Http;
+using System.Web.Http.Results;
+using NHibernate;
 using NUnit.Framework;
 using PIMS.Core.Models;
+using PIMS.Data.Repositories;
+using PIMS.Web.Api.Controllers;
+
 
 
 namespace PIMS.IntegrationTest
@@ -15,7 +18,6 @@ namespace PIMS.IntegrationTest
     [TestFixture]
     public class VerifyAssetClassController
     {
-        
 
         /*
             API tests WebApi endpoints, mimicking client-based calls, as in sending resource-based URL requests; this 
@@ -24,220 +26,258 @@ namespace PIMS.IntegrationTest
             These tests also verify IoC/DI is working correctly.
         */
 
-        //private AssetClassController _ctrl;
+        private ISessionFactory _nhSessionFactory;
+        private AssetClassController _ctrl;
         private const string UrlBase = "http://localhost/PIMS.Web.API/api";
-      
+        IGenericRepository<AssetClass> _repository;  
 
-        public void Init()
+
+        [SetUp]
+        public void Init() {
+            _nhSessionFactory = NhDatabaseConfiguration.CreateSessionFactory();
+            _repository = new AssetClassRepository(_nhSessionFactory);
+        }
+
+
+
+        [Test]
+        // ReSharper disable once InconsistentNaming
+        public async Task Can_GET_All_Asset_Classifications()
         {
+            // Arrange
+            _ctrl = new AssetClassController(_repository) {
+                Request = new HttpRequestMessage { RequestUri = new Uri(UrlBase + "/AssetClass") },
+                Configuration = new HttpConfiguration()
+            };
+            
+
+            // Act
+            var classifications = await _ctrl.GetAll(); 
+
+
+            // Assert
+            Assert.IsNotNull(classifications);
+            Assert.GreaterOrEqual(classifications.Count(), 15);
+            Assert.That(classifications.First(x => x.Code.Trim() == "PFD").Code, Is.Unique);
+            Assert.That(classifications.First(x => x.Code.Trim() == "PFD").Description, Is.EqualTo("Preferred Stock"));
+        }
+        
+
+        [Test]
+        // ReSharper disable once InconsistentNaming
+        public async void Can_GET_an_Asset_Classification_By_Code()
+        {
+
+            // Arrange
+            _ctrl = new AssetClassController(_repository) {
+                Request = new HttpRequestMessage { RequestUri = new Uri(UrlBase + "/AssetClass/ETF") },
+                Configuration = new HttpConfiguration()
+            };
+
+            // Act
+            var assetClass = await _ctrl.GetByClassification("ETF") as OkNegotiatedContentResult<IQueryable<AssetClass>>;
+            
+            
+            // Assert
+            Assert.IsNotNull(assetClass);
+            Assert.IsTrue(assetClass.Content.First().Code.Trim().ToUpper() == "ETF");
+            Assert.That(assetClass.Content.ToList(), Is.Unique);
+
+        }
+        
+
+        [Test]
+        // ReSharper disable once InconsistentNaming
+        public async void Can_GET_an_Asset_Classification_By_Id()
+        {
+            // Arrange
+            _ctrl = new AssetClassController(_repository) {
+                Request = new HttpRequestMessage { RequestUri = new Uri(UrlBase + "/AssetClass/567f2176-2098-4800-bdf3-a2fc00a6be5a") },
+                Configuration = new HttpConfiguration()
+            };
+
+            // Act
+            var assetClass = await _ctrl.GetByClassificationId(new Guid("567f2176-2098-4800-bdf3-a2fc00a6be5a")) as OkNegotiatedContentResult<AssetClass>;
+
+            // Assert
+            Assert.IsNotNull(assetClass);
+            Assert.IsTrue(assetClass.Content.KeyId == new Guid("567f2176-2098-4800-bdf3-a2fc00a6be5a"));
+            Assert.IsTrue(assetClass.Content.Code.Trim().ToUpper() == "ETF");
+
+        }
+
+        
+        [Test]
+        // ReSharper disable once InconsistentNaming
+        public async void Can_POST_a_New_Asset_Classification()
+        {
+
+            // Arrange
+            _ctrl = new AssetClassController(_repository) {
+                Request = new HttpRequestMessage { RequestUri = new Uri(UrlBase + "/AssetClass") },
+                Configuration = new HttpConfiguration()
+            };
+
+            var newClassification = new AssetClass
+                                        {
+                                            Code = "TEST",
+                                            Description = DateTime.Now.ToString("g")
+                                        };
+
+            // Act
+            //var debugJsonForFiddler = TestHelpers.ObjectToJson(newClassification);
+            var response = await _ctrl.CreateNewAssetClass(newClassification) as CreatedNegotiatedContentResult<AssetClass>;
+            
+            
+            // Assert
+            Assert.IsNotNull(response);
+            Assert.That(response.Location.AbsoluteUri.Contains("api/AssetClass/TEST"), Is.True);
+ 
+        }
+        
+
+        [Test]
+        // ReSharper disable once InconsistentNaming
+        public async void Can_PUT_Update_an_Asset_Classification_By_Asset_Class()
+        {
+           
+            // Arrange
+            _ctrl = new AssetClassController(_repository) {
+                Request = new HttpRequestMessage { RequestUri = new Uri(UrlBase + "/AssetClass/TEST") },
+                Configuration = new HttpConfiguration()
+            };
+
+                var editedClassification = new AssetClass
+                                    {
+                                        KeyId = new Guid("3437791f-3e3f-4f76-a266-a47600c39453"),
+                                        Code = "TEST",
+                                        Description = DateTime.Now.ToString("g")
+                                    };
+
+
+            // Act
+            //var debugJsonForFiddler = TestHelpers.ObjectToJson(editedClassification);
+            var assetClassResult = await _ctrl.UpdateAssetClass(editedClassification, editedClassification.Code.Trim()) as OkNegotiatedContentResult<AssetClass>;
+                
+
+            // Assert
+            Assert.IsNotNull(assetClassResult);
            
         }
 
 
         [Test]
         // ReSharper disable once InconsistentNaming
-        public async void Can_GET_All_Asset_Classifications() {
+        public async void Can_DELETE_an_Asset_Classification_By_Id() {
 
-            using (var client = new HttpClient())
-                {
-                    // Arrange
-                    client.BaseAddress = new Uri(UrlBase + "/AssetClass");
-                    client.DefaultRequestHeaders.Accept.Clear();
-                    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            // Arrange
+            var existingGuid = new Guid();
+            var preTestCtrl = new AssetClassController(_repository)
+                                         {
+                                            Request = new HttpRequestMessage { RequestUri = new Uri(UrlBase + "/AssetClass/TEST") },
+                                            Configuration = new HttpConfiguration()
+                                         };
 
-                    // Act
-                    var resp = await client.GetAsync(client.BaseAddress);
-                    var classes = await resp.Content.ReadAsAsync<IEnumerable<AssetClass>>();
-
-
-                    // Assert
-                    Assert.IsTrue(resp.StatusCode == HttpStatusCode.OK);
-                    Assert.IsNotNull(classes);
-                    // Avoid posssible multiple enumerations.
-                    var assetClasses = classes as AssetClass[] ?? classes.ToArray();
-                    Assert.IsTrue(assetClasses.First().Code != string.Empty);
-                    Assert.IsTrue(assetClasses.First().Description != string.Empty);
-                    Assert.GreaterOrEqual(assetClasses.Count(), 4);
-               }
-        }
-        
-        [Test]
-        // ReSharper disable once InconsistentNaming
-        public async void Can_GET_an_Asset_Classification_By_Asset_Class() {
-
-            using (var client = new HttpClient()) {
-                // Arrange
-                client.BaseAddress = new Uri(UrlBase + "/AssetClass/ETF");
-                client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-                // Act
-                HttpResponseMessage resp = await client.GetAsync(client.BaseAddress);
-                var assetClass = await resp.Content.ReadAsAsync<AssetClass>();
-
-                
-
-                // Assert
-                Assert.IsTrue(resp.StatusCode == HttpStatusCode.OK);
-                Assert.IsNotNull(assetClass);
-                Assert.IsTrue(assetClass.Code.ToUpper().Trim() == "ETF");
-                Assert.IsFalse(assetClass.Description == string.Empty);
+            var existingAssetClass = await preTestCtrl.GetByClassification("TEST") as OkNegotiatedContentResult<IQueryable<AssetClass>>;
+            if (existingAssetClass != null)
+            {
+                existingGuid = new Guid(existingAssetClass.Content.First().KeyId.ToString(CultureInfo.InvariantCulture.ToString()));
             }
+            else
+            {
+                Assert.False(existingAssetClass == null);
+            }
+
+
+            _ctrl = new AssetClassController(_repository) {
+                Request = new HttpRequestMessage { RequestUri = new Uri(UrlBase + "/AssetClass/" + existingGuid) },
+                Configuration = new HttpConfiguration()
+            };
+
+            // Act
+            var assetClass = await _ctrl.Delete(existingGuid) as OkNegotiatedContentResult<AssetClass>;
+
+
+            // Assert
+            Assert.IsNull(assetClass);
+  
         }
 
 
         //[Test]
         //// ReSharper disable once InconsistentNaming
-        //public async void Can_PUT_Update_an_Asset_Classification_By_Asset_Class() {
+        //public async void Cannot_GET_an_Asset_Classification_By_An_Invalid_Asset_Class() {
 
         //    using (var client = new HttpClient()) {
-
         //        // Arrange
-        //        client.BaseAddress = new Uri(UrlBase + "/AssetClass/ETF");
+        //        client.BaseAddress = new Uri(UrlBase + "/AssetClass/RPA");
         //        client.DefaultRequestHeaders.Accept.Clear();
-        //        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/octet-stream"));
-        //        var respGet = await client.GetAsync(client.BaseAddress); // async call to server for data
-                
-        //        var updatedAssetClass = new AssetClass
-        //                                {
-        //                                    KeyId = Guid.NewGuid(),
-        //                                    Description = "Exchange-Traded Fund",
-        //                                    Code = "ETF"
-        //                                };
+        //        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-
-        //        //var newContent = new ObjectContent<AssetClass>();
-        //        //newContent.
-        //        //respGet.Content = myObjectContent(updatedAssetClass, new JsonMediaTypeFormatter());
-                
-
-        //        var content = respGet.Content; // write content to a string
-        //        var z = JsonConvert.SerializeObject(content);
-        //        var modifiedAssetClass = JsonConvert.DeserializeObject<AssetClass>(z); // deserialize Json to .Net type
-        //        modifiedAssetClass.Description = "Exchange-Traded Fund"; // made modification
-        //        var jsonModifiedAssetClass = JsonConvert.SerializeObject(modifiedAssetClass); // .Net type to Json string
-        //        var stringContent = new StringContent(jsonModifiedAssetClass);
-              
-                
-
-                
         //        // Act
-        //        //var respPut = await client.PutAsJsonAsync(client.BaseAddress.ToString(), jsonModifiedAssetClass);
-        //        var respPut = await client.PutAsync(client.BaseAddress.ToString(), stringContent); //respGet.Content);
-        //        var assetClass = await respPut.Content.ReadAsAsync<AssetClass>();
+        //        var resp = await client.GetAsync(client.BaseAddress);
+        //        var assetClass = await resp.Content.ReadAsAsync<Core.Models.AssetClass>();
 
-        //        var a = 2;
         //        // Assert
-        //        Assert.IsTrue(respPut.StatusCode == HttpStatusCode.OK);
-        //        //Assert.IsNotNull(assetClass);
-        //        //Assert.IsTrue(assetClass.Code.ToUpper().Trim() == "ETF");
-        //        Assert.IsTrue(assetClass.Description == "Exchange-Traded Fund");
+        //        Assert.IsTrue(resp.StatusCode == HttpStatusCode.NotFound);
+        //        Assert.IsNull(assetClass);
         //    }
         //}
 
 
-        [Test]
-        // ReSharper disable once InconsistentNaming
-        public async void Cannot_GET_an_Asset_Classification_By_An_Invalid_Asset_Class() {
+        //[Test]
+        //// ReSharper disable once InconsistentNaming
+        //public async void Can_GET_an_Asset_Classification_By_Asset_Class() {
 
-            using (var client = new HttpClient()) {
-                // Arrange
-                client.BaseAddress = new Uri(UrlBase + "/AssetClass/RPA");
-                client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        //    using (var client = new HttpClient()) {
+        //        // Arrange
+        //        client.BaseAddress = new Uri(UrlBase + "/AssetClass/ETF");
+        //        client.DefaultRequestHeaders.Accept.Clear();
+        //        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-                // Act
-                var resp = await client.GetAsync(client.BaseAddress);
-                var assetClass = await resp.Content.ReadAsAsync<AssetClass>();
-
-                // Assert
-                Assert.IsTrue(resp.StatusCode == HttpStatusCode.NotFound);
-                Assert.IsNull(assetClass);
-            }
-        }
+        //        // Act
+        //        HttpResponseMessage resp = await client.GetAsync(client.BaseAddress);
+        //        var assetClass = await resp.Content.ReadAsAsync<Core.Models.AssetClass>();
 
 
-        [Test]
-        // ReSharper disable once InconsistentNaming
-        public async void Can_GET_an_Asset_Classification_By_Asset_Id() {
 
-            using (var client = new HttpClient()) {
-                // Arrange                                       // b9c7d922-a4d2-49b6-aeb0-a30600f02cc3
-                client.BaseAddress = new Uri(UrlBase + "/AssetClass/b9c7d922-a4d2-49b6-aeb0-a30600f02cc3");
-                client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/octet-stream"));
-
-                // Act
-                var resp = await client.GetAsync(client.BaseAddress);
-                var assetClass = await resp.Content.ReadAsAsync<AssetClass>();
-
-                // Assert
-                Assert.IsTrue(resp.StatusCode == HttpStatusCode.OK);
-                Assert.IsNotNull(assetClass);
-                Assert.IsTrue(assetClass.KeyId == new Guid("b9c7d922-a4d2-49b6-aeb0-a30600f02cc3"));
-                Assert.IsFalse(assetClass.Description != "Preferred Stock");
-            }
-        }
+        //        // Assert
+        //        Assert.IsTrue(resp.StatusCode == HttpStatusCode.OK);
+        //        Assert.IsNotNull(assetClass);
+        //        Assert.IsTrue(assetClass.Code.ToUpper().Trim() == "ETF");
+        //        Assert.IsFalse(assetClass.Description == string.Empty);
+        //    }
+        //}
 
 
-        [Test]
-        // ReSharper disable once InconsistentNaming
-        public void Can_POST_a_New_Asset_Classification() {
+        
 
-            using (var client = new HttpClient()) {
 
-                // Arrange
-                client.BaseAddress = new Uri(UrlBase + "/AssetClass/");
-                client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                var random = new Random();
-                var randomNumber = random.Next(0, 100);
+        //[Test]
+        //// ReSharper disable once InconsistentNaming
+        //public void Cannot_POST_a_duplicate_Asset_Classification() {
 
-                var newClassification = new AssetClass {
-                                                            Code = "t" + randomNumber.ToString(CultureInfo.InvariantCulture),
-                                                            Description = DateTime.Now.ToLocalTime().ToString(CultureInfo.InvariantCulture)
-                                                        };
-                
-                // Act
-                var response = client.PostAsJsonAsync(client.BaseAddress.ToString(), newClassification).Result;
-                var jsonResult = response.Content.ReadAsStringAsync().Result;
-                var classification = JsonConvert.DeserializeObject<AssetClass>(jsonResult);
+        //    using (var client = new HttpClient()) {
+
+        //        // Arrange
+        //        client.BaseAddress = new Uri(UrlBase + "/AssetClass/");
+        //        client.DefaultRequestHeaders.Accept.Clear();
+        //        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        //        var newClassification = new Core.Models.AssetClass {
+        //            Code = "CEF",
+        //            Description = "Closed-End Fund"
+        //        };
+
+        //        // Act
+        //        var response = client.PostAsJsonAsync(client.BaseAddress.ToString(), newClassification).Result;
               
-
-                // Assert
-                Assert.IsTrue(response.StatusCode == HttpStatusCode.Created);
-                Assert.IsTrue(classification.Code.Contains("t"));
-                Assert.IsTrue(response.Headers.Location.AbsoluteUri.Contains(classification.Code));
-            }
-            
-        }
+        //        // Assert
+        //        Assert.IsTrue(response.StatusCode == HttpStatusCode.Conflict);
 
 
-        [Test]
-        // ReSharper disable once InconsistentNaming
-        public void Cannot_POST_a_duplicate_Asset_Classification() {
+        //    }
 
-            using (var client = new HttpClient()) {
-
-                // Arrange
-                client.BaseAddress = new Uri(UrlBase + "/AssetClass/");
-                client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                var newClassification = new AssetClass {
-                    Code = "CEF",
-                    Description = "Closed-End Fund"
-                };
-
-                // Act
-                var response = client.PostAsJsonAsync(client.BaseAddress.ToString(), newClassification).Result;
-              
-                // Assert
-                Assert.IsTrue(response.StatusCode == HttpStatusCode.Conflict);
-
-
-            }
-
-        }
+        //}
 
     }
 
