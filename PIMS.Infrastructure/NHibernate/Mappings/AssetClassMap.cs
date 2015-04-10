@@ -17,16 +17,6 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             Map(x => x.Code);
             Map(x => x.Description);
 
-            // 1:M 
-            // An AssetClassifcation can be associated with many Assets.
-            HasMany(x => x.AssetClassifications)
-                .Table("AssetClassification")
-                .KeyColumn("AssetClassId")
-                .Cascade
-                .All();
-
-
-
         }
        
     }
