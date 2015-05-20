@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Linq;
 using System.Linq.Expressions;
+using NHibernate;
+using NHibernate.Linq;
 using PIMS.Core.Models;
-using PIMS.Data.FakeRepositories;
 
 
 namespace PIMS.Data.Repositories
@@ -10,21 +11,36 @@ namespace PIMS.Data.Repositories
 
     public class AssetRepository : IGenericRepository<Asset>
     {
+        private readonly ISession _nhSession;
 
-        public AssetRepository()
+        public AssetRepository(ISessionFactory sessFactory)
         {
-            
+            if (sessFactory == null)
+                throw new ArgumentNullException("sessFactory");
+
+            _nhSession = sessFactory.OpenSession();
+            _nhSession.FlushMode = FlushMode.Auto;
         }
+
 
 
         public IQueryable<Asset> RetreiveAll()
         {
-            throw new NotImplementedException();
+            var assetsQuery = (from asset in _nhSession.Query<Asset>() select asset);
+            return assetsQuery.AsQueryable();
         }
 
         public IQueryable<Asset> Retreive(Expression<Func<Asset, bool>> predicate)
         {
-            throw new NotImplementedException();
+            try
+            {
+                return RetreiveAll().Where(predicate);
+            }
+            catch (Exception ex)
+            {
+                var y = ex.Message;
+                return null;
+            }
         }
 
         
@@ -51,9 +67,5 @@ namespace PIMS.Data.Repositories
         public string UrlAddress { get; set; }
 
 
-        public void TestProfileMethod()
-        {
-            throw new NotImplementedException();
-        }
     }
 }
