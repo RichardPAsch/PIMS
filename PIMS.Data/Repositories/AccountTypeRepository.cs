@@ -10,55 +10,67 @@ namespace PIMS.Data.Repositories
 {
     public class AccountTypeRepository : IGenericRepository<AccountType>
     {
-        
-        private readonly ISessionFactory _nhSessFactory;
-        public AccountTypeRepository(ISessionFactory nhSessFactory)
+        private readonly ISession _nhSession;
+        public string UrlAddress { get; set; }
+
+        public AccountTypeRepository(ISessionFactory sessFactory)
         {
-            if (nhSessFactory == null) throw new ArgumentNullException("nhSessFactory");
-            _nhSessFactory = nhSessFactory;
+            if (sessFactory == null)
+                throw new ArgumentNullException("sessFactory");
+
+            _nhSession = sessFactory.OpenSession();
+            _nhSession.FlushMode = FlushMode.Auto;
         }
 
 
 
         public virtual IQueryable<AccountType> RetreiveAll()
         {
-            using (var sess = _nhSessFactory.OpenSession())
-            {
-                var atQuery = sess.Query<AccountType>().Select(at => at);
-                return atQuery.ToList().AsQueryable();
-            }
+            var accountTypeQuery = (from accountType in _nhSession.Query<AccountType>() select accountType);
+            return accountTypeQuery.AsQueryable();
         }
+
+
+        public AccountType RetreiveById(Guid idGuid)
+        {
+            return _nhSession.Get<AccountType>(idGuid);
+        }
+
 
         public IQueryable<AccountType> Retreive(Expression<Func<AccountType, bool>> predicate)
         {
-            throw new NotImplementedException();
+            return RetreiveAll().Where(predicate);
         }
-
         
-       
-        public AccountType RetreiveById(Guid idGuid)
+
+        public bool Create(AccountType newEntity)
         {
-            var listing = RetreiveAll().Where(at => at.KeyId == idGuid);
-            return listing.FirstOrDefault();
-        }
-
-
-       public bool Create(AccountType newEntity)
-        {
-            var currListing = RetreiveAll().ToList();
-            if (currListing.Any(at => at.AccountTypeDesc.ToUpper().Trim() == newEntity.AccountTypeDesc.ToUpper().Trim())) return false;
-
-            using (var sess = _nhSessFactory.OpenSession()) 
+            using (var trx = _nhSession.BeginTransaction())
             {
-                using (var trx = sess.BeginTransaction())
+                try {
+                    _nhSession.Save(newEntity);
+                    trx.Commit();
+                }
+                catch {
+                    return false;
+                }
+
+                return true;
+            }
+        }
+        
+        
+        public bool Update(AccountType entity, object id)
+        {
+            using (var trx = _nhSession.BeginTransaction())
+            {
+                try
                 {
-                    try {
-                        sess.Save(newEntity);
-                        trx.Commit();
-                    }
-                    catch {
-                        return false;
-                    }
+                    _nhSession.Merge(entity);
+                    trx.Commit();
+                }
+                catch (Exception) {
+                    return false;
                 }
             }
 
@@ -66,70 +78,23 @@ namespace PIMS.Data.Repositories
         }
         
 
-        
-        public bool Update(AccountType entity, object id)
-        {
-            using (var sess = _nhSessFactory.OpenSession())
-            {
-                using (var trx = sess.BeginTransaction())
-                {
-                    try
-                    {
-                        var acctTypeItem = RetreiveAll().ToList().Find(at => at.KeyId == (Guid) id);
-                        acctTypeItem.AccountTypeDesc = entity.AccountTypeDesc.Trim().ToUpper();
-
-                        sess.Update(acctTypeItem);
-                        trx.Commit();
-                    }
-                    catch {
-                        return false;
-                    }
-                }
-                return true;
-            }
-        }
-
-        public string UrlAddress { get; set; }
-
 
         public bool Delete(Guid cGuid) {
 
             var deleteOk = true;
             var accountTypeToDelete = RetreiveById(cGuid);
 
-            using (var sess = _nhSessFactory.OpenSession()) {
-                using (var trx = sess.BeginTransaction()) {
-                    try {
-                        sess.Delete(accountTypeToDelete);
-                        trx.Commit();
-                    }
-                    catch (Exception) {
-                        // TODO: Candidate for logging.
-                        deleteOk = false;
-                    }
+            if (accountTypeToDelete == null)
+                return false;
+
+
+            using (var trx = _nhSession.BeginTransaction()) {
+                try {
+                    _nhSession.Delete(accountTypeToDelete);
+                    trx.Commit();
                 }
-            }
-
-            return deleteOk;
-        }
-
-
-
-        public bool DeleteByType(string acctType) {
-
-            var deleteOk = true;
-            var accountTypeToDelete = RetreiveAll().FirstOrDefault(at => at.AccountTypeDesc.Trim() == acctType.Trim());
-
-            using (var sess = _nhSessFactory.OpenSession()) {
-                using (var trx = sess.BeginTransaction()) {
-                    try {
-                        sess.Delete(accountTypeToDelete);
-                        trx.Commit();
-                    }
-                    catch (Exception) {
-                        // TODO: Candidate for logging.
-                        deleteOk = false;
-                    }
+                catch (Exception) {
+                    deleteOk = false;
                 }
             }
 
