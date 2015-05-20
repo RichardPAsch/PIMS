@@ -27,6 +27,9 @@ namespace PIMS.Core.Models
 
         // NH relational mapping for 'many' side of M:1 Asset/AssetClassification.
         public virtual IList<Asset> AssetClassificationAssets { get; set; }
+
+
+        public virtual string LastUpdate { get; set; }
     
 
     }
