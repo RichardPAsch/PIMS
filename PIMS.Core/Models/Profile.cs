@@ -11,7 +11,7 @@ namespace PIMS.Core.Models
         public virtual string Url { get; set; }
 
         // NH relational mapping for 'many' side of M:1 Asset/Profile.
-        public virtual IList<Profile> AssetProfile { get; set; }
+        public virtual IList<Asset> AssetProfile { get; set; }
 
         [Required]
         public virtual Guid ProfileId { get; set; }
