@@ -22,7 +22,7 @@ namespace PIMS.Core.Models
         [Required]
         public virtual Guid PositionId { get; set; }
 
-        // NH - FK 'one' side of Position/AccountType rel.
+        // NH - 'one' side of Position/AccountType rel.
         public virtual AccountType Account { get; set; }
 
         // NH - FK ref. 
@@ -49,25 +49,6 @@ namespace PIMS.Core.Models
         [Range(0.01, 10000.00)]
         public virtual decimal MarketPrice { get; set; }
 
-
-        
-
-        
-
-
-        // Added as NH requirement for composite keys: 'composite-id class must override Equals()'.
-        public override bool Equals(object obj) {
-            if (obj == null || GetType() != obj.GetType())
-                return false;
-
-            var that = (Position)obj;
-
-            return PositionId == that.PositionId && PositionId == that.PositionId;
-        }
-
-        public override int GetHashCode() {
-            return (PositionId + "|" + PositionId).GetHashCode();
-        }
 
 
     }
