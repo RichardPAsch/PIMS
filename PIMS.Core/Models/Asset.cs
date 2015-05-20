@@ -46,22 +46,14 @@ namespace PIMS.Core.Models
 
         public virtual Profile Profile { get; set; }
 
+        public virtual string LastUpdate { get; set; }
+
         
 
 
         // TODO - implement
         // public virtual string Status {get; set;}             // (A)ctive, (I)nactive
 
-
-
-        // TODO - reevaluate
-        // lookup can be provided via link to Bloomberg site:
-        // http://www.bloomberg.com/markets/symbolsearch?query=etv&commit=Find+Symbols
-
-        // NHibernate requirement to prevent dirty reads.
-        //public virtual byte[] Version { get; set; }
-
-       
         
     }
 }
