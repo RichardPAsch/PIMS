@@ -1,7 +1,4 @@
-﻿using System;
-
-
-namespace PIMS.Core.Models.ViewModels
+﻿namespace PIMS.Core.Models.ViewModels
 {
     public class AssetSummaryVm
     {

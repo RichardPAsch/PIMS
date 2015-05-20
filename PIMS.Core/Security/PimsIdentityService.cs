@@ -10,7 +10,8 @@ namespace PIMS.Core.Security
             // temp until integration test begun.
             get
             {
-                return "Asch";
+                return "rpasch@rpclassics.net"; // login name
+                //return "Asch";
 
                 // For PROD:
                 //return Thread.CurrentPrincipal.Identity.Name;
