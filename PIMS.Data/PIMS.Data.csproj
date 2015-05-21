@@ -60,6 +60,7 @@
     <Compile Include="Repositories\ICreateSessionTest.cs" />
     <Compile Include="Repositories\IIncomeRepository.cs" />
     <Compile Include="Repositories\IncomeRepository.cs" />
+    <Compile Include="Repositories\InvestorRepository.cs" />
     <Compile Include="Repositories\IPositionRepository.cs" />
     <Compile Include="Repositories\IProfileRepository.cs" />
     <Compile Include="Repositories\IUserRepository.cs" />

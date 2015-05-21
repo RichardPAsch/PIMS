@@ -135,7 +135,7 @@ namespace PIMS.Data.FakeRepositories
     }
 
 
-
+    // For in-memory testing.
     public static class GenericRepositoryExtension
     {
         public static IList<string> RetreiveLookUpAccounts(this IGenericRepository<AccountType> test)

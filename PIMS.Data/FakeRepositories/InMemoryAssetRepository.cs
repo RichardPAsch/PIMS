@@ -37,7 +37,7 @@ namespace PIMS.Data.FakeRepositories
                                     AssetClass = new AssetClass
                                                     {
                                                         Url = "",
-                                                        Code = "CB", 
+                                                        LastUpdate = "CB", 
                                                         Description = "Corporate Bond", 
                                                         KeyId = new Guid("75a3983f-da08-4ee6-bfbb-664088133483")
                                                     },
@@ -53,7 +53,7 @@ namespace PIMS.Data.FakeRepositories
                                     AssetClass = new AssetClass
                                                     {
                                                         Url = "", //UrlAddress.Replace("Asset","AssetClass") + "/CS",
-                                                        Code = "CS", 
+                                                        LastUpdate = "CS", 
                                                         Description = "Common Stock", 
                                                         KeyId = new Guid("f63ae3d2-6e5d-425a-8424-ffc3d375eec1")
                                                     },
@@ -69,7 +69,7 @@ namespace PIMS.Data.FakeRepositories
                                     AssetClass = new AssetClass
                                                     {
                                                         Url = "", //UrlAddress.Replace("Asset","AssetClass") + "/MLP",
-                                                        Code = "MLP", 
+                                                        LastUpdate = "MLP", 
                                                         Description = "Master Limited Partnership", 
                                                         KeyId = new Guid("25c33d28-327c-4cbb-858e-1d85224e68c9")
                                                     },
@@ -85,7 +85,7 @@ namespace PIMS.Data.FakeRepositories
                                     AssetClass = new AssetClass
                                                     {
                                                         Url = "", //UrlAddress.Replace("Asset","AssetClass") + "/ETF",
-                                                        Code = "ETF", 
+                                                        LastUpdate = "ETF", 
                                                         Description = "Exchange Traded Fund", 
                                                         KeyId = new Guid("28f8a3d2-42a2-4d39-b503-54a9a3143dcb")
                                                     },
@@ -101,7 +101,7 @@ namespace PIMS.Data.FakeRepositories
                                     AssetClass = new AssetClass
                                                     {
                                                         Url = "", //UrlAddress.Replace("Asset","AssetClass") + "/CB",
-                                                        Code = "CB", 
+                                                        LastUpdate = "CB", 
                                                         Description = "Corporate Bond", 
                                                         KeyId = new Guid("da329599-a301-411d-8167-b8e571a531d1")
                                                     },
@@ -117,7 +117,7 @@ namespace PIMS.Data.FakeRepositories
             {
                 item.Url = "http://localhost/Pims.Web.Api/api/Asset/" + item.Profile.TickerSymbol.ToUpper().Trim();
                 item.Investor.Url = "http://localhost/Pims.Web.Api/api/Investor/" + item.Investor.FirstName + item.Investor.MiddleInitial + item.Investor.LastName;
-                item.AssetClass.Url = "http://localhost/Pims.Web.Api/api/AssetClass/" + item.AssetClass.Code.Trim().ToUpper();
+                item.AssetClass.Url = "http://localhost/Pims.Web.Api/api/AssetClass/" + item.AssetClass.LastUpdate.Trim().ToUpper();
                 item.Profile.Url = "http://localhost/Pims.Web.Api/api/Profile/" + item.Profile.TickerSymbol.Trim().ToUpper();
                 
                 foreach (var subitem in item.Revenue)
@@ -172,7 +172,7 @@ namespace PIMS.Data.FakeRepositories
             var assetToUpdate = assets.First();
             assetToUpdate.Profile.TickerSymbol = entity.Profile.TickerSymbol;
             assetToUpdate.Profile.TickerDescription = entity.Profile.TickerDescription;
-            assetToUpdate.AssetClass.Code = entity.AssetClass.Code;
+            assetToUpdate.AssetClass.LastUpdate = entity.AssetClass.LastUpdate;
             assetToUpdate.Revenue.First().Actual = entity.Revenue.First().Actual;
             assetToUpdate.Revenue.First().DateRecvd = entity.Revenue.First().DateRecvd;
             
