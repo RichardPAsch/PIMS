@@ -21,7 +21,9 @@ namespace PIMS.Web.Api
             // Globally allow for cross-origin requests (CORS). May be overridden
             // selectively, via attribute, at the controller-level if necessary.
             // Differing URL port numbers = CORS.
-            var cors = new EnableCorsAttribute("*", "*", "GET,POST,PUT,DELETE");
+            // arg1 = a valid domain origin;  arg2 = valid headers; arg3 = valid set of methods [* = all]
+            // all domains allowed, as the service will be publicly accessed.
+            var cors = new EnableCorsAttribute("*", "*", "*");
             config.EnableCors(cors);
 
 
