@@ -9,6 +9,7 @@ using NHibernate;
 using NUnit.Framework;
 using PIMS.Core.Models;
 using PIMS.Data.Repositories;
+using PIMS.UnitTest;
 using PIMS.Web.Api.Controllers;
 
 
@@ -58,8 +59,8 @@ namespace PIMS.IntegrationTest
             // Assert
             Assert.IsNotNull(classifications);
             Assert.GreaterOrEqual(classifications.Count(), 15);
-            Assert.That(classifications.First(x => x.Code.Trim() == "PFD").Code, Is.Unique);
-            Assert.That(classifications.First(x => x.Code.Trim() == "PFD").Description, Is.EqualTo("Preferred Stock"));
+            Assert.That(classifications.First(x => x.LastUpdate.Trim() == "PFD").LastUpdate, Is.Unique);
+            Assert.That(classifications.First(x => x.LastUpdate.Trim() == "PFD").Description, Is.EqualTo("Preferred Stock"));
         }
         
 
@@ -80,7 +81,7 @@ namespace PIMS.IntegrationTest
             
             // Assert
             Assert.IsNotNull(assetClass);
-            Assert.IsTrue(assetClass.Content.First().Code.Trim().ToUpper() == "ETF");
+            Assert.IsTrue(assetClass.Content.First().LastUpdate.Trim().ToUpper() == "ETF");
             Assert.That(assetClass.Content.ToList(), Is.Unique);
 
         }
@@ -102,7 +103,7 @@ namespace PIMS.IntegrationTest
             // Assert
             Assert.IsNotNull(assetClass);
             Assert.IsTrue(assetClass.Content.KeyId == new Guid("567f2176-2098-4800-bdf3-a2fc00a6be5a"));
-            Assert.IsTrue(assetClass.Content.Code.Trim().ToUpper() == "ETF");
+            Assert.IsTrue(assetClass.Content.LastUpdate.Trim().ToUpper() == "ETF");
 
         }
 
@@ -120,12 +121,12 @@ namespace PIMS.IntegrationTest
 
             var newClassification = new AssetClass
                                         {
-                                            Code = "TEST",
+                                            LastUpdate = "TEST",
                                             Description = DateTime.Now.ToString("g")
                                         };
 
             // Act
-            //var debugJsonForFiddler = TestHelpers.ObjectToJson(newClassification);
+            var debugJsonForFiddler = TestHelpers.ObjectToJson(newClassification);
             var response = await _ctrl.CreateNewAssetClass(newClassification) as CreatedNegotiatedContentResult<AssetClass>;
             
             
@@ -150,14 +151,14 @@ namespace PIMS.IntegrationTest
                 var editedClassification = new AssetClass
                                     {
                                         KeyId = new Guid("3437791f-3e3f-4f76-a266-a47600c39453"),
-                                        Code = "TEST",
+                                        LastUpdate = "TEST",
                                         Description = DateTime.Now.ToString("g")
                                     };
 
 
             // Act
             //var debugJsonForFiddler = TestHelpers.ObjectToJson(editedClassification);
-            var assetClassResult = await _ctrl.UpdateAssetClass(editedClassification, editedClassification.Code.Trim()) as OkNegotiatedContentResult<AssetClass>;
+            var assetClassResult = await _ctrl.UpdateAssetClass(editedClassification, editedClassification.LastUpdate.Trim()) as OkNegotiatedContentResult<AssetClass>;
                 
 
             // Assert

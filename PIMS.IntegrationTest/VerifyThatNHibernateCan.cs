@@ -88,7 +88,7 @@ namespace PIMS.IntegrationTest
             // Act
             new PersistenceSpecification<AssetClass>(currSess)
                 .CheckProperty(ac => ac.Url, "http://localhost/Pims.Web.Api/api/AssetClass")
-                .CheckProperty(ac => ac.Code, "CS")
+                .CheckProperty(ac => ac.LastUpdate, "CS")
                 .CheckProperty(ac => ac.Description, "Common Stock NHtest - " +  DateTime.Now.ToString("g"))
             
                 

@@ -1,48 +1,62 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Web.Http;
+using NHibernate;
 using NUnit.Framework;
 using PIMS.Core.Models;
+using PIMS.Core.Security;
+using PIMS.Data.Repositories;
+using PIMS.Web.Api.Controllers;
 
-// 10-15-14:
-// NOTE: Do test cases need to be async, as controller is already processing asynchronously?
-// Good to use in integration tests?
-// Successfully tested against test Db
 
 namespace PIMS.IntegrationTest
 {
     [TestFixture]
     public class VerifyAccountTypeController
     {
-
+        private ISessionFactory _nhSessionFactory;
+        private AccountTypeController _ctrl;
         private const string UrlBase = "http://localhost/PIMS.Web.API/api";
+        readonly IGenericRepository<AccountType> _repository;
+        readonly IGenericRepository<Asset> _repositoryAsset;
+        private readonly IPimsIdentityService _identityService;
 
-        public void Init() {
+        public VerifyAccountTypeController(IPimsIdentityService identityService)
+        {
+            _identityService = identityService;
         }
+
+        public VerifyAccountTypeController()
+        {
+            _nhSessionFactory = NhDatabaseConfiguration.CreateSessionFactory();
+            _repository = new AccountTypeRepository(_nhSessionFactory);
+            _repositoryAsset = new AssetRepository(_nhSessionFactory);
+            _identityService = new PimsIdentityService();
+        }
+
+        public void Init()
+        {}
 
 
         [Test]
         // ReSharper disable once InconsistentNaming
-        public async void Can_GET_All_Account_Types() {
+        public async void Can_GET_All_Account_Types()
+        {
+            // Arrange
+            _ctrl = new AccountTypeController(_repository, _repositoryAsset, _identityService) {
+                Request = new HttpRequestMessage { RequestUri = new Uri(UrlBase + "/AccountType") },
+                Configuration = new HttpConfiguration()
+            };
+               
 
-            using (var client = new HttpClient()) 
-            {
-                // Arrange
-                var resp = await client.GetAsync(UrlBase + "/AccountType").ConfigureAwait(false);
-
-
-                // Act
-                var acctTypes = await resp.Content.ReadAsAsync<IEnumerable<AccountType>>();
-
-
-                // Assert
-                Assert.IsTrue(resp.StatusCode == HttpStatusCode.OK);
-                Assert.IsNotNull(acctTypes);
-                Assert.IsTrue(acctTypes.ToList().FindAll(a => a.AccountTypeDesc == "ROTH-IRA").Count == 1);
-            }
+            // Act
+            var acctTypes = await _ctrl.GetAllAccounts();
+            
+            // Assert
+            Assert.IsNotNull(acctTypes);
+          
         }
 
 
