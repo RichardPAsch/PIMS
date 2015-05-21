@@ -80,7 +80,7 @@ namespace PIMS.Web.Api.Areas.HelpPage.ModelDescriptions
             { typeof(Guid), "globally unique identifier" },
             { typeof(TimeSpan), "time interval" },
             { typeof(DateTime), "date" },
-            { typeof(DateTimeOffset), "date" },
+           // { typeof(DateTimeOffset), "date" },
             { typeof(Boolean), "boolean" },
         };
 
