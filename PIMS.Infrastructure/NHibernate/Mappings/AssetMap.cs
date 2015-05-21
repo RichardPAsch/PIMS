@@ -26,6 +26,7 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
                 .GuidComb();
 
             Map(x => x.InvestorId, "AssetInvestorId");
+            Map(x => x.LastUpdate);
 
             HasManyToMany(x => x.Investors)
                 .Table("AssetInvestor")

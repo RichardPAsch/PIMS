@@ -14,7 +14,7 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
                 .GuidComb();
 
             Map(x => x.Url, "Link");
-            Map(x => x.Code);
+            Map(x => x.LastUpdate); // test
             Map(x => x.Description);
 
         }

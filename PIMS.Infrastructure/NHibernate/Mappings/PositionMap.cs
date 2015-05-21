@@ -13,12 +13,15 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
                 .GeneratedBy
                 .GuidComb();
 
+            Map(x => x.PositionAssetId);
+            Map(x => x.AcctTypeId, "PositionAccountTypeId");
             Map(x => x.PurchaseDate);
             Map(x => x.Quantity);
+            Map(x => x.MarketPrice, "UnitCost").Precision(6).Scale(2);
             Map(x => x.LastUpdate);
-            Map(x => x.MarketPrice,"UnitCost").Precision(6).Scale(2);
-            Map(x => x.AcctTypeId, "PositionAccountTypeId");
-            Map(x => x.PositionAssetId);
+            Map(x => x.InvestorKey); // added 4-14-15
+            Map(x => x.Url);
+            
             
 
             // M:1
@@ -30,11 +33,16 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
                  .Not.Update()
                  .Not.Insert();
 
-
+            // M:1
+            // One or more Positions on one or more Assets may be associated with an AccountType.
+            References(x => x.Account)
+                .Column("PositionAccountTypeId")
+                .Not.Update()
+                .Not.Insert();
 
             // Bypass NH default and load this child aggregate entity.
             //Not.LazyLoad();
-            
+
         }
     }
 }

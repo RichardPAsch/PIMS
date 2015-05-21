@@ -28,7 +28,7 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             Map(x => x.Price, "UnitPrice").Precision(7);
 
             // 1:M 
-            // An Profile can be associated with an Asset with many Investors.
+            // A Profile can be associated with an Asset with many Investors.
             HasMany(x => x.AssetProfile)
                 .Table("Profile")
                 .KeyColumn("ProfileId")
