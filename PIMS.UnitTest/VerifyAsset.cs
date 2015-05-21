@@ -317,7 +317,7 @@ namespace PIMS.UnitTest
             var newAsset = new Asset
             {
                 AssetId = Guid.NewGuid(),
-                AssetClass = new AssetClass { Code = "PFD", Description = "Preferred Stock", KeyId = Guid.NewGuid() },
+                AssetClass = new AssetClass { LastUpdate = "PFD", Description = "Preferred Stock", KeyId = Guid.NewGuid() },
                 Positions = new List<Position>
                     {new Position
                                 {
@@ -377,7 +377,7 @@ namespace PIMS.UnitTest
             var newAsset = new Asset
             {
                 AssetId = Guid.NewGuid(),
-                AssetClass = new AssetClass { Code = "PFD", Description = "Preferred Stock", KeyId = Guid.NewGuid() },
+                AssetClass = new AssetClass { LastUpdate = "PFD", Description = "Preferred Stock", KeyId = Guid.NewGuid() },
                 Positions = new List<Position>
                     { new Position
                                 {
@@ -442,7 +442,7 @@ namespace PIMS.UnitTest
             // Arrange 
             var newAsset = new Asset {
                 AssetId = Guid.NewGuid(),
-                AssetClass = new AssetClass { Code = "PFD", Description = "Preferred Stock", KeyId = Guid.NewGuid() },
+                AssetClass = new AssetClass { LastUpdate = "PFD", Description = "Preferred Stock", KeyId = Guid.NewGuid() },
                 Positions = new List<Position>
                     { 
                         new Position
@@ -516,7 +516,7 @@ namespace PIMS.UnitTest
             // Arrange - only 1 Position created for this test.
             var newAsset = new Asset {
                 AssetId = Guid.NewGuid(),
-                AssetClass = new AssetClass { Code = "ETF", Description = "Exchange-traded fund", KeyId = Guid.NewGuid() },
+                AssetClass = new AssetClass { LastUpdate = "ETF", Description = "Exchange-traded fund", KeyId = Guid.NewGuid() },
                 Positions = new List<Position>
                                         {new Position
                                             {
@@ -574,7 +574,7 @@ namespace PIMS.UnitTest
             // Arrange - Mimics how a new Asset would be POSTed via a client.
             var newAsset = new Asset {
                 AssetId = Guid.NewGuid(),
-                AssetClass = new AssetClass { Code = "MLP", Description = "Master Limited Partnership", KeyId = Guid.NewGuid() },
+                AssetClass = new AssetClass { LastUpdate = "MLP", Description = "Master Limited Partnership", KeyId = Guid.NewGuid() },
                 Positions = new List<Position>
                                 {new Position
                                     {
@@ -679,7 +679,7 @@ namespace PIMS.UnitTest
             // Arrange 
             var newAsset = new Asset {
                 AssetId = Guid.NewGuid(),
-                AssetClass = new AssetClass { Code = "ETF", Description = "Exchange-traded fund", KeyId = Guid.NewGuid() },
+                AssetClass = new AssetClass { LastUpdate = "ETF", Description = "Exchange-traded fund", KeyId = Guid.NewGuid() },
                 Positions = new List<Position>
                                         {new Position
                                             {
@@ -741,7 +741,7 @@ namespace PIMS.UnitTest
                 AssetId = Guid.NewGuid(),
                 AssetClass = new AssetClass {
                     Url = "http://localhost/Pims.Web.Api/api/AssetClass/PFD",
-                    Code = "PFD",
+                    LastUpdate = "PFD",
                     Description = "Preferred Stock",
                     KeyId = Guid.NewGuid()
                 },

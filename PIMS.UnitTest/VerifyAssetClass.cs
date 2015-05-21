@@ -83,7 +83,7 @@ namespace PIMS.UnitTest
 
             // Assert
             Assert.IsNotNull(result);
-            Assert.That(result.Content.First().Code, Is.EqualTo("ETF"));
+            Assert.That(result.Content.First().LastUpdate, Is.EqualTo("ETF"));
             Assert.That(result.Content.Count(), Is.EqualTo(1));
         }
 
