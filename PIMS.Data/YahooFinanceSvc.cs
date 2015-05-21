@@ -14,7 +14,7 @@ namespace PIMS.Data
             {
                 using (var web = new WebClient())
                 {
-                    var csvProfile = web.DownloadString("http://finance.yahoo.com/d/quotes.csv?s=" + ticker + "&f=nsb2dyreqr1");
+                    var csvProfile = web.DownloadString("http://finance.yahoo.com/d/quotes.csv?s=" + ticker + "&f=nsodyreqr1");
 
                     var profile = YahooParser.MapToProfile(csvProfile);
 
