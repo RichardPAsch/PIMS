@@ -57,10 +57,10 @@ namespace PIMS.Web.Api.DependencyResolution {
 
                             // ** -- Domain Constructor injections ---
                             /*  --------------- UNIT TESTING only, via NUnit/Fiddler ---------------------------- */
-                            x.For<IGenericRepository<Asset>>().Use<InMemoryAssetRepository>();
-                            x.For<IGenericRepository<Investor>>().Use<InMemoryInvestorRepository>();
-                            x.For<IGenericRepository<Position>>().Use<InMemoryPositionRepository>();
-                            x.For<IGenericRepository<Income>>().Use<InMemoryIncomeRepository>();
+                            //x.For<IGenericRepository<Asset>>().Use<InMemoryAssetRepository>();
+                            //x.For<IGenericRepository<Investor>>().Use<InMemoryInvestorRepository>();
+                            //x.For<IGenericRepository<Position>>().Use<InMemoryPositionRepository>();
+                            //x.For<IGenericRepository<Income>>().Use<InMemoryIncomeRepository>();
                             //x.For<IGenericRepository<AccountType>>().Use<InMemoryAccountTypeRepository>();
                             //x.For<IGenericRepository<AssetClass>>().Use<InMemoryAssetClassRepository>();
                             /*  --------------------------------------------------------------------------------- */
@@ -68,7 +68,11 @@ namespace PIMS.Web.Api.DependencyResolution {
                             /*  --------------- INTEGRATION/PROD TESTING only, via Fiddler & Web Api client ----- */
                             x.For<IGenericRepository<AssetClass>>().Use<AssetClassRepository>();
                             x.For<IGenericRepository<AccountType>>().Use<AccountTypeRepository>();
-                            //x.For<IGenericRepository<Profile>>().Use<ProfileRepository>();
+                            x.For<IGenericRepository<Asset>>().Use<AssetRepository>();
+                            x.For<IGenericRepository<Position>>().Use<PositionRepository>();
+                            x.For<IGenericRepository<Income>>().Use<IncomeRepository>();
+                            x.For<IGenericRepository<Investor>>().Use<InvestorRepository>();
+                            x.For<IGenericRepository<Profile>>().Use<ProfileRepository>();
                             //x.For<IGenericRepository<Profile>>().Use<InMemoryProfileRepository>(); [10/24/14: not needed due to unit test configurations]
                             //x.For<IGenericRepository<Position>>().Use<PositionRepository>();
                             //x.For<IGenericRepository<Income>>().Use<IncomeRepository>();
