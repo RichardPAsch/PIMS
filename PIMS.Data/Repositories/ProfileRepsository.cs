@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
-using Newtonsoft.Json;
 using NHibernate;
 using NHibernate.Linq;
 using PIMS.Core.Models;
@@ -19,22 +17,28 @@ namespace PIMS.Data.Repositories
         // 4. D - Only admin role allowed to delete Profiles - WIP secondary to security implementation.
 
 
-        private readonly ISessionFactory _sfFactory;
-        public ProfileRepository(ISessionFactory sfFactory)
+        private readonly ISession _nhSession;
+        public string UrlAddress { get; set; }
+
+
+        public ProfileRepository(ISessionFactory sessFactory)
         {
-            if (sfFactory == null)
-                throw new ArgumentNullException("sfFactory");
+            if (sessFactory == null)
+                throw new ArgumentNullException("sessFactory");
 
-            _sfFactory = sfFactory;
+            _nhSession = sessFactory.OpenSession();
+            _nhSession.FlushMode = FlushMode.Auto;
         }
-
-
+        
         public IQueryable<Profile> RetreiveAll() {
 
-            using (var sess = _sfFactory.OpenSession()) {
-                var profileQuery = sess.Query<Profile>();
-                return profileQuery.ToList().AsQueryable();
-            }
+            var profileQuery = (from profile in _nhSession.Query<Profile>() select profile);
+            return profileQuery.AsQueryable();
+        }
+        
+        public Profile RetreiveById(Guid key)
+        {
+            return _nhSession.Get<Profile>(key);
         }
 
         public IQueryable<Profile> Retreive(Expression<Func<Profile, bool>> predicate)
@@ -46,63 +50,26 @@ namespace PIMS.Data.Repositories
                 return null;
             }
         }
-
-        public Profile RetreiveById(Guid key)
-        {
-            var filteredProfile = RetreiveAll().ToList().Where(p => p.AssetId == key);
-            return filteredProfile.FirstOrDefault();
-        }
         
         public bool Create(Profile newEntity)
         {
-            var existingProfiles = this.RetreiveAll().ToList();
+            var existingProfiles = RetreiveAll().ToList();
             if (existingProfiles.Any(p => p.TickerSymbol.ToUpper().Trim() == newEntity.TickerSymbol.ToUpper().Trim())) return false;
-
-            using (var sess = _sfFactory.OpenSession()) {
-                using (var trx = sess.BeginTransaction()) {
-                    try {
-                        sess.Save(newEntity);
-                        trx.Commit();
-                    }
-                    catch(Exception ex)
-                    {
-                        // TODO: Candidate for logging error.
-                        var debugError = ex.Message;
-                        return false;
-                    }
+            
+            using (var trx = _nhSession.BeginTransaction())
+            {
+                try {
+                    _nhSession.Save(newEntity);
+                    trx.Commit();
+                }
+                catch(Exception)
+                {
+                    // TODO: Candidate for logging error.
+                    return false;
                 }
             }
 
             return true;
-        }
-
-        // TODO: Accessible via Admin only.
-        // ReSharper disable once InconsistentNaming
-        public bool Delete(Guid ProfileId)
-        {
-            var deleteOk = true;
-            
-            // ** To avoid NHibernate.Hql.Ast.ANTLR.QuerySyntaxException], NHibernate needs to load 
-            // the OBJECT before deleting it, so that it can cascade deletes through its' object graph. **
-            var profileToDelete = RetreiveById(ProfileId);
-
-            using (var sess = _sfFactory.OpenSession()) {
-                using (var trx = sess.BeginTransaction()) {
-                    try
-                    {
-                        sess.Delete(profileToDelete);
-                        trx.Commit();
-                    }
-                    catch(Exception ex)
-                    {
-                        // TODO: Candidate for logging.
-                        var debugError = ex.Message;
-                        deleteOk = false;
-                    }
-                }
-            }
-
-            return deleteOk;
         }
         
         public bool Update(Profile revisedProfile, object id)
@@ -110,21 +77,47 @@ namespace PIMS.Data.Repositories
             // Do we have an existing record on file to update? If so, update anyway,
             // even if only 1 field is affected.
             var updateOk = true;
-            using (var sess = _sfFactory.OpenSession()) {
-                using (var trx = sess.BeginTransaction()) {
-                    try {
-                        sess.Update(revisedProfile);
-                        trx.Commit();
-                    }
-                    catch {
-                        updateOk = false;
-                    }
+
+            using (var trx = _nhSession.BeginTransaction()) {
+                try {
+                    _nhSession.Update(revisedProfile);
+                    trx.Commit();
+                }
+                catch {
+                    updateOk = false;
                 }
             }
+            
 
             return updateOk;
         }
 
-        public string UrlAddress { get; set; }
+
+
+        // ** Per Admin only; rarely performed, as used by many referencing Assets. **
+        // ReSharper disable once InconsistentNaming
+        public bool Delete(Guid ProfileId) {
+            var deleteOk = true;
+
+            // ** To avoid NHibernate.Hql.Ast.ANTLR.QuerySyntaxException], NHibernate needs to load 
+            // the OBJECT before deleting it, so that it can cascade deletes through its' object graph. **
+            var profileToDelete = RetreiveById(ProfileId);
+
+            using (var trx = _nhSession.BeginTransaction()) {
+                try {
+                    _nhSession.Delete(profileToDelete);
+                    trx.Commit();
+                }
+                catch (Exception) {
+                    // TODO: Candidate for logging.
+                    deleteOk = false;
+                }
+            }
+
+
+            return deleteOk;
+        }
+
+       
     }
 }
