@@ -29,7 +29,7 @@ namespace PIMS.Web.Api.Controllers
         [Route("")]
         public async Task<IQueryable<AssetClass>> GetAll()
         {
-            return await Task<IQueryable<AssetClass>>.Factory.StartNew(() => _repository.RetreiveAll().OrderBy(ac => ac.Code));
+            return await Task<IQueryable<AssetClass>>.Factory.StartNew(() => _repository.RetreiveAll().OrderBy(ac => ac.LastUpdate));
         }
 
 
@@ -48,7 +48,7 @@ namespace PIMS.Web.Api.Controllers
         [Route("{code}")]
         public async Task<IHttpActionResult> GetByClassification(string code)
         {
-            var matchingAssetClass = await Task.FromResult(_repository.Retreive(ac => ac.Code.Trim() == code.Trim())
+            var matchingAssetClass = await Task.FromResult(_repository.Retreive(ac => ac.LastUpdate.Trim() == code.Trim())
                                                                       .AsQueryable());
 
             if (matchingAssetClass.Any())
@@ -70,7 +70,7 @@ namespace PIMS.Web.Api.Controllers
             });
 
             
-            var existingAssetClass = await Task.FromResult(_repository.Retreive(ac => ac.Code.Trim() == newClassification.Code.Trim())
+            var existingAssetClass = await Task.FromResult(_repository.Retreive(ac => ac.LastUpdate.Trim() == newClassification.LastUpdate.Trim())
                                                                       .AsQueryable());
 
             if (existingAssetClass.Any())
@@ -79,13 +79,15 @@ namespace PIMS.Web.Api.Controllers
                                         ReasonPhrase = "Duplicate Asset Class found."
                 });
 
-           
-            var isCreated = await Task.FromResult(_repository.Create(newClassification));
-
-            if (!isCreated) return BadRequest("Unable to create Asset Class for:  " + newClassification.Code);
 
             var requestUri = ControllerContext.RequestContext.Url.Request.RequestUri.AbsoluteUri;
-            newClassification.Url = requestUri + "/" + newClassification.Code.Trim();
+            newClassification.Url = requestUri + "/" + newClassification.LastUpdate.Trim();
+
+            var isCreated = await Task.FromResult(_repository.Create(newClassification));
+
+            if (!isCreated) return BadRequest("Unable to create Asset Class for:  " + newClassification.LastUpdate);
+
+           
 
             // Accomodate NUnit testing.
             if (ControllerContext.RouteData == null) 
@@ -95,7 +97,7 @@ namespace PIMS.Web.Api.Controllers
             }
             
 
-            newLocation = Url.Link("CreateNewAssetClassification", new {newClassification.Code });
+            newLocation = Url.Link("CreateNewAssetClassification", new {Code = newClassification.LastUpdate });
             return Created(newLocation, newClassification); // 201 status code
 
         }
@@ -115,7 +117,7 @@ namespace PIMS.Web.Api.Controllers
 
             // Confirm received search-by code indeed matches correct asset class to be updated.
             var fetchedAssetClass = _repository.RetreiveById(updatedClassification.KeyId);
-            var isCorrectAssetClass = fetchedAssetClass.Code.Trim() == updatedClassification.Code.Trim();
+            var isCorrectAssetClass = fetchedAssetClass.LastUpdate.Trim() == updatedClassification.LastUpdate.Trim();
 
             if (isCorrectAssetClass)
             {
@@ -127,7 +129,7 @@ namespace PIMS.Web.Api.Controllers
             if (isUpdated)
                 return Ok(updatedClassification);
 
-            return BadRequest("Unable to update Asset Class for: " + updatedClassification.Code);
+            return BadRequest("Unable to update Asset Class for: " + updatedClassification.LastUpdate);
 
         }
         

@@ -1,16 +1,20 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using FluentNHibernate.Conventions;
 using PIMS.Core.Models;
+using PIMS.Core.Models.ViewModels;
 using PIMS.Core.Security;
-using PIMS.Data.FakeRepositories;
 using PIMS.Data.Repositories;
 
 
 namespace PIMS.Web.Api.Controllers
 {
-   [RoutePrefix("api")]
+   [RoutePrefix("api/AccountType")]
     public class AccountTypeController : ApiController
     {
         private static IGenericRepository<AccountType> _repository;
@@ -26,90 +30,152 @@ namespace PIMS.Web.Api.Controllers
         }
 
 
-
         [HttpGet]
         [Route("")]
         public async Task<IHttpActionResult> GetAllAccounts() {
-            var accounts = await Task.FromResult(_repository.RetreiveAll().AsQueryable());
-            if (accounts != null)
-                return Ok(accounts);
 
-            return BadRequest("Unable to retreive AccountType data.");
+            var availableAccountTypes = await Task.FromResult(_repository.RetreiveAll()
+                                                            .OrderBy(at => at.AccountTypeDesc)
+                                                            .AsQueryable());
+
+            if (availableAccountTypes == null) return BadRequest("Unable to retreive AccountType data.");
+
+            // Use of Vm mandated by received Http status:500 Error - "An error has occurred.","exceptionMessage":"Error getting value
+            // from 'DefaultValue' on 'NHibernate.Type.DateTimeOffsetType'.","exceptionType":"Newtonsoft.Json.JsonSerializationException"
+            // Proxy setup by NH results in serialization error, although no DateTime-related types exist in projects.
+            IList<AccountTypeVm> accountTypeListing = availableAccountTypes.Select(at => new AccountTypeVm {
+                                                            AccountTypeDesc = at.AccountTypeDesc,
+                                                            KeyId = at.KeyId,
+                                                            Url = ControllerContext.Request.RequestUri.AbsoluteUri.Trim() + "/" + at.AccountTypeDesc.Trim()
+                                                        }).ToList();
+
+            return Ok(accountTypeListing);
         }
 
 
-        [HttpGet]
-        [Route("~/api/AccountType")]
-        public async Task<IHttpActionResult> GetLookUpAccounts([FromUri] bool lookUps = true)
-        {
-            // use of extension method.
-            var availableAccts = await Task.FromResult(_repository.RetreiveLookUpAccounts().AsQueryable());
 
-            if (availableAccts != null)
-                return Ok(availableAccts);
+       [HttpPost]
+       [Route("", Name = "CreateNewAccountType")]
+       public async Task<IHttpActionResult> CreateNewAccountType([FromBody] AccountType newAcctType )
+       {
+           // New AccountType will not contain a valid PositionRefId if added via 'Admin' for lookup purposes.
+           if (!ModelState.IsValid) return ResponseMessage(new HttpResponseMessage {
+                StatusCode = HttpStatusCode.BadRequest,
+                ReasonPhrase = "Invalid data received for new AccountType creation."
+           });
 
-            return BadRequest("Unable to retreive available lookup data.");
-        }
+           var existingAccountType = await Task
+               .FromResult(_repository.Retreive(at => at.AccountTypeDesc.Trim() == newAcctType.AccountTypeDesc.Trim()));
+
+           if (existingAccountType.Any())
+                return ResponseMessage(new HttpResponseMessage {
+                                        StatusCode = HttpStatusCode.Conflict,
+                                        ReasonPhrase = "Duplicate AccountType found."
+           });
+
+           var requestUri = ControllerContext.RequestContext.Url.Request.RequestUri.AbsoluteUri;
+           newAcctType.Url = requestUri + "/" + newAcctType.AccountTypeDesc.Trim();
+
+           var isCreated = await Task.FromResult(_repository.Create(newAcctType));
+           if (!isCreated) return BadRequest("Unable to create AccountType :  " + newAcctType.AccountTypeDesc.Trim());
+          
+
+           var newLocation = Url.Link("CreateNewAccountType", new {});
+           return Created(newLocation, newAcctType);
+       }
 
 
-        [HttpGet]
-        [Route("~/api/AccountType/{forTicker}")]
-        public async Task<IHttpActionResult> GetAllAccountsForInvestor(string forTicker = "")
-        {
-            var currentInvestor = _identityService.CurrentUser;
-            IQueryable<Position> matchingPositions;
+       [HttpPut]
+       [HttpPatch]
+       [Route("{preEditAcctTypeCode}")]
+       public async Task<IHttpActionResult> UpdateAccountType([FromBody] AccountType updatedAcctType, string preEditAcctTypeCode)
+       {
+           var isUpdated = false;
+           if (!ModelState.IsValid || preEditAcctTypeCode.IsEmpty()) return ResponseMessage(new HttpResponseMessage {
+               StatusCode = HttpStatusCode.BadRequest,
+               ReasonPhrase = "Invalid AccountType data received for update."
+           });
 
-            if (forTicker.Trim().ToUpper() != "NONE")
-            {
-                matchingPositions = await Task.FromResult(_repositoryAssets.Retreive(a => a.Investor.LastName == currentInvestor.Trim() &&
-                                                                                          a.Url.Contains(forTicker.Trim().ToUpper()) )
-                                                                 .AsQueryable()
-                                                                 .SelectMany(a => a.Positions.Where(p => p.PositionId != default(Guid))));
-            }
-            else
-            {
-                matchingPositions = await Task.FromResult(_repositoryAssets.Retreive(a => a.Investor.LastName == currentInvestor.Trim())
+           // Confirm received AccountType matches correct AccountType to be updated.
+           var fetchedAccountType = _repository.RetreiveById(updatedAcctType.KeyId);
+           var isCorrectAccountType = fetchedAccountType.AccountTypeDesc.Trim() == preEditAcctTypeCode.Trim();
+
+           if (isCorrectAccountType) {
+               isUpdated = await Task.FromResult(_repository.Update(updatedAcctType, updatedAcctType.KeyId));
+           }
+
+
+           if (isUpdated)
+               return Ok(updatedAcctType);
+
+           return BadRequest("Unable to update AccountType for: " + updatedAcctType.AccountTypeDesc.Trim());
+
+       }
+
+
+       [HttpDelete]
+       [Route("{id}")]
+       public async Task<IHttpActionResult> Delete(Guid id)
+       {
+           var isDeleted = await Task.FromResult(_repository.Delete(id));
+
+           if (isDeleted)
+               return Ok("Delete successful");
+
+           return BadRequest(string.Format("Unable to delete AccountType with id:  {0} , not found", id));
+
+       }
+
+       
+
+        //TODO: 4-20-15:  Reevaluate need for this! Fiddler testing needed.
+       [HttpGet]
+       [Route("~/api/AccountType/{forTicker}")]
+       public async Task<IHttpActionResult> GetAllAccountsForInvestor(string forTicker = "") {
+           var currentInvestor = _identityService.CurrentUser;
+           IQueryable<Position> matchingPositions;
+
+           if (forTicker.Trim().ToUpper() != "NONE") {
+               matchingPositions = await Task.FromResult(_repositoryAssets.Retreive(a => a.Investor.LastName == currentInvestor.Trim() &&
+                                                                                         a.Url.Contains(forTicker.Trim().ToUpper()))
                                                                 .AsQueryable()
                                                                 .SelectMany(a => a.Positions.Where(p => p.PositionId != default(Guid))));
-            }
-            
-
-            if (!matchingPositions.Any())
-                return BadRequest("No matching Position data found, or unable to retreive for: " + currentInvestor);
-
-            var matchingAccounts = await Task.FromResult(matchingPositions.Select(p => p.Account.AccountTypeDesc).Distinct().AsQueryable());
-            if (!matchingAccounts.Any())
-                return BadRequest("Unable to retreive matching Account type data for: " + currentInvestor);
-
-            return Ok(matchingAccounts);
-        }
+           } else {
+               matchingPositions = await Task.FromResult(_repositoryAssets.Retreive(a => a.Investor.LastName == currentInvestor.Trim())
+                                                               .AsQueryable()
+                                                               .SelectMany(a => a.Positions.Where(p => p.PositionId != default(Guid))));
+           }
 
 
+           if (!matchingPositions.Any())
+               return BadRequest("No matching Position data found, or unable to retreive for: " + currentInvestor);
 
-        [HttpPut]
-        [Route("~/api/AccountType/{acctTypeId}")]
-        public async Task<IHttpActionResult> UpdateAccountType([FromBody]AccountType editedAcctType, Guid acctTypeId)
-        {
-            var currentInvestor = _identityService.CurrentUser;
-            var existingPosition = await Task.FromResult(_repositoryAssets.Retreive(a => a.Investor.LastName == currentInvestor.Trim() )
-                                                                  .AsQueryable()
-                                                                  .SelectMany(a => a.Positions.Where(p => p.Account.PositionRefId == editedAcctType.PositionRefId )));
+           var matchingAccounts = await Task.FromResult(matchingPositions.Select(p => p.Account.AccountTypeDesc).Distinct().AsQueryable());
+           if (!matchingAccounts.Any())
+               return BadRequest("Unable to retreive matching Account type data for: " + currentInvestor);
 
-            if (existingPosition == null)
-                return BadRequest("No matching Account Type found for :" + editedAcctType.AccountTypeDesc.Trim());
+           return Ok(matchingAccounts);
+       }
+
+       
 
 
-            var isUpdated = await Task<bool>.Factory.StartNew(() => _repository.Update(existingPosition.First().Account, editedAcctType.PositionRefId));
+        // TODO: Ignore! Uses in-memory data! 
+        //[HttpGet]
+        //[Route("~/api/AccountType")]
+        //public async Task<IHttpActionResult> GetLookUpAccounts([FromUri] bool lookUps = true)
+        //{
+        //    // use of extension method.
+        //    var availableAccts = await Task.FromResult(_repository.RetreiveLookUpAccounts().AsQueryable());
 
-            if (isUpdated)
-                return Ok();
+        //    if (availableAccts != null)
+        //        return Ok(availableAccts);
 
-            return BadRequest("Unable to update Account Type for: " + editedAcctType.AccountTypeDesc.Trim());
-        }
-        
-
+        //    return BadRequest("Unable to retreive available lookup data.");
+        //}
 
 
 
     }
+    
 }

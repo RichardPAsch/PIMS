@@ -48,7 +48,7 @@ namespace PIMS.Web.Api.Controllers
                                                                         .AsQueryable()
                                                                         .Select(a => new AssetSummaryVm {
                                                                             AccountType = a.Revenue.First().Account,
-                                                                            AssetClassification = a.AssetClass.Code,
+                                                                            AssetClassification = a.AssetClass.LastUpdate,
                                                                             DividendFrequency = a.Profile.DividendFreq,
                                                                             IncomeRecvd = a.Revenue.First().Actual,
                                                                             Quantity = a.Positions.First().Quantity,
@@ -102,7 +102,7 @@ namespace PIMS.Web.Api.Controllers
                                                                          .AsQueryable()
                                                                          .Select(a => new AssetSummaryVm {
                                                                              AccountType = a.Revenue.First().Account,
-                                                                             AssetClassification = a.AssetClass.Code,
+                                                                             AssetClassification = a.AssetClass.LastUpdate,
                                                                              DividendFrequency = a.Profile.DividendFreq,
                                                                              IncomeRecvd = a.Revenue.First().Actual,
                                                                              Quantity = a.Positions.First().Quantity,
@@ -137,11 +137,11 @@ namespace PIMS.Web.Api.Controllers
                 case "ASSETCLASS": {
                         assets = await Task.FromResult(_repository.Retreive(a => a.Investor
                                                                                   .LastName.ToUpper().Trim() == currentInvestor.Trim().ToUpper())
-                                                                   .OrderBy(item => item.AssetClass.Code).AsQueryable());
+                                                                   .OrderBy(item => item.AssetClass.LastUpdate).AsQueryable());
 
                         assetSummary = assets.AsQueryable().Select(a => new AssetSummaryVm {
                                                                                 AccountType = a.Revenue.First().Account,
-                                                                                AssetClassification = a.AssetClass.Code,
+                                                                                AssetClassification = a.AssetClass.LastUpdate,
                                                                                 DividendFrequency = a.Profile.DividendFreq,
                                                                                 IncomeRecvd = a.Revenue.First().Actual,
                                                                                 Quantity = a.Positions.First().Quantity,
@@ -160,7 +160,7 @@ namespace PIMS.Web.Api.Controllers
 
                         assetSummary = assets.AsQueryable().Select(a => new AssetSummaryVm {
                                                                                     AccountType = a.Revenue.First().Account,
-                                                                                    AssetClassification = a.AssetClass.Code,
+                                                                                    AssetClassification = a.AssetClass.LastUpdate,
                                                                                     DividendFrequency = a.Profile.DividendFreq,
                                                                                     IncomeRecvd = a.Revenue.First().Actual,
                                                                                     Quantity = a.Positions.First().Quantity,
@@ -180,7 +180,7 @@ namespace PIMS.Web.Api.Controllers
 
                         assetSummary = assets.AsQueryable().Select(a => new AssetSummaryVm {
                                                                                 AccountType = a.Revenue.First().Account,
-                                                                                AssetClassification = a.AssetClass.Code,
+                                                                                AssetClassification = a.AssetClass.LastUpdate,
                                                                                 DividendFrequency = a.Profile.DividendFreq,
                                                                                 IncomeRecvd = a.Revenue.First().Actual,
                                                                                 Quantity = a.Positions.First().Quantity,
@@ -200,7 +200,7 @@ namespace PIMS.Web.Api.Controllers
 
                         assetSummary = assets.AsQueryable().Select(a => new AssetSummaryVm {
                                                                                 AccountType = a.Revenue.First().Account,
-                                                                                AssetClassification = a.AssetClass.Code,
+                                                                                AssetClassification = a.AssetClass.LastUpdate,
                                                                                 DividendFrequency = a.Profile.DividendFreq,
                                                                                 IncomeRecvd = a.Revenue.First().Actual,
                                                                                 Quantity = a.Positions.First().Quantity,
@@ -371,7 +371,7 @@ namespace PIMS.Web.Api.Controllers
                                                     + assetToUpdate.Investor.MiddleInitial.Trim()
                                                     + assetToUpdate.Investor.LastName.Trim());
             assetToUpdate.AssetClass.Url = _repositoryInvestor.UrlAddress.Replace("Asset",
-                                                     "AssetClass/" + assetToUpdate.AssetClass.Code.Trim().ToUpper());
+                                                     "AssetClass/" + assetToUpdate.AssetClass.LastUpdate.Trim().ToUpper());
             assetToUpdate.Profile.Url = _repositoryInvestor.UrlAddress.Replace("Asset",
                                                     "Profile/" + assetToUpdate.Profile.TickerSymbol.Trim().ToUpper());
             foreach (var position in assetToUpdate.Positions)
