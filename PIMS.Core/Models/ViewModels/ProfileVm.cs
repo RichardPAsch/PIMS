@@ -14,10 +14,11 @@ namespace PIMS.Core.Models.ViewModels
         public decimal EarningsPerShare { get; set; }
         // ReSharper disable once InconsistentNaming
         public decimal? PE_Ratio { get; set; }
-        public string LastUpdate { get; set; }
-        public string ExDividendDate { get; set; }
-        public string DividendPayDate { get; set; }
+        public DateTime? LastUpdate { get; set; }
+        public DateTime? ExDividendDate { get; set; }
+        public DateTime? DividendPayDate { get; set; }
         public decimal Price { get; set; }
+        public string Url { get; set; }
    }
 }
 
