@@ -19,11 +19,13 @@ namespace PIMS.Core.Models
         //public virtual Guid PositionInvestorId { get; set; }
 
         // NH - for PK mapping
-        [Required]
         public virtual Guid PositionId { get; set; }
 
         // NH - 'one' side of Position/AccountType rel.
         public virtual AccountType Account { get; set; }
+
+        // NH - 'one' side of Position/Income rel.
+        public virtual Income PositionIncome { get; set; }
 
         // NH - FK ref. 
         public virtual Guid AcctTypeId { get; set; }
@@ -33,21 +35,23 @@ namespace PIMS.Core.Models
         public virtual string InvestorKey { get; set; }
         
         [Required]
-        public virtual string PurchaseDate { get; set; }
+        public virtual DateTime PurchaseDate { get; set; }
 
         [Required]
         [Range(1,10000)]
         public virtual int Quantity { get; set; }
         
-        
-
         // Useful for most recent unit price info in AssetSummaryVm.
+        //TODO: Change to DateTime
         [Required]
-        public virtual string LastUpdate { get; set; }
+        public virtual DateTime LastUpdate { get; set; }
 
         [Required]
         [Range(0.01, 10000.00)]
         public virtual decimal MarketPrice { get; set; }
+
+        [Required]
+        public virtual string TickerSymbol { get; set; }
 
 
 
