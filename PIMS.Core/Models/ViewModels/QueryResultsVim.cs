@@ -1,4 +1,6 @@
-﻿namespace PIMS.Core.Models.ViewModels
+﻿
+
+namespace PIMS.Core.Models.ViewModels
 {
     // NOTE: Class names closely correspond to Income controller action names.
 
@@ -8,6 +10,7 @@
         public string Ticker { get; set; }
         public string DateReceived { get; set; }
         public decimal AmountReceived { get; set; }
+        public string AccountType { get; set; }
     }
 
    
@@ -27,12 +30,11 @@
         public decimal YtdAverage { get; set; }
         public decimal Rolling3MonthAverage { get; set; }
 
-        public decimal TestMethod()
-        {
-            return 100M;
-        }
+        //public decimal TestMethod()
+        //{
+        //    return 100M;
+        //}
 
-        
     }
 
     public class AssetProfilesVm
@@ -47,9 +49,18 @@
     {
         public string TickerSymbol { get; set; }
         public string IncomeFrequency { get; set; }
-        public decimal TotalRecvd { get; set; }
-    }                                                                  
-                                                                           
+        public decimal MonthlyRevenue { get; set; }
+        public decimal AvgMonthlyRevenue { get; set; }
+    }
+
+    public class RevenueLast3MonthsVm
+    {
+        public int RevenueMonth { get; set; }
+        public decimal RevenueAmount { get; set; }
+    }                                                        
+      
+    
+                                                                 
  }
 
 
