@@ -10,8 +10,13 @@ namespace PIMS.Core.Models
 
     public class AssetClass : IEntity
     {
+       
+        // NH relational mapping for 'many' side of M:1 Asset/AssetClassification.
+        public virtual IList<Asset> AssetClassificationAssets { get; set; }
+
+
         public virtual string Url { get; set; }
-        
+
         [Key]
         public virtual Guid KeyId { get; set; }  // Mapping: AssetClassId
 
@@ -23,10 +28,6 @@ namespace PIMS.Core.Models
         // Example: "Common Stock"
         [Required]
         public virtual string Description { get; set; }
-
-
-        // NH relational mapping for 'many' side of M:1 Asset/AssetClassification.
-        public virtual IList<Asset> AssetClassificationAssets { get; set; }
 
 
         public virtual string LastUpdate { get; set; }
