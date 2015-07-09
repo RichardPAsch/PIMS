@@ -42,11 +42,11 @@ namespace PIMS.Core.Models
         public virtual decimal? PE_Ratio { get; set; }
 
         [Required]
-        public virtual string LastUpdate { get; set; }
+        public virtual DateTime LastUpdate { get; set; }
 
-        public virtual string ExDividendDate { get; set; }
+        public virtual DateTime? ExDividendDate { get; set; }
 
-        public virtual string DividendPayDate { get; set; }
+        public virtual DateTime? DividendPayDate { get; set; }
 
         // aka 'Ask Price' or todays' market price.
         public virtual decimal Price { get; set; } 
