@@ -40,8 +40,8 @@ namespace PIMS.Core.Models
                 filteredPreEditAsset.Positions.First().Quantity = assetVmWithEdits.Quantity;
                 if (!isModified) isModified = true;
             }
-            if (!string.IsNullOrWhiteSpace(assetVmWithEdits.AccountType) && filteredPreEditAsset.Positions.First() != null && filteredPreEditAsset.Positions.First().Account.AccountTypeDesc != assetVmWithEdits.AccountType) {
-                filteredPreEditAsset.Positions.First().Account.AccountTypeDesc = assetVmWithEdits.AccountType;
+            if (!string.IsNullOrWhiteSpace(assetVmWithEdits.AccountTypePostEdit) && filteredPreEditAsset.Positions.First() != null && filteredPreEditAsset.Positions.First().Account.AccountTypeDesc != assetVmWithEdits.AccountTypePostEdit) {
+                filteredPreEditAsset.Positions.First().Account.AccountTypeDesc = assetVmWithEdits.AccountTypePostEdit;
                 if (!isModified) isModified = true;
             }
             
@@ -54,7 +54,8 @@ namespace PIMS.Core.Models
                 if (!isModified) isModified = true;
             }
 
-            if (!string.IsNullOrWhiteSpace(assetVmWithEdits.DateRecvd) && assetVmWithEdits.DateRecvd != default(DateTime).ToString("g")) {
+            //  Default DateTime value: DateTime.MinValue
+            if (assetVmWithEdits.DateRecvd != DateTime.MinValue && assetVmWithEdits.DateRecvd != default(DateTime)) {
                 filteredPreEditAsset.Revenue.First().DateRecvd = assetVmWithEdits.DateRecvd;
                 if (!isModified) isModified = true;
             }
