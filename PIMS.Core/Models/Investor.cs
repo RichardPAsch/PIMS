@@ -52,6 +52,9 @@ namespace PIMS.Core.Models
         // 'Many' side for NH M:M mapping 
         public virtual IList<Asset> Assets { get; set; }
 
+        // NH 'one-side' Investor for Asset relationship.
+        public virtual IList<Asset> InvestorAssets { get; set; }
+
 
     }
 }
