@@ -25,9 +25,6 @@ namespace PIMS.Core.Models
         // NH FK mapping - Asset - AssetClassId
         public virtual Guid AssetClassId { get; set; }
 
-        // NH FK mapping - Asset-Profile
-        //public virtual Guid AssetProfileId { get; set; }
-
         // 'Many' side for NH mapping re: M:M relationship.
         public virtual IList<Investor> Investors { get; set; }
 
@@ -36,6 +33,9 @@ namespace PIMS.Core.Models
 
         // For NH mapping for 'many' side of 1:M 
         public virtual IList<Income> Revenue { get; set; }
+
+
+
 
         // Referenced by domain.
         public virtual Guid InvestorId { get; set; }
@@ -46,13 +46,17 @@ namespace PIMS.Core.Models
 
         public virtual Profile Profile { get; set; }
 
-        public virtual string LastUpdate { get; set; }
+        public virtual DateTime? LastUpdate { get; set; }
+
+        public virtual Guid ProfileId { get; set; }
+
+        
 
         
 
 
         // TODO - implement
-        // public virtual string Status {get; set;}             // (A)ctive, (I)nactive
+        // public virtual bool IsActive {get; set;}      
 
         
     }
