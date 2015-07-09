@@ -65,8 +65,10 @@
     <Compile Include="Models\ModelParser.cs" />
     <Compile Include="Models\RegistrationModel.cs" />
     <Compile Include="Models\ViewModels\AccountTypeVm.cs" />
-    <Compile Include="Models\ViewModels\AssetPositionsVm.cs" />
+    <Compile Include="Models\ViewModels\AssetCreationVm.cs" />
+    <Compile Include="Models\ViewModels\PositionVm.cs" />
     <Compile Include="Models\ViewModels\AssetSummaryVm.cs" />
+    <Compile Include="Models\ViewModels\IncomeVm.cs" />
     <Compile Include="Models\ViewModels\ProfileVm.cs" />
     <Compile Include="Models\ViewModels\QueryResultsVim.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
