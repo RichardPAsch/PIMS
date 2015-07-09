@@ -6,7 +6,7 @@ namespace PIMS.Core.Models
 {
     public class Income 
     {
-        // Considered as child object of Aggregate root (Asset).
+        //TODO: Should be [Required] for IncomeController?
         public virtual string Url { get; set; }
 
         // NH PK match in Income table.
@@ -16,9 +16,14 @@ namespace PIMS.Core.Models
         // NH one-side reference for M:1 relationship to Asset.
         public virtual Asset IncomeAsset { get; set; }
 
+        // NH one-side reference for M:1 relationship to Position.
+        public virtual Position IncomePosition { get; set; }
+
        
         // Referenced by domain
         public virtual Guid AssetId { get; set; }
+
+        public virtual Guid IncomePositionId { get; set; } // added 5/27/15
 
         // Account type.
         public virtual string Account { get; set; }
@@ -32,12 +37,12 @@ namespace PIMS.Core.Models
 
         [Required]
         [RegularExpression(@"^((((0[13578])|([13578])|(1[02]))[\/](([1-9])|([0-2][0-9])|(3[01])))|(((0[469])|([469])|(11))[\/](([1-9])|([0-2][0-9])|(30)))|((2|02)[\/](([1-9])|([0-2][0-9]))))[\/]\d{4}$|^\d{4}$")]
-        public virtual string DateRecvd { get; set; }
-        
+        public virtual DateTime DateRecvd { get; set; }
        
         // Added 3-10-15 
-        public virtual string LastUpdate { get; set; }
+        public virtual DateTime LastUpdate { get; set; }
 
+        
 
         // ** For future reference if needed **
         // NH requirement for composite keys: 'composite-id class must override Equals()'.
