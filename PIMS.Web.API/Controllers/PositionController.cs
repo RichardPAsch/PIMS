@@ -10,6 +10,7 @@ using PIMS.Core.Models.ViewModels;
 using PIMS.Core.Security;
 using PIMS.Data;
 using PIMS.Data.Repositories;
+using PIMS.Web.Api.Common;
 
 
 namespace PIMS.Web.Api.Controllers
@@ -47,13 +48,15 @@ namespace PIMS.Web.Api.Controllers
         private static IGenericRepository<Investor> _repositoryInvestor; 
         private readonly IPimsIdentityService _identityService;
         private static IGenericRepository<Position> _repository;
-        
-        public PositionController(IPimsIdentityService identitySvc, IGenericRepository<Asset> repositoryAsset, IGenericRepository<Investor> repositoryInvestor, IGenericRepository<Position> repository)
+        private static IGenericRepository<AccountType> _repositoryAccountType;
+
+        public PositionController(IPimsIdentityService identitySvc, IGenericRepository<Asset> repositoryAsset, IGenericRepository<Investor> repositoryInvestor, IGenericRepository<Position> repository, IGenericRepository<AccountType> repositoryAccountType)
         {
             _repositoryAsset = repositoryAsset;
             _identityService = identitySvc;
             _repositoryInvestor = repositoryInvestor;
             _repository = repository;
+            _repositoryAccountType = repositoryAccountType;
         }
 
 
@@ -66,12 +69,12 @@ namespace PIMS.Web.Api.Controllers
             var currentInvestor = _identityService.CurrentUser;
 
             var matchingPosition = await Task.FromResult(_repositoryAsset.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == tickerSymbol.ToUpper().Trim() &&
-                                                                                        a.InvestorId == GetInvestorId(currentInvestor.Trim()))
+                                                                                        a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
                                                                          .SelectMany(a => a.Positions).Where(p => p.Account.AccountTypeDesc.Trim() == accountType.Trim())
-                                                                         .Select(p2 => new AssetPositionsVm {
+                                                                         .Select(p2 => new PositionVm {
                                                                              PostEditPositionAccount = p2.Account.AccountTypeDesc,
                                                                              PreEditPositionAccount = p2.Account.AccountTypeDesc,
-                                                                             MarketPrice = p2.MarketPrice,
+                                                                             CostBasis = p2.MarketPrice,
                                                                              Qty = p2.Quantity,
                                                                              DateOfPurchase = p2.PurchaseDate,
                                                                              LastUpdate = p2.LastUpdate,
@@ -96,10 +99,10 @@ namespace PIMS.Web.Api.Controllers
             var currentInvestor = _identityService.CurrentUser;
 
             var matchingPosition = await Task.FromResult(_repository.Retreive(p => p.PositionId == positionKeyId)
-                                                                    .Select(x => new AssetPositionsVm
+                                                                    .Select(x => new PositionVm
                                                                                  {
                                                                                      PreEditPositionAccount = x.Account.AccountTypeDesc,
-                                                                                     MarketPrice = x.MarketPrice,
+                                                                                     CostBasis = x.MarketPrice,
                                                                                      Qty = x.Quantity,
                                                                                      DateOfPurchase = x.PurchaseDate,
                                                                                      LastUpdate = x.LastUpdate,
@@ -109,7 +112,7 @@ namespace PIMS.Web.Api.Controllers
                                                                     .AsQueryable());
 
 
-            if (matchingPosition != null && new Guid(matchingPosition.First().LoggedInInvestor) == GetInvestorId(currentInvestor))
+            if (matchingPosition != null && new Guid(matchingPosition.First().LoggedInInvestor) == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
                   return Ok(matchingPosition);
 
             return BadRequest(string.Format("No Position found matching id {0} for {1} ", positionKeyId, currentInvestor));
@@ -124,12 +127,12 @@ namespace PIMS.Web.Api.Controllers
             var currentInvestor = _identityService.CurrentUser;
            
             var filteredPositions = await Task.FromResult(_repositoryAsset.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == tickerSymbol.ToUpper().Trim()
-                                                                                      && a.InvestorId == GetInvestorId(currentInvestor.Trim()))
+                                                                                      && a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
                                                                           .SelectMany(p => p.Positions)
-                                                                          .Select(p2 => new AssetPositionsVm
+                                                                          .Select(p2 => new PositionVm
                                                                                         {
                                                                                             PreEditPositionAccount = p2.Account.AccountTypeDesc,
-                                                                                            MarketPrice = p2.MarketPrice,
+                                                                                            CostBasis = p2.MarketPrice,
                                                                                             Qty = p2.Quantity,
                                                                                             DateOfPurchase = p2.PurchaseDate,
                                                                                             LastUpdate = p2.LastUpdate,
@@ -147,8 +150,11 @@ namespace PIMS.Web.Api.Controllers
 
         [HttpPost]
         [Route("{tickerSymbol}/Position")]
-        public async Task<IHttpActionResult> CreateNewPosition([FromBody]Position positionData)
+        public async Task<IHttpActionResult> CreateNewPosition([FromBody]PositionVm positionData)
         {
+            if (string.IsNullOrWhiteSpace(positionData.LoggedInInvestor))
+                positionData.LoggedInInvestor = _identityService.CurrentUser.Trim();
+
             if (!ModelState.IsValid) {
                 return ResponseMessage(new HttpResponseMessage {
                                             StatusCode = HttpStatusCode.BadRequest,
@@ -156,37 +162,38 @@ namespace PIMS.Web.Api.Controllers
                                       });
             }
 
-            var loggedInInvestorId = string.IsNullOrEmpty(positionData.InvestorKey) 
-                ? GetInvestorId(_identityService.CurrentUser) 
-                : new Guid(positionData.InvestorKey);
-
-            var ticker = ParseUrlForTicker(ControllerContext.Request.RequestUri.ToString());
-
-            // TODO: Investigate using route data for building links instead.
-            var newLocation = ParseForNewPositionUrl(ControllerContext.Request.RequestUri.AbsoluteUri, positionData.Account.AccountTypeDesc.Trim())
-                                    + "/" + positionData.Account.AccountTypeDesc;
+            var currentInvestorId = Utilities.GetInvestorId(_repositoryInvestor, _identityService.CurrentUser);
+            
+            //TODO: This won't work IF called as a RPC from another controller!! 7-8 check now if ctx is null, or can use model url. TEST this.
+            if (ControllerContext.Request != null)
+                positionData.Url = ControllerContext.Request.RequestUri.ToString();
+                
+            var ticker = ParseUrlForTicker(positionData.Url);
+            var newLocation = positionData.Url;
 
             var matchingPosition = await Task.FromResult(_repositoryAsset.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == ticker.ToUpper().Trim() &&
-                                                                                        a.InvestorId == loggedInInvestorId)
-                                                                         .SelectMany(a => a.Positions).Where(p => p.Account.AccountTypeDesc.Trim() == positionData.Account.AccountTypeDesc.Trim())
+                                                                                        a.InvestorId == currentInvestorId)
+                                                                         .SelectMany(a => a.Positions).Where(p => p.Account.AccountTypeDesc.Trim() == positionData.ReferencedAccount.AccountTypeDesc.Trim())
                                                                          .AsQueryable());
 
            if (matchingPosition.Any())
                 return BadRequest(string.Format("No Position created, Position {0} already exists for {1} ",
-                                                                                                positionData.Account.AccountTypeDesc.Trim(),
+                                                                                                positionData.ReferencedAccount.AccountTypeDesc.Trim(),
                                                                                                 ticker.ToUpper()));
-            positionData.Url = newLocation;
 
-            var isCreated = await Task.FromResult(_repository.Create(positionData));
-            if (!isCreated) return BadRequest(string.Format("Unable to add Position to: {0} ", ticker.ToUpper()));
-            return Created(newLocation, positionData);
+            positionData.ReferencedAccount.Url = Utilities.GetBaseUrl(newLocation) + "AccountType/";
+
+            var positionToCreate = MapVmToPosition(positionData);
+            var isCreated = await Task.FromResult(_repository.Create(positionToCreate));
+            if (!isCreated) return BadRequest(string.Format("Unable to add Position for: {0} ", ticker.ToUpper()));
+            return Created(newLocation + positionToCreate.AcctTypeId, positionToCreate);
         }
         
 
         [HttpPut]
         [HttpPatch]
         [Route("{tickerSymbol}/Position")]
-        public async Task<IHttpActionResult> UpdatePositionsByAsset([FromBody]AssetPositionsVm editedPosition)
+        public async Task<IHttpActionResult> UpdatePositionsByAsset([FromBody]PositionVm editedPosition)
         {
             if (!ModelState.IsValid) {
                 return ResponseMessage(new HttpResponseMessage {
@@ -205,7 +212,7 @@ namespace PIMS.Web.Api.Controllers
                 var newLocation = ParseForNewPositionUrl(ControllerContext.Request.RequestUri.AbsoluteUri, editedPosition.PostEditPositionAccount.Trim())
                                     + "/" + editedPosition.PostEditPositionAccount;
 
-                var targetPosition = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == GetInvestorId(currentInvestor.Trim()) &&
+                var targetPosition = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()) &&
                                                                                           a.Profile.TickerSymbol == ticker)
                                                                     .SelectMany(a => a.Positions).Where(p => p.Account.AccountTypeDesc.Trim() == 
                                                                                                             editedPosition.PostEditPositionAccount.Trim())
@@ -214,7 +221,7 @@ namespace PIMS.Web.Api.Controllers
                 if (!targetPosition.Any())
                     return BadRequest(string.Format("No matching Position found to consolidate with, for {0} ", editedPosition.PostEditPositionAccount));
 
-                var sourcePosition = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == GetInvestorId(currentInvestor.Trim()) &&
+                var sourcePosition = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()) &&
                                                                                           a.Profile.TickerSymbol == ticker)
                                                                     .SelectMany(a => a.Positions).Where(p => p.Account.AccountTypeDesc.Trim() ==
                                                                                                             editedPosition.PreEditPositionAccount.Trim())
@@ -225,15 +232,15 @@ namespace PIMS.Web.Api.Controllers
 
 
                 // Purchase date ALWAYS reflects date of consolidation.
-                targetPosition.First().PurchaseDate = DateTime.UtcNow.ToString("d");
+                targetPosition.First().PurchaseDate = DateTime.UtcNow;
                 targetPosition.First().Quantity = targetPosition.First().Quantity + sourcePosition.First().Quantity;
                 targetPosition.First().MarketPrice = await GetCurrentMarketPrice(ticker);
                 targetPosition.First().Account = targetPosition.First().Account;
-                targetPosition.First().LastUpdate = DateTime.UtcNow.ToString("d");
+                targetPosition.First().LastUpdate = DateTime.UtcNow;
                 targetPosition.First().Url = newLocation.Trim();
 
                 editedPosition.PostEditPositionAccount = targetPosition.First().Account.AccountTypeDesc;
-                editedPosition.MarketPrice = targetPosition.First().MarketPrice;
+                editedPosition.CostBasis = targetPosition.First().MarketPrice;
                 editedPosition.Qty = targetPosition.First().Quantity;
                 editedPosition.Url = targetPosition.First().Url;
                 editedPosition.LastUpdate = targetPosition.First().LastUpdate;
@@ -256,7 +263,7 @@ namespace PIMS.Web.Api.Controllers
 
                 ticker = ParseUrlForTicker(editedPosition.Url.Trim());
                 _repositoryAsset.UrlAddress = ControllerContext.Request.RequestUri.ToString();
-                var positionToUpdate = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == GetInvestorId(currentInvestor.Trim()) &&
+                var positionToUpdate = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()) &&
                                                                                             a.Profile.TickerSymbol == ticker)
                                                                     .SelectMany(a => a.Positions).Where(p => p.Account.AccountTypeDesc.Trim() ==
                                                                                                             editedPosition.PreEditPositionAccount.Trim())
@@ -268,7 +275,7 @@ namespace PIMS.Web.Api.Controllers
 
                 // Only selected attributes are available for editing.
                 positionToUpdate.First().Quantity = editedPosition.Qty;
-                positionToUpdate.First().MarketPrice = editedPosition.MarketPrice;
+                positionToUpdate.First().MarketPrice = editedPosition.CostBasis;
 
 
                 var isUpdated = await Task.FromResult(_repository.Update(positionToUpdate.First(), positionToUpdate.First().PositionId));
@@ -298,38 +305,50 @@ namespace PIMS.Web.Api.Controllers
 
 
 
-        private static string ParseUrlForTicker(string urlToParse)
-        {
-            var pos1 = urlToParse.IndexOf("Asset/", StringComparison.Ordinal) + 6;
-            var pos2 = urlToParse.IndexOf("/Position", StringComparison.Ordinal);
-            return urlToParse.Substring(pos1, pos2 - pos1);
-        }
+        #region Helpers
 
-        //private static string ParseUrlForAccount(string urlToParse)
-        //{
-        //    var pos1 = urlToParse.LastIndexOf("Position/", StringComparison.Ordinal) + 9;
-        //    return urlToParse.Substring(pos1, urlToParse.Length - pos1);
-        //}
+            private static string ParseUrlForTicker(string urlToParse) {
+                var pos1 = urlToParse.IndexOf("Asset/", StringComparison.Ordinal) + 6;
+                var pos2 = urlToParse.IndexOf("/Position", StringComparison.Ordinal);
+                return urlToParse.Substring(pos1, pos2 - pos1);
+            }
+
+            private static string ParseForNewPositionUrl(string urlForPosition, string accountType) {
+                if (urlForPosition.IndexOf("?", StringComparison.Ordinal) <= 0) return urlForPosition;
+                var pos1 = urlForPosition.IndexOf("Position?", StringComparison.Ordinal);
+                return urlForPosition.Substring(0, pos1 + 8) + "/" + accountType.Trim();
+            }
+
+            private static async Task<decimal> GetCurrentMarketPrice(string tickerSymbol) {
+                var currentProfile = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfile(tickerSymbol, new Profile()));
+                return currentProfile == null ? 0 : currentProfile.Price;
+
+            }
+
+            private Position MapVmToPosition(PositionVm sourceData)
+            {
+                var acctTypeCtrl = new AccountTypeController(_repositoryAccountType, _repositoryAsset, _identityService);
+                return new Position
+                       {
+                           // ReSharper disable once PossibleInvalidOperationException
+                           PurchaseDate = (DateTime) sourceData.DateOfPurchase,
+                           Quantity = sourceData.Qty,
+                           MarketPrice = sourceData.CostBasis,
+                           InvestorKey = Utilities.GetInvestorId(_repositoryInvestor, _identityService.CurrentUser).ToString(),
+                           AcctTypeId = sourceData.ReferencedAccount.KeyId,
+                           PositionAssetId = sourceData.ReferencedAssetId, 
+                           LastUpdate = DateTime.Now,
+                           TickerSymbol = sourceData.ReferencedTickerSymbol,
+                           Account = acctTypeCtrl.MapVmToAccountType(sourceData.ReferencedAccount),
+                           Url = sourceData.Url
+                       };
+            }
+
+        #endregion
+
         
-        private static string ParseForNewPositionUrl(string urlForPosition, string accountType)
-        {
-            if (urlForPosition.IndexOf("?", StringComparison.Ordinal) <= 0) return urlForPosition;
-            var pos1 = urlForPosition.IndexOf("Position?", StringComparison.Ordinal);
-            return urlForPosition.Substring(0, pos1 + 8) + "/" + accountType.Trim();
-        }
+
         
-        private static async Task<decimal> GetCurrentMarketPrice(string tickerSymbol)
-        {
-            var currentProfile = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfile(tickerSymbol, new Profile()));
-            return currentProfile == null ? 0 : currentProfile.Price;
-
-        }
-
-        private static Guid GetInvestorId(string investorLogin)
-        {
-            return _repositoryInvestor.Retreive(i => i.EMailAddr.Trim() == investorLogin.Trim()).First().InvestorId;
-        }
-
         
     }
 }

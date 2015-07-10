@@ -39,24 +39,54 @@ namespace PIMS.Web.Api.Controllers
                                                             .AsQueryable());
 
             if (availableAccountTypes == null) return BadRequest("Unable to retreive AccountType data.");
-
+            
             // Use of Vm mandated by received Http status:500 Error - "An error has occurred.","exceptionMessage":"Error getting value
             // from 'DefaultValue' on 'NHibernate.Type.DateTimeOffsetType'.","exceptionType":"Newtonsoft.Json.JsonSerializationException"
             // Proxy setup by NH results in serialization error, although no DateTime-related types exist in projects.
             IList<AccountTypeVm> accountTypeListing = availableAccountTypes.Select(at => new AccountTypeVm {
                                                             AccountTypeDesc = at.AccountTypeDesc,
                                                             KeyId = at.KeyId,
-                                                            Url = ControllerContext.Request.RequestUri.AbsoluteUri.Trim() + "/" + at.AccountTypeDesc.Trim()
+                                                            Url = string.Empty
                                                         }).ToList();
 
             return Ok(accountTypeListing);
         }
 
 
+        //TODO: 4-20-15:  Reevaluate need for this! Fiddler testing needed.
+        [HttpGet]
+        [Route("~/api/AccountType/{forTicker}")]
+        public async Task<IHttpActionResult> GetAllAccountsForInvestor(string forTicker = "") {
+            var currentInvestor = _identityService.CurrentUser;
+            IQueryable<Position> matchingPositions;
 
-       [HttpPost]
-       [Route("", Name = "CreateNewAccountType")]
-       public async Task<IHttpActionResult> CreateNewAccountType([FromBody] AccountType newAcctType )
+            if (forTicker.Trim().ToUpper() != "NONE") {
+                matchingPositions = await Task.FromResult(_repositoryAssets.Retreive(a => a.Investor.LastName == currentInvestor.Trim() &&
+                                                                                          a.Url.Contains(forTicker.Trim().ToUpper()))
+                                                                 .AsQueryable()
+                                                                 .SelectMany(a => a.Positions.Where(p => p.PositionId != default(Guid))));
+            } else {
+                matchingPositions = await Task.FromResult(_repositoryAssets.Retreive(a => a.Investor.LastName == currentInvestor.Trim())
+                                                                .AsQueryable()
+                                                                .SelectMany(a => a.Positions.Where(p => p.PositionId != default(Guid))));
+            }
+
+
+            if (!matchingPositions.Any())
+                return BadRequest("No matching Position data found, or unable to retreive for: " + currentInvestor);
+
+            var matchingAccounts = await Task.FromResult(matchingPositions.Select(p => p.Account.AccountTypeDesc).Distinct().AsQueryable());
+            if (!matchingAccounts.Any())
+                return BadRequest("Unable to retreive matching Account type data for: " + currentInvestor);
+
+            return Ok(matchingAccounts);
+        }
+
+
+
+        [HttpPost]
+        [Route("", Name = "CreateNewAccountType")]
+        public async Task<IHttpActionResult> CreateNewAccountType([FromBody] AccountType newAcctType )
        {
            // New AccountType will not contain a valid PositionRefId if added via 'Admin' for lookup purposes.
            if (!ModelState.IsValid) return ResponseMessage(new HttpResponseMessage {
@@ -85,10 +115,10 @@ namespace PIMS.Web.Api.Controllers
        }
 
 
-       [HttpPut]
-       [HttpPatch]
-       [Route("{preEditAcctTypeCode}")]
-       public async Task<IHttpActionResult> UpdateAccountType([FromBody] AccountType updatedAcctType, string preEditAcctTypeCode)
+        [HttpPut]
+        [HttpPatch]
+        [Route("{preEditAcctTypeCode}")]
+        public async Task<IHttpActionResult> UpdateAccountType([FromBody] AccountType updatedAcctType, string preEditAcctTypeCode)
        {
            var isUpdated = false;
            if (!ModelState.IsValid || preEditAcctTypeCode.IsEmpty()) return ResponseMessage(new HttpResponseMessage {
@@ -113,9 +143,9 @@ namespace PIMS.Web.Api.Controllers
        }
 
 
-       [HttpDelete]
-       [Route("{id}")]
-       public async Task<IHttpActionResult> Delete(Guid id)
+        [HttpDelete]
+        [Route("{id}")]
+        public async Task<IHttpActionResult> Delete(Guid id)
        {
            var isDeleted = await Task.FromResult(_repository.Delete(id));
 
@@ -124,40 +154,34 @@ namespace PIMS.Web.Api.Controllers
 
            return BadRequest(string.Format("Unable to delete AccountType with id:  {0} , not found", id));
 
-       }
+        }
 
-       
 
-        //TODO: 4-20-15:  Reevaluate need for this! Fiddler testing needed.
-       [HttpGet]
-       [Route("~/api/AccountType/{forTicker}")]
-       public async Task<IHttpActionResult> GetAllAccountsForInvestor(string forTicker = "") {
-           var currentInvestor = _identityService.CurrentUser;
-           IQueryable<Position> matchingPositions;
 
-           if (forTicker.Trim().ToUpper() != "NONE") {
-               matchingPositions = await Task.FromResult(_repositoryAssets.Retreive(a => a.Investor.LastName == currentInvestor.Trim() &&
-                                                                                         a.Url.Contains(forTicker.Trim().ToUpper()))
-                                                                .AsQueryable()
-                                                                .SelectMany(a => a.Positions.Where(p => p.PositionId != default(Guid))));
-           } else {
-               matchingPositions = await Task.FromResult(_repositoryAssets.Retreive(a => a.Investor.LastName == currentInvestor.Trim())
-                                                               .AsQueryable()
-                                                               .SelectMany(a => a.Positions.Where(p => p.PositionId != default(Guid))));
+
+        #region Helpers
+
+           public AccountType MapVmToAccountType(AccountTypeVm sourceData)
+           {
+               return new AccountType
+                      {
+                          PositionRefId = new Guid(), 
+                          AccountTypeDesc = sourceData.AccountTypeDesc,
+                          Url = sourceData.Url
+                      };
            }
-
-
-           if (!matchingPositions.Any())
-               return BadRequest("No matching Position data found, or unable to retreive for: " + currentInvestor);
-
-           var matchingAccounts = await Task.FromResult(matchingPositions.Select(p => p.Account.AccountTypeDesc).Distinct().AsQueryable());
-           if (!matchingAccounts.Any())
-               return BadRequest("Unable to retreive matching Account type data for: " + currentInvestor);
-
-           return Ok(matchingAccounts);
-       }
-
+           
+           
        
+       
+           
+   
+
+
+        #endregion
+
+
+
 
 
         // TODO: Ignore! Uses in-memory data! 

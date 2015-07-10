@@ -6,7 +6,6 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using PIMS.Core.Models;
-using PIMS.Core.Security;
 using PIMS.Data;
 using PIMS.Data.Repositories;
 using PIMS.Core.Models.ViewModels;
@@ -26,9 +25,9 @@ namespace PIMS.Web.Api.Controllers
     [RoutePrefix("api/Profile")]
     public class ProfileController : ApiController
     {
+
         private static IGenericRepository<Profile> _repository;
-
-
+        
 
         public ProfileController(IGenericRepository<Profile> repository)
         {
@@ -101,12 +100,11 @@ namespace PIMS.Web.Api.Controllers
             return BadRequest(string.Format("Error creating Profile for {0}, check ticker symbol.", tickerForProfile));
 
         }
-
-
-        //TODO: Use configurable hours for: DateTime.UtcNow.AddHours(-24)
+        
+        
         [HttpPost]
         [Route("", Name = "CreateNewProfile")]
-        public async Task<IHttpActionResult> CreateNewProfile([FromBody] Profile submittedProfile)
+        public async Task<IHttpActionResult> CreateNewProfile([FromBody] ProfileVm submittedProfile)
         {
   
             if (!ModelState.IsValid) return ResponseMessage(new HttpResponseMessage {
@@ -114,23 +112,49 @@ namespace PIMS.Web.Api.Controllers
                 ReasonPhrase = "Invalid data received for new Profile creation."
             });
 
-            // Double check data store that received Profile (from GET), is indeed current.
-            var existingProfile = await Task.FromResult(_repository.Retreive(p => p.TickerSymbol.Trim() == submittedProfile.TickerSymbol.Trim())); //&&
-                                                                                  //Convert.ToDateTime(p.LastUpdate) > DateTime.UtcNow.AddHours(-24)) );
+            var existingProfile = await Task.FromResult(_repository.Retreive(p => p.TickerSymbol.Trim() == submittedProfile.TickerSymbol.Trim()));
 
-
-            if (existingProfile.Any() && Convert.ToDateTime(existingProfile.First().LastUpdate) > DateTime.UtcNow.AddHours(-24))
+            //TODO: Use configurable hours for: DateTime.Now.AddHours(-24)
+            if (existingProfile.Any() && Convert.ToDateTime(existingProfile.First().LastUpdate) > DateTime.Now.AddHours(-24))
                 return ResponseMessage(new HttpResponseMessage {
                                                 StatusCode = HttpStatusCode.NotModified, // Status:304
-                                                ReasonPhrase = "No Profile created, existing data is currently up to date."
+                                                ReasonPhrase = "No Profile created, existing data is less than 24 hours old."
                                      });
-            
-            var isCreated = await Task.FromResult(_repository.Create(submittedProfile));
+
+            var profileToCreate = MapVmToProfile(submittedProfile);
+            var isCreated = await Task.FromResult(_repository.Create(profileToCreate));
             if (!isCreated) return BadRequest("Unable to create new Profile for :  " + submittedProfile.TickerSymbol.Trim());
 
-            var newLocation = Url.Link("CreateNewProfile", new { });
-            return Created(newLocation, submittedProfile);
+            //TODO: Should use RouteData for determining newLocation Url. 7-8-15: Reeval, RouteData avail via RPC?
+           // return Created("http://localhost/Pims.Web.Api/api/Asset/", profileToCreate);
+            return Created(submittedProfile.Url + "/" + profileToCreate.ProfileId, profileToCreate);
         }
+
+
+
+
+        #region Helpers
+
+            private static Profile MapVmToProfile(ProfileVm sourceData)
+            {
+                return new Profile
+                       {
+                           TickerSymbol = sourceData.TickerSymbol.ToUpper().Trim(),
+                           TickerDescription = sourceData.TickerDescription.Trim(),
+                           DividendRate = sourceData.DividendRate,
+                           DividendYield = sourceData.DividendYield,
+                           DividendFreq = sourceData.DividendFreq,
+                           EarningsPerShare = sourceData.EarningsPerShare,
+                           PE_Ratio = sourceData.PE_Ratio,
+                           LastUpdate = DateTime.Now,
+                           ExDividendDate = sourceData.ExDividendDate,
+                           DividendPayDate = sourceData.DividendPayDate,
+                           Price = sourceData.Price,
+                           Url = sourceData.Url.Trim()
+                       };
+            }
+
+        #endregion
 
 
     }

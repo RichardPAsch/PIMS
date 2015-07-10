@@ -5,10 +5,12 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Results;
 using PIMS.Core.Models;
 using PIMS.Core.Models.ViewModels;
 using PIMS.Data.Repositories;
 using PIMS.Core.Security;
+using PIMS.Web.Api.Common;
 
 
 namespace PIMS.Web.Api.Controllers
@@ -19,280 +21,280 @@ namespace PIMS.Web.Api.Controllers
         private readonly IGenericRepository<Asset> _repository;
         private readonly IPimsIdentityService _identityService;
         private readonly IGenericRepository<Investor> _repositoryInvestor;
+        private readonly IGenericRepository<AssetClass> _repositoryAssetClass;
+        private readonly IGenericRepository<Profile> _repositoryProfile;
+        private readonly IGenericRepository<AccountType> _repositoryAccountType;
+        private readonly IGenericRepository<Position> _repositoryPosition;
+        private readonly IGenericRepository<Income> _repositoryIncome;
         private const string DefaultDisplayType = "detail";
         private string _currentInvestor;
 
 
-        public AssetController(IGenericRepository<Asset> repository, IPimsIdentityService identityService, IGenericRepository<Investor> repositoryInvestor)
+        public AssetController(IGenericRepository<Asset> repository, IPimsIdentityService identityService,
+                                                                     IGenericRepository<Investor> repositoryInvestor,
+                                                                     IGenericRepository<AssetClass> repositoryAssetClass,
+                                                                     IGenericRepository<Profile> repositoryProfile,
+                                                                     IGenericRepository<AccountType> repositoryAccountType,
+                                                                     IGenericRepository<Position> repositoryPosition,
+                                                                     IGenericRepository<Income> repositoryIncome )
         {
             _repository = repository;
             _identityService = identityService;
             _repositoryInvestor = repositoryInvestor;
+            _repositoryAssetClass = repositoryAssetClass;
+            _repositoryProfile = repositoryProfile;
+            _repositoryAccountType = repositoryAccountType;
+            _repositoryPosition = repositoryPosition;
+            _repositoryIncome = repositoryIncome;
         }
 
 
 
         [HttpGet]
-        [Route("{tickerSymbol?}", Name = "AssetsByTicker")]
+        [Route("{tickerSymbol}", Name = "AssetsByTicker")]
         // Ex. http://localhost/Pims.Web.Api/api/Asset/VNR
-        public async Task<IHttpActionResult> GetByTicker(string tickerSymbol, [FromUri] string displayType=DefaultDisplayType)
+        public async Task<IHttpActionResult> GetByTicker(string tickerSymbol)
         {
-            _repository.UrlAddress = ControllerContext.Request.RequestUri.ToString();
-            var currentInvestor = _identityService.CurrentUser;
-
-            if (displayType == "summary")
-            {
-                var editedAsset = await Task.FromResult(_repository.Retreive(a => a.Investor
-                                                                              .LastName.ToUpper().Trim() == currentInvestor.Trim().ToUpper() &&
-                                                                        a.Profile.TickerSymbol.ToUpper().Trim() == tickerSymbol.ToUpper().Trim())
-                                                                        .AsQueryable()
-                                                                        .Select(a => new AssetSummaryVm {
-                                                                            AccountType = a.Revenue.First().Account,
-                                                                            AssetClassification = a.AssetClass.LastUpdate,
-                                                                            DividendFrequency = a.Profile.DividendFreq,
-                                                                            IncomeRecvd = a.Revenue.First().Actual,
-                                                                            Quantity = a.Positions.First().Quantity,
-                                                                            UnitPrice = a.Positions.First().MarketPrice,
-                                                                            TickerSymbol = a.Profile.TickerSymbol,
-                                                                            DateRecvd = a.Revenue.First().DateRecvd,
-                                                                            TickerSymbolDescription = a.Profile.TickerDescription,
-                                                                            CurrentInvestor = a.Investor.LastName
-                                                                        })
-                                                        );
-                if (editedAsset.Any())
-                    return Ok(editedAsset);
-            }
-
-            var editedAssetDetail = await Task.FromResult(_repository.Retreive(a => a.Investor
-                                                                              .LastName.ToUpper().Trim() == currentInvestor.Trim().ToUpper() &&
-                                                                        a.Profile.TickerSymbol.ToUpper().Trim() == tickerSymbol.ToUpper().Trim())
-                                                                        .AsQueryable()
-                                                        );
-            if (editedAssetDetail.Any())
-                return Ok(editedAssetDetail);
- 
-
-            return BadRequest(string.Format("No Assets found matching {0} for investor {1}", tickerSymbol.ToUpper(), currentInvestor.ToUpper()));
-        }
-
-
-        [HttpGet]
-        [Route("")]
-        public async Task<IHttpActionResult> GetAll([FromUri] string displayType=DefaultDisplayType)
-        {
+            //TODO: Fiddler ok 6-16-15
             _repositoryInvestor.UrlAddress = ControllerContext.Request.RequestUri.ToString();
             var currentInvestor = _identityService.CurrentUser;
 
-            //IQueryable<object> assets; returns Null in Unit test ?
-            if (displayType == "detail") {
-                var assets = await Task.FromResult(_repository.Retreive(a => a.Investor
-                                                                              .LastName.ToUpper().Trim() == currentInvestor.Trim().ToUpper())
-                                                                              .OrderBy(item => item.Profile.TickerSymbol)
-                                                              .AsQueryable());
-                if (assets != null)
-                    return Ok(assets);
+            var assetSummary = await Task.FromResult(_repository.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim())
+                                                                            && a.Profile.TickerSymbol.Trim() == tickerSymbol.Trim())
+                                                                .AsQueryable());
+            if(!assetSummary.Any())
+                return BadRequest("No Asset found matching " + tickerSymbol.Trim() + " for Investor " + currentInvestor.Trim());
 
-                return BadRequest("Unable to retreive Asset details for: " + currentInvestor);
-            } 
-            else
-            {
-                var assets = await Task.FromResult(_repository.Retreive(a => a.Investor
-                                                                         .LastName.ToUpper().Trim() == currentInvestor.Trim().ToUpper())
-                                                                         .OrderBy(item => item.Profile.TickerSymbol)
-                                                                         .AsQueryable()
-                                                                         .Select(a => new AssetSummaryVm {
-                                                                             AccountType = a.Revenue.First().Account,
-                                                                             AssetClassification = a.AssetClass.LastUpdate,
-                                                                             DividendFrequency = a.Profile.DividendFreq,
-                                                                             IncomeRecvd = a.Revenue.First().Actual,
-                                                                             Quantity = a.Positions.First().Quantity,
-                                                                             UnitPrice = a.Positions.First().MarketPrice,
-                                                                             TickerSymbol = a.Profile.TickerSymbol,
-                                                                             DateRecvd = a.Revenue.First().DateRecvd,
-                                                                             TickerSymbolDescription = a.Profile.TickerDescription,
-                                                                             CurrentInvestor = a.Investor.LastName
-                                                                         })
-                                                                         );
-                if (assets != null)
-                    return Ok(assets);
-
-                return BadRequest("Unable to retreive Asset summary for: " + currentInvestor);
+            IList<AssetSummaryVm> customizedAssetSummary = new List<AssetSummaryVm>();
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var assetRec in assetSummary) {
+                customizedAssetSummary.Add(new AssetSummaryVm {
+                                                    AccountTypePostEdit = assetRec.Positions.First().Account.AccountTypeDesc,
+                                                    AccountTypePreEdit = assetRec.Positions.First().Account.AccountTypeDesc,
+                                                    AssetClassification = assetRec.AssetClass.Code,
+                                                    DividendFrequency = assetRec.Profile.DividendFreq,
+                                                    IncomeRecvd = assetRec.Revenue.Any() ? assetRec.Revenue.First().Actual : 0,
+                                                    Quantity = assetRec.Positions.First().Quantity,
+                                                    UnitPrice = assetRec.Positions.First().MarketPrice,
+                                                    TickerSymbol = assetRec.Profile.TickerSymbol,
+                                                    DateRecvd = assetRec.Revenue.Any() ? assetRec.Revenue.First().DateRecvd : DateTime.Parse("1/1/1900"),
+                                                    TickerSymbolDescription = assetRec.Profile.TickerDescription,
+                                                    CurrentInvestor = assetRec.Investor.EMailAddr
+                                                });
             }
-            
+
+            return Ok(customizedAssetSummary.AsQueryable());
         }
 
 
         [HttpGet]
-        [Route("")]
-        // Ex: http://localhost/Pims.Web.Api/api/Asset?sortBy=assetClass
-        public async Task<IHttpActionResult> GetAndSortByOther([FromUri]string sortBy)
+        [Route("{displayType?}")]
+        public async Task<IHttpActionResult> GetAll([FromUri] string displayType=DefaultDisplayType)
         {
-           _repositoryInvestor.UrlAddress = ControllerContext.Request.RequestUri.ToString();
+            //TODO: Fiddler ok 6-15-15
+            _repositoryInvestor.UrlAddress = ControllerContext.Request.RequestUri.ToString();
             var currentInvestor = _identityService.CurrentUser;
 
-            IQueryable<Asset> assets;
-            IQueryable<AssetSummaryVm> assetSummary = null;
+            if (displayType == "detail")
+            {
+                var assetDetails = await Task.FromResult(_repository.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
+                                                                    .OrderBy(item => item.Profile.TickerSymbol)
+                                                                    .AsQueryable()
+                                                                    .Select(a => new AssetDetailVm {
+                                                                        TickerSymbol = a.Profile.TickerSymbol,
+                                                                        AssetInvestor = a.Investor.FirstName  +" " + a.Investor.MiddleInitial + " " + a.Investor.LastName,
+                                                                        AssetClassification = a.AssetClass.Code,
+                                                                        ProfileUrl = _repositoryInvestor.UrlAddress + "/" + a.Profile.TickerSymbol.Trim() + "/Profile",
+                                                                        PositionsUrl = _repositoryInvestor.UrlAddress + "/" +  a.Profile.TickerSymbol.Trim() + "/Position",
+                                                                        RevenueUrl = _repositoryInvestor.UrlAddress + "/" + a.Profile.TickerSymbol.Trim() + "/Income"
+                                                                    }));
 
-            switch (sortBy.Trim().ToUpper()) {
-                case "ASSETCLASS": {
-                        assets = await Task.FromResult(_repository.Retreive(a => a.Investor
-                                                                                  .LastName.ToUpper().Trim() == currentInvestor.Trim().ToUpper())
-                                                                   .OrderBy(item => item.AssetClass.LastUpdate).AsQueryable());
-
-                        assetSummary = assets.AsQueryable().Select(a => new AssetSummaryVm {
-                                                                                AccountType = a.Revenue.First().Account,
-                                                                                AssetClassification = a.AssetClass.LastUpdate,
-                                                                                DividendFrequency = a.Profile.DividendFreq,
-                                                                                IncomeRecvd = a.Revenue.First().Actual,
-                                                                                Quantity = a.Positions.First().Quantity,
-                                                                                UnitPrice = a.Positions.First().MarketPrice,
-                                                                                TickerSymbol = a.Profile.TickerSymbol,
-                                                                                DateRecvd = a.Revenue.First().DateRecvd,
-                                                                                TickerSymbolDescription = a.Profile.TickerDescription,
-                                                                                CurrentInvestor = a.Investor.LastName
-                                                                        });
-                        break;
-                    }
-                case "ACCTTYPE": {
-                        assets = await Task.FromResult(_repository.Retreive(a => a.Investor
-                                                                                  .LastName.ToUpper().Trim() == currentInvestor.Trim().ToUpper())
-                                                                  .OrderBy(item => item.Positions.First().Account.AccountTypeDesc).AsQueryable());
-
-                        assetSummary = assets.AsQueryable().Select(a => new AssetSummaryVm {
-                                                                                    AccountType = a.Revenue.First().Account,
-                                                                                    AssetClassification = a.AssetClass.LastUpdate,
-                                                                                    DividendFrequency = a.Profile.DividendFreq,
-                                                                                    IncomeRecvd = a.Revenue.First().Actual,
-                                                                                    Quantity = a.Positions.First().Quantity,
-                                                                                    UnitPrice = a.Positions.First().MarketPrice,
-                                                                                    TickerSymbol = a.Profile.TickerSymbol,
-                                                                                    DateRecvd = a.Revenue.First().DateRecvd,
-                                                                                    TickerSymbolDescription = a.Profile.TickerDescription,
-                                                                                    CurrentInvestor = a.Investor.LastName
-                                                                            });
-                        break;
-                    }
-                case "INCOME": {
-
-                        assets = await Task.FromResult(_repository.Retreive(a => a.Investor
-                                                                                  .LastName.ToUpper().Trim() == currentInvestor.Trim().ToUpper())
-                                                                  .OrderByDescending(assetList => assetList.Revenue.First().Actual).AsQueryable());
-
-                        assetSummary = assets.AsQueryable().Select(a => new AssetSummaryVm {
-                                                                                AccountType = a.Revenue.First().Account,
-                                                                                AssetClassification = a.AssetClass.LastUpdate,
-                                                                                DividendFrequency = a.Profile.DividendFreq,
-                                                                                IncomeRecvd = a.Revenue.First().Actual,
-                                                                                Quantity = a.Positions.First().Quantity,
-                                                                                UnitPrice = a.Positions.First().MarketPrice,
-                                                                                TickerSymbol = a.Profile.TickerSymbol,
-                                                                                DateRecvd = a.Revenue.First().DateRecvd,
-                                                                                TickerSymbolDescription = a.Profile.TickerDescription,
-                                                                                CurrentInvestor = a.Investor.LastName
-                                                                            });
-                        break;
-                    }
-                case "DATERECVD": {
-                        //var withinLast12Months = DateTime.Now.AddYears(-1);
-                        assets = await Task.FromResult(_repository.Retreive(a => a.Investor
-                                                                                  .LastName.ToUpper().Trim() == currentInvestor.Trim().ToUpper())
-                                                                  .OrderByDescending(assetList => assetList.Revenue.First().DateRecvd).AsQueryable());
-
-                        assetSummary = assets.AsQueryable().Select(a => new AssetSummaryVm {
-                                                                                AccountType = a.Revenue.First().Account,
-                                                                                AssetClassification = a.AssetClass.LastUpdate,
-                                                                                DividendFrequency = a.Profile.DividendFreq,
-                                                                                IncomeRecvd = a.Revenue.First().Actual,
-                                                                                Quantity = a.Positions.First().Quantity,
-                                                                                UnitPrice = a.Positions.First().MarketPrice,
-                                                                                TickerSymbol = a.Profile.TickerSymbol,
-                                                                                DateRecvd = a.Revenue.First().DateRecvd,
-                                                                                TickerSymbolDescription = a.Profile.TickerDescription,
-                                                                                CurrentInvestor = a.Investor.LastName
-                                                                            });
-                        break;
-                    }
-
+                if (assetDetails.Any())
+                    return Ok(assetDetails.AsQueryable());
+                
+                return BadRequest("Unable to retreive Asset details for: " + currentInvestor);
             }
 
-            if (assetSummary != null)
-                return Ok(assetSummary);
-           
-            return BadRequest("Unable to retreive Assets for: " + currentInvestor);
+
+            var assetSummary = await Task.FromResult(_repository.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
+                                                                .OrderBy(item => item.Profile.TickerSymbol)
+                                                                .AsQueryable());
+
+            // Workaround for: "exceptionMessage=Exception of type 'Antlr.Runtime.NoViableAltException' was thrown..." ?
+            IList<AssetSummaryVm> customizedAssetSummary = new List<AssetSummaryVm>();
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var assetRec in assetSummary)
+            {
+                customizedAssetSummary.Add(new AssetSummaryVm
+                                           {
+                                               AccountTypePostEdit = assetRec.Positions.First().Account.AccountTypeDesc,
+                                               AccountTypePreEdit = assetRec.Positions.First().Account.AccountTypeDesc,
+                                               AssetClassification = assetRec.AssetClass.Code,
+                                               DividendFrequency = assetRec.Profile.DividendFreq,
+                                               IncomeRecvd = assetRec.Revenue.Any() ? assetRec.Revenue.First().Actual : 0,
+                                               Quantity = assetRec.Positions.First().Quantity,
+                                               UnitPrice = assetRec.Positions.First().MarketPrice,
+                                               TickerSymbol = assetRec.Profile.TickerSymbol,
+                                               DateRecvd = assetRec.Revenue.Any() ? assetRec.Revenue.First().DateRecvd : DateTime.Parse("1/1/1900"),
+                                               TickerSymbolDescription = assetRec.Profile.TickerDescription,
+                                               CurrentInvestor = assetRec.Investor.EMailAddr
+                                           });
+            }
+
+            if (customizedAssetSummary.Any())
+                return Ok(customizedAssetSummary.AsQueryable());
+
+            return BadRequest("Unable to retreive Asset summary for: " + currentInvestor);
         }
 
-
+     
         [HttpPost]
         [Route("")]
-        public async Task<IHttpActionResult> CreateNewAsset([FromBody] Asset newAsset)
+        public async Task<IHttpActionResult> CreateNewAsset([FromBody] AssetCreationVm submittedAsset)
         {
+            
+            //TODO: WIP 6-18-15 
             _currentInvestor = _identityService.CurrentUser; 
             _repositoryInvestor.UrlAddress = ControllerContext.Request.RequestUri.ToString();
 
-            // Confirm investors' registration for idempotent operation.
-            var registeredInvestor = _repositoryInvestor.Retreive(u => u.LastName.Trim() == _currentInvestor.Trim()).SingleOrDefault();
-            if (registeredInvestor == null)
-                return BadRequest("Invalid operation, no registration found for investor : " + _currentInvestor);
+            // Confirm investors' registration for idempotent operations.
+            var registeredInvestor = await Task.FromResult(_repositoryInvestor.Retreive(u => u.EMailAddr.Trim() == _currentInvestor.Trim()));
+            if (!registeredInvestor.Any())
+                return BadRequest("Unable to create new Asset, no registration found for investor : " + _currentInvestor);
 
-            newAsset.Investor = registeredInvestor; // TODO: Entire object needed ? Re-eval during integration tests. For investor Profile info ?
-           
             if (!ModelState.IsValid) {
                 return ResponseMessage(new HttpResponseMessage {
-                    StatusCode = HttpStatusCode.BadRequest,
-                    ReasonPhrase = "Invalid/Incomplete data received for Asset creation."
-                });
+                                            StatusCode = HttpStatusCode.BadRequest,
+                                            ReasonPhrase = "Invalid/Incomplete data received for new Asset creation."});
             }
 
-            if(newAsset.Profile == null || newAsset.Positions == null)
-                return BadRequest("No new Asset created, due to missing required Profile and/or Position data.");
+            // Reconfirm required Position data exist.
+            if (!submittedAsset.PositionsCreated.Any())
+                return BadRequest("Unable to create new Asset, no Position data found.");
 
-            // Check against existing data. Per UI design, all Positions are created before any Income is added.
-            var newAssetTicker = newAsset.Profile.TickerSymbol.ToUpper().Trim();
-            var existingAsset = await Task.FromResult(_repository.Retreive(asset => asset.Investor.LastName.ToUpper().Trim() == _currentInvestor.Trim().ToUpper()
-                                                                                             && asset.Profile.TickerSymbol.ToUpper().Trim() == newAssetTicker)
-                                          .AsQueryable());
+            // ACCOUNT TYPE.
+            var acctTypeCtrl = new AccountTypeController(_repositoryAccountType, _repository, _identityService);
+            var existingAcctTypes = await acctTypeCtrl.GetAllAccounts() as OkNegotiatedContentResult<IList<AccountTypeVm>>;
+            if(existingAcctTypes == null)
+                return BadRequest("Unable to retreive required AccountType data (id) for Asset creation.");
 
-            if (existingAsset.Any()) {
+
+            var duplicateCheck = GetByTicker(submittedAsset.AssetTicker.Trim());
+            if(duplicateCheck.Result.ToString().Contains("OkNegotiatedContent"))
                 return ResponseMessage(new HttpResponseMessage {
-                                        StatusCode = HttpStatusCode.Conflict,
-                                        ReasonPhrase = string.Format("No new Asset created, due to existing Asset already found for: {0}", newAssetTicker)});
-            }
+                                                        StatusCode = HttpStatusCode.Conflict,
+                                                        ReasonPhrase = "No Asset created; duplicate Asset found for " + submittedAsset.AssetTicker.Trim()
+                });
 
-            var newPositions = newAsset.Positions;
-            if (ContainsDuplicates(ref newPositions))
-                return BadRequest("No new Asset created, due to duplicate Position entry(ies) received.");
+            submittedAsset.AssetInvestorId = registeredInvestor.First().InvestorId.ToString();
+            submittedAsset.AssetClassificationId = await Task.FromResult(_repositoryAssetClass.Retreive(ac => ac.Code.Trim() == submittedAsset.AssetClassification.Trim())
+                                                                                              .AsQueryable()
+                                                                                              .First()
+                                                                                              .KeyId.ToString());
 
-            // Contained "Income" aggregate component may not be initialized due to deferred use.
-            if (newAsset.Revenue != null)
+            // PROFILE.
+            var existingProfile = await Task.FromResult(_repositoryProfile.Retreive(p => p.TickerSymbol.Trim() == submittedAsset.AssetTicker.Trim())
+                                                                          .AsQueryable());
+            if (existingProfile.Any())
+                submittedAsset.AssetProfileId = existingProfile.First().ProfileId.ToString();
+            else
             {
-                var newIncome = newAsset.Revenue;
-                if (ContainsDuplicates(ref newIncome))
-                    return BadRequest("No new Asset created, due to duplicate Income entry(ies) received.");
+                var profileCtrl = new ProfileController(_repositoryProfile);
+                var newProfileVm = new ProfileVm
+                                      {
+                                          TickerSymbol = submittedAsset.AssetTicker.Trim(),
+                                          TickerDescription = submittedAsset.AssetDescription.Trim(),
+                                          DividendRate = submittedAsset.DividendPerShare,
+                                          DividendYield = submittedAsset.DividendYield,
+                                          DividendFreq = !string.IsNullOrWhiteSpace(submittedAsset.DividendFrequency)
+                                              ? submittedAsset.DividendFrequency
+                                              : "U", // (U)nkown
+                                          EarningsPerShare = submittedAsset.EarningsPerShare > 0
+                                              ? submittedAsset.EarningsPerShare
+                                              : 0,
+                                          PE_Ratio = submittedAsset.PriceEarningsRatio > 0
+                                              ? submittedAsset.PriceEarningsRatio
+                                              : 0,
+                                          LastUpdate = DateTime.Now,
+                                          ExDividendDate = submittedAsset.ExDividendDate,
+                                          DividendPayDate = submittedAsset.DividendPayDate,
+                                          Url = Utilities.GetBaseUrl( _repositoryInvestor.UrlAddress) + "Profile/",
+                                          Price = submittedAsset.PricePerShare > 0
+                                              ? submittedAsset.PricePerShare
+                                              : 0
+                                      };
+
+                var createdProfile = await profileCtrl.CreateNewProfile(newProfileVm) as CreatedNegotiatedContentResult<Profile>;
+                if (createdProfile == null)
+                    return BadRequest("Error creating new Profile.");
+
+                submittedAsset.AssetProfileId = createdProfile.Content.ProfileId.ToString();
             }
-           
-            InitializePositionsWithInvestorInfo(ref newPositions);
-            newAsset = InitializeUrls(newAsset);
-
-            var isCreated = await Task<bool>.Factory.StartNew(() => _repository.Create(newAsset));
-            var newLocation = _repositoryInvestor.UrlAddress + "/" + newAsset.Profile.TickerSymbol.Trim();
-            _repository.UrlAddress = newLocation;
-
-            if (isCreated)
-                return Created(newLocation, newAsset); // 201 status code
-
-            return BadRequest("Unable to create new Asset for : " + newAsset.Profile.TickerSymbol);
 
 
-            //TODO: Use for Asset Position/Update ?
-            //var existingPositions = existingAsset.SelectMany(p => p.Positions); 
-            //var matchingPositionsFound = CheckExistingPositionsAgainstNewPositions(existingPositions, newAsset.Positions.AsQueryable());
-            //if (matchingPositionsFound)
-            //    return BadRequest("Matching existing Position(s) found, Asset not created");
+            // ASSET.
+            var newAsset = await SaveAssetAndGetId(submittedAsset) as CreatedNegotiatedContentResult<Asset>;;
+            if (newAsset == null)
+                return BadRequest("Error creating new Asset or AssetId.");
+
+            submittedAsset.AssetIdentification = newAsset.Content.AssetId.ToString();
+
+            
+            // POSITION(S).
+            var positionCtrl = new PositionController(_identityService, _repository, _repositoryInvestor, _repositoryPosition, _repositoryAccountType);
+            for(var pos = 0; pos < submittedAsset.PositionsCreated.Count; pos++)
+            {
+                // ReSharper disable once AccessToModifiedClosure
+                var positionAcctTypeId = existingAcctTypes.Content.Where(at => at.AccountTypeDesc.Trim().ToUpper() == submittedAsset.PositionsCreated.ElementAt(pos)
+                                                                                                                          .PreEditPositionAccount
+                                                                                                                          .ToUpper()
+                                                                                                                          .Trim())
+                                                                                                                          .AsQueryable()
+                                                                                                                          .Select(at => at.KeyId);
+
+                if (!positionAcctTypeId.Any())
+                    return BadRequest("Position creation aborted, error retreiving AccountType for: " + submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.Trim().ToUpper());
+
+                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedAccount.KeyId = positionAcctTypeId.First();
+                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedAssetId = new Guid(submittedAsset.AssetIdentification); 
+                submittedAsset.PositionsCreated.ElementAt(pos).Url = Utilities.GetBaseUrl(_repositoryInvestor.UrlAddress)
+                                                                     + "Asset/"
+                                                                     + submittedAsset.AssetTicker.Trim()
+                                                                     + "/Position/"
+                                                                     + submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.Trim();
+
+                var createdPosition = await positionCtrl.CreateNewPosition(submittedAsset.PositionsCreated.ElementAt(pos)) as CreatedNegotiatedContentResult<Position>;
+                if (createdPosition == null)
+                    return BadRequest("Error creating new Position(s).");
+                
+                submittedAsset.PositionsCreated.ElementAt(pos).CreatedPositionId = createdPosition.Content.PositionId; // added 7-4-15
+            }
 
 
-            //var existingIncome = existingAsset.SelectMany(p => p.Revenue).Where(r => r.DateRecvd == new DateTime(2014, 07, 10, 18, 09, 0).ToString("g"));
-            //var x = existingPositions.Count();
-            //var y = existingIncome.Count();
+            // INCOME (optional).
+            if (!submittedAsset.RevenueCreated.Any()) 
+                return ResponseMessage(new HttpResponseMessage {
+                                              StatusCode = HttpStatusCode.Created,
+                                              ReasonPhrase = "Asset created - affiliated Profile, and Position(s) recorded."
+            });
+
+            var incomeCtrl = new IncomeController(_identityService, _repository, _repositoryInvestor, _repositoryIncome);
+            foreach (var incomeRecord in submittedAsset.RevenueCreated)
+            {
+                incomeRecord.Url = Utilities.GetBaseUrl(_repositoryInvestor.UrlAddress)
+                                   + "Asset/"
+                                   + submittedAsset.AssetTicker.Trim()
+                                   + "/Income/";
+               
+                var createdIncome = await incomeCtrl.CreateNewIncome2(incomeRecord) as CreatedNegotiatedContentResult<Income>;
+                if (createdIncome == null)
+                    return BadRequest("Error creating new Income record(s).");
+            }
+
+            return ResponseMessage(new HttpResponseMessage {
+                StatusCode = HttpStatusCode.Created,
+                ReasonPhrase = "Asset created - affiliated Profile, Position(s), and Income recorded."
+            });
 
         }
 
@@ -361,51 +363,85 @@ namespace PIMS.Web.Api.Controllers
 
 
 
+        #region Helpers
 
-        private Asset InitializeUrls(Asset assetToUpdate)
-        {
-            // Initialize with appropriate URLs.
-            assetToUpdate.Url = _repositoryInvestor.UrlAddress + "/" + assetToUpdate.Profile.TickerSymbol.ToUpper().Trim();
-            assetToUpdate.Investor.Url = _repositoryInvestor.UrlAddress.Replace("Asset",
-                                                    "Investor/" + assetToUpdate.Investor.FirstName.Trim()
-                                                    + assetToUpdate.Investor.MiddleInitial.Trim()
-                                                    + assetToUpdate.Investor.LastName.Trim());
-            assetToUpdate.AssetClass.Url = _repositoryInvestor.UrlAddress.Replace("Asset",
-                                                     "AssetClass/" + assetToUpdate.AssetClass.LastUpdate.Trim().ToUpper());
-            assetToUpdate.Profile.Url = _repositoryInvestor.UrlAddress.Replace("Asset",
-                                                    "Profile/" + assetToUpdate.Profile.TickerSymbol.Trim().ToUpper());
-            foreach (var position in assetToUpdate.Positions)
-                position.Url = assetToUpdate.Url + "/Position/" + position.Account.AccountTypeDesc.Trim();
+            private Asset InitializeUrls(Asset assetToUpdate) {
+                // Initialize with appropriate URLs.
+                assetToUpdate.Url = _repositoryInvestor.UrlAddress + "/" + assetToUpdate.Profile.TickerSymbol.ToUpper().Trim();
+                assetToUpdate.Investor.Url = _repositoryInvestor.UrlAddress.Replace("Asset",
+                                                        "Investor/" + assetToUpdate.Investor.FirstName.Trim()
+                                                        + assetToUpdate.Investor.MiddleInitial.Trim()
+                                                        + assetToUpdate.Investor.LastName.Trim());
+                assetToUpdate.AssetClass.Url = _repositoryInvestor.UrlAddress.Replace("Asset",
+                                                         "AssetClass/" + assetToUpdate.AssetClass.LastUpdate.Trim().ToUpper());
+                assetToUpdate.Profile.Url = _repositoryInvestor.UrlAddress.Replace("Asset",
+                                                        "Profile/" + assetToUpdate.Profile.TickerSymbol.Trim().ToUpper());
+                foreach (var position in assetToUpdate.Positions)
+                    position.Url = assetToUpdate.Url + "/Position/" + position.Account.AccountTypeDesc.Trim();
 
-            if (assetToUpdate.Revenue == null) return assetToUpdate;
-            foreach (var subitem in assetToUpdate.Revenue)
-                subitem.Url = _repositoryInvestor.UrlAddress.Replace("Asset", "Income/" + Guid.NewGuid());
+                if (assetToUpdate.Revenue == null) return assetToUpdate;
+                foreach (var subitem in assetToUpdate.Revenue)
+                    subitem.Url = _repositoryInvestor.UrlAddress.Replace("Asset", "Income/" + Guid.NewGuid());
 
-            return assetToUpdate;
-        }
+                return assetToUpdate;
+            }
+        
+            private void InitializePositionsWithInvestorInfo(ref IList<Position> positionsToUpdate) {
+                foreach (var position in positionsToUpdate)
+                    position.InvestorKey = _currentInvestor.Trim();
+            }
+        
+            private static bool ContainsDuplicates<T>(ref IList<T> collectionToCheck) {
+                switch (typeof(T).Name) {
+                    case "Position":
+                        var positionData = collectionToCheck as IList<Position>;
+                        return positionData != null && positionData.GroupBy(p => new { p.Account.AccountTypeDesc }).Any(p => p.Skip(1).Any());
+                    case "Income":
+                        var incomeData = collectionToCheck as IList<Income>;
+                        return incomeData != null && incomeData.GroupBy(i => new { i.Account, i.DateRecvd }).Any(i => i.Skip(1).Any());
+                }
 
-
-        private void InitializePositionsWithInvestorInfo(ref IList<Position> positionsToUpdate)
-        {
-            foreach (var position in positionsToUpdate)
-                position.InvestorKey = _currentInvestor.Trim();
-        }
-
-
-        private static bool ContainsDuplicates<T>(ref IList<T> collectionToCheck)
-        {
-            switch (typeof(T).Name)
-            {
-                case "Position" :
-                    var positionData  = collectionToCheck as IList<Position>;
-                    return positionData != null && positionData.GroupBy(p => new {p.Account.AccountTypeDesc}).Any(p => p.Skip(1).Any());
-                case "Income" :
-                  var incomeData  = collectionToCheck as IList<Income>;
-                    return incomeData != null && incomeData.GroupBy(i => new {i.Account, i.DateRecvd}).Any(i => i.Skip(1).Any());
+                return false;
             }
 
-            return false;
-        }
+            private static Asset MapVmToAsset(AssetCreationVm sourceVm)
+            {
+                return new Asset {
+                    InvestorId = new Guid(sourceVm.AssetInvestorId),
+                    AssetClassId = new Guid(sourceVm.AssetClassificationId),
+                    ProfileId = new Guid(sourceVm.AssetProfileId),
+                    AssetId = sourceVm.AssetIdentification == null ? new Guid() : new Guid(sourceVm.AssetIdentification),
+                    LastUpdate = DateTime.Now
+                };
+            }
+
+            private static AccountType MapVmToAccountType(AccountTypeVm sourceVm)
+            {
+                return new AccountType
+                       {
+                           //PositionRefId = sourceVm.PositionRefId,
+                           AccountTypeDesc = sourceVm.AccountTypeDesc,
+                           Url = ""
+                       };
+            }
+
+            private async Task<IHttpActionResult> SaveAssetAndGetId(AssetCreationVm assetToSave)
+            {
+                var createdAsset = MapVmToAsset(assetToSave);
+                var isCreated = await Task.FromResult(_repository.Create(createdAsset));
+             
+                if (!isCreated) return BadRequest("Unable to create new Asset for :  " + assetToSave.AssetTicker.Trim());
+
+                //TODO: Use routeData for URL.
+               return Created("http://localhost/Pims.Web.Api/api/Asset/", createdAsset);
+            }
+
+
+
+        #endregion
+        
+
+
 
 
         // TODO: for Position/Update ?
@@ -416,6 +452,109 @@ namespace PIMS.Web.Api.Controllers
         //        return currentPositions.Count(a => a.Account.AccountTypeDesc == positionToAdd.Account.AccountTypeDesc) >= 1;
         //    }
         //}
+
+
+        #region Obsolete - handled via UI/AngularJs
+        //[HttpGet]
+        //[Route("")]
+        //// Ex: http://localhost/Pims.Web.Api/api/Asset?sortBy=assetClass
+        //public async Task<IHttpActionResult> GetAndSortByOther([FromUri]string sortBy)
+        //{
+        //   _repositoryInvestor.UrlAddress = ControllerContext.Request.RequestUri.ToString();
+        //    var currentInvestor = _identityService.CurrentUser;
+
+        //    IQueryable<Asset> assets;
+        //    IQueryable<AssetSummaryVm> assetSummary = null;
+
+        //    switch (sortBy.Trim().ToUpper()) {
+        //        case "ASSETCLASS": {
+        //                assets = await Task.FromResult(_repository.Retreive(a => a.Investor
+        //                                                                          .LastName.ToUpper().Trim() == currentInvestor.Trim().ToUpper())
+        //                                                           .OrderBy(item => item.AssetClass.LastUpdate).AsQueryable());
+
+        //                assetSummary = assets.AsQueryable().Select(a => new AssetSummaryVm {
+        //                                                                        AccountTypePostEdit = a.Revenue.First().Account,
+        //                                                                        AssetClassification = a.AssetClass.LastUpdate,
+        //                                                                        DividendFrequency = a.Profile.DividendFreq,
+        //                                                                        IncomeRecvd = a.Revenue.First().Actual,
+        //                                                                        Quantity = a.Positions.First().Quantity,
+        //                                                                        UnitPrice = a.Positions.First().MarketPrice,
+        //                                                                        TickerSymbol = a.Profile.TickerSymbol,
+        //                                                                        DateRecvd = a.Revenue.First().DateRecvd,
+        //                                                                        TickerSymbolDescription = a.Profile.TickerDescription,
+        //                                                                        CurrentInvestor = a.Investor.LastName
+        //                                                                });
+        //                break;
+        //            }
+        //        case "ACCTTYPE": {
+        //                assets = await Task.FromResult(_repository.Retreive(a => a.Investor
+        //                                                                          .LastName.ToUpper().Trim() == currentInvestor.Trim().ToUpper())
+        //                                                          .OrderBy(item => item.Positions.First().Account.AccountTypeDesc).AsQueryable());
+
+        //                assetSummary = assets.AsQueryable().Select(a => new AssetSummaryVm {
+        //                                                                            AccountTypePostEdit = a.Revenue.First().Account,
+        //                                                                            AssetClassification = a.AssetClass.LastUpdate,
+        //                                                                            DividendFrequency = a.Profile.DividendFreq,
+        //                                                                            IncomeRecvd = a.Revenue.First().Actual,
+        //                                                                            Quantity = a.Positions.First().Quantity,
+        //                                                                            UnitPrice = a.Positions.First().MarketPrice,
+        //                                                                            TickerSymbol = a.Profile.TickerSymbol,
+        //                                                                            DateRecvd = a.Revenue.First().DateRecvd,
+        //                                                                            TickerSymbolDescription = a.Profile.TickerDescription,
+        //                                                                            CurrentInvestor = a.Investor.LastName
+        //                                                                    });
+        //                break;
+        //            }
+        //        case "INCOME": {
+
+        //                assets = await Task.FromResult(_repository.Retreive(a => a.Investor
+        //                                                                          .LastName.ToUpper().Trim() == currentInvestor.Trim().ToUpper())
+        //                                                          .OrderByDescending(assetList => assetList.Revenue.First().Actual).AsQueryable());
+
+        //                assetSummary = assets.AsQueryable().Select(a => new AssetSummaryVm {
+        //                                                                        AccountTypePostEdit = a.Revenue.First().Account,
+        //                                                                        AssetClassification = a.AssetClass.LastUpdate,
+        //                                                                        DividendFrequency = a.Profile.DividendFreq,
+        //                                                                        IncomeRecvd = a.Revenue.First().Actual,
+        //                                                                        Quantity = a.Positions.First().Quantity,
+        //                                                                        UnitPrice = a.Positions.First().MarketPrice,
+        //                                                                        TickerSymbol = a.Profile.TickerSymbol,
+        //                                                                        DateRecvd = a.Revenue.First().DateRecvd,
+        //                                                                        TickerSymbolDescription = a.Profile.TickerDescription,
+        //                                                                        CurrentInvestor = a.Investor.LastName
+        //                                                                    });
+        //                break;
+        //            }
+        //        case "DATERECVD": {
+        //                //var withinLast12Months = DateTime.Now.AddYears(-1);
+        //                assets = await Task.FromResult(_repository.Retreive(a => a.Investor
+        //                                                                          .LastName.ToUpper().Trim() == currentInvestor.Trim().ToUpper())
+        //                                                          .OrderByDescending(assetList => assetList.Revenue.First().DateRecvd).AsQueryable());
+
+        //                assetSummary = assets.AsQueryable().Select(a => new AssetSummaryVm {
+        //                                                                        AccountTypePostEdit = a.Revenue.First().Account,
+        //                                                                        AssetClassification = a.AssetClass.LastUpdate,
+        //                                                                        DividendFrequency = a.Profile.DividendFreq,
+        //                                                                        IncomeRecvd = a.Revenue.First().Actual,
+        //                                                                        Quantity = a.Positions.First().Quantity,
+        //                                                                        UnitPrice = a.Positions.First().MarketPrice,
+        //                                                                        TickerSymbol = a.Profile.TickerSymbol,
+        //                                                                        DateRecvd = a.Revenue.First().DateRecvd,
+        //                                                                        TickerSymbolDescription = a.Profile.TickerDescription,
+        //                                                                        CurrentInvestor = a.Investor.LastName
+        //                                                                    });
+        //                break;
+        //            }
+
+        //    }
+
+        //    if (assetSummary != null)
+        //        return Ok(assetSummary);
+
+        //    return BadRequest("Unable to retreive Assets for: " + currentInvestor);
+        //}
+
+        #endregion
 
     }
 }
