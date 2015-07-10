@@ -58,7 +58,9 @@ namespace PIMS.Data.Repositories
                     _nhSession.Save(newEntity);
                     trx.Commit();
                 }
-                catch {
+                catch(Exception ex)
+                {
+                    var debug = ex.InnerException;
                     return false;
                 }
 

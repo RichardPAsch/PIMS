@@ -16,8 +16,7 @@ namespace PIMS.Data.Repositories
         private readonly ISession _nhSession;
         public string UrlAddress { get; set; }
 
-        public InvestorRepository(ISessionFactory sessFactory)
-        {
+        public InvestorRepository(ISessionFactory sessFactory) {
             if (sessFactory == null)
                 throw new ArgumentNullException("sessFactory");
 
@@ -27,35 +26,29 @@ namespace PIMS.Data.Repositories
 
 
 
-        public IQueryable<Investor> RetreiveAll()
-        {
+        public IQueryable<Investor> RetreiveAll() {
             var investorQuery = (from investor in _nhSession.Query<Investor>() select investor);
             return investorQuery.AsQueryable();
         }
 
 
-        public Investor RetreiveById(Guid idGuid)
-        {
+        public Investor RetreiveById(Guid idGuid) {
             return _nhSession.Get<Investor>(idGuid);
         }
 
 
-        public IQueryable<Investor> Retreive(Expression<Func<Investor, bool>> predicate)
-        {
+        public IQueryable<Investor> Retreive(Expression<Func<Investor, bool>> predicate) {
             return RetreiveAll().Where(predicate);
         }
 
 
-        public bool Create(Investor newEntity)
-        {
-            using (var trx = _nhSession.BeginTransaction())
-            {
+        public bool Create(Investor newEntity) {
+            using (var trx = _nhSession.BeginTransaction()) {
                 try {
                     _nhSession.Save(newEntity);
                     trx.Commit();
                 }
-                catch(Exception ex)
-                {
+                catch (Exception ex) {
                     var len = newEntity.Url.Length;
                     var debug = ex.Message;
                     return false;
@@ -66,12 +59,9 @@ namespace PIMS.Data.Repositories
         }
 
 
-        public bool Update(Investor entity, object id)
-        {
-            using (var trx = _nhSession.BeginTransaction())
-            {
-                try
-                {
+        public bool Update(Investor entity, object id) {
+            using (var trx = _nhSession.BeginTransaction()) {
+                try {
                     _nhSession.Merge(entity);
                     trx.Commit();
                 }
@@ -82,7 +72,7 @@ namespace PIMS.Data.Repositories
 
             return true;
         }
-        
+
 
         public bool Delete(Guid cGuid) {
 
@@ -107,3 +97,4 @@ namespace PIMS.Data.Repositories
         }
     }
 }
+

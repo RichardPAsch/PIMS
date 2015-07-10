@@ -12,6 +12,7 @@ namespace PIMS.Data.Repositories
     public class AssetRepository : IGenericRepository<Asset>
     {
         private readonly ISession _nhSession;
+        public string UrlAddress { get; set; }
 
         public AssetRepository(ISessionFactory sessFactory)
         {
@@ -22,13 +23,14 @@ namespace PIMS.Data.Repositories
             _nhSession.FlushMode = FlushMode.Auto;
         }
 
-
+       
 
         public IQueryable<Asset> RetreiveAll()
         {
             var assetsQuery = (from asset in _nhSession.Query<Asset>() select asset);
             return assetsQuery.AsQueryable();
         }
+
 
         public IQueryable<Asset> Retreive(Expression<Func<Asset, bool>> predicate)
         {
@@ -38,7 +40,7 @@ namespace PIMS.Data.Repositories
             }
             catch (Exception ex)
             {
-                var y = ex.Message;
+                var debug = ex.Message;
                 return null;
             }
         }
@@ -46,25 +48,70 @@ namespace PIMS.Data.Repositories
         
         public Asset RetreiveById(Guid key)
         {
-            throw new NotImplementedException();
+            return _nhSession.Get<Asset>(key);
         }
+
 
         public bool Create(Asset newEntity)
         {
-            throw new NotImplementedException();
+            using (var trx = _nhSession.BeginTransaction()) {
+                try {
+                    _nhSession.Save(newEntity);
+                    trx.Commit();
+                }
+                catch (Exception ex) {
+                    var debug = ex.InnerException;
+                    return false;
+                }
+
+                return true;
+            }
         }
+
 
         public bool Delete(Guid idGuid)
         {
-            throw new NotImplementedException();
+            //TODO: All referenced objects must be cascade deleted.
+            var deleteOk = true;
+            var assetToDelete = RetreiveById(idGuid);
+
+            if (assetToDelete == null)
+                return false;
+
+
+            using (var trx = _nhSession.BeginTransaction()) {
+                try {
+                    _nhSession.Delete(assetToDelete);
+                    trx.Commit();
+                }
+                catch (Exception) {
+                    // TODO: Candidate for logging?
+                    deleteOk = false;
+                }
+            }
+
+
+            return deleteOk;
         }
+
 
         public bool Update(Asset entity, object id)
         {
-            throw new NotImplementedException();
+            using (var trx = _nhSession.BeginTransaction()) {
+                try {
+                    _nhSession.Merge(entity);
+                    trx.Commit();
+                }
+                catch (Exception ex) {
+                    //var debug = ex.InnerException;
+                    return false;
+                }
+            }
+
+            return true;
         }
 
-        public string UrlAddress { get; set; }
+        
 
 
     }
