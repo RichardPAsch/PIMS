@@ -220,21 +220,21 @@ namespace PIMS.IntegrationTest
                             {
                                 PositionId = Guid.NewGuid(),
                                 PositionAssetId = new Guid("D8D62A0D-67B6-49B9-9F7A-53175A115765"),
-                                PurchaseDate = currentDateTime.AddMonths(-8).ToString("d"),
+                                PurchaseDate = currentDateTime.AddMonths(-8),
                                 Quantity = int.Parse("125"),
                                 MarketPrice = 32.12M,
                                 AcctTypeId = new Guid("18D97297-BFE8-4746-9E2A-BE9BC2C0E9E4"), // Roth-IRA
-                                LastUpdate = currentDateTime.ToString("g"),
+                                LastUpdate = currentDateTime,
                             },
                             new Position
                             {
                                 PositionId = Guid.NewGuid(),
                                 PositionAssetId = new Guid("D8D62A0D-67B6-49B9-9F7A-53175A115765"),
-                                PurchaseDate = currentDateTime.AddMonths(-3).ToString("d"),
+                                PurchaseDate = currentDateTime.AddMonths(-3),
                                 Quantity = 100,
                                 MarketPrice = 40.62M,
                                 AcctTypeId = new Guid("745AD04D-D7DF-4CD2-A5C1-ADA8032FCFD8"), // CMA
-                                LastUpdate = currentDateTime.ToString("g"),
+                                LastUpdate = currentDateTime,
                             }
                         };
 
@@ -243,10 +243,10 @@ namespace PIMS.IntegrationTest
                             new Income
                             {
                                 Actual = decimal.Parse("74.50"),
-                                DateRecvd = currentDateTime.ToString("d"),
+                                DateRecvd = currentDateTime,
                                 Projected = decimal.Parse("75.11"),
                                 AssetId = new Guid("D8D62A0D-67B6-49B9-9F7A-53175A115765"),
-                                LastUpdate = currentDateTime.ToString("g")
+                                LastUpdate = currentDateTime
                             }
                         };
 
@@ -271,12 +271,12 @@ namespace PIMS.IntegrationTest
                     TickerDescription = "Verizon Communications, Inc.",
                     Price = decimal.Parse("49.72"),
                     DividendYield = decimal.Parse("4.50"),
-                    ExDividendDate = currentDateTime.AddDays(-11).ToString("d"),
-                    DividendPayDate = currentDateTime.AddDays(5).ToString("d"),
+                    ExDividendDate = currentDateTime.AddDays(-11),
+                    DividendPayDate = currentDateTime.AddDays(5),
                     PE_Ratio = decimal.Parse("20.55"),
                     DividendFreq = "M",
                     EarningsPerShare = decimal.Parse("2.42"),
-                    LastUpdate = currentDateTime.ToString("g")
+                    LastUpdate = currentDateTime
                 })
 
                 
