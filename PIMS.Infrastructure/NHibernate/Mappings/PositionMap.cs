@@ -40,8 +40,16 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
                 .Not.Update()
                 .Not.Insert();
 
-            // Bypass NH default and load this child aggregate entity.
-            //Not.LazyLoad();
+
+            // TODO: needed ? - added 5/27/15
+            // 1:M
+            // Each Position may have one or more Income items (Revenue).
+            //HasMany<Income>(x => x.PositionIncome)
+            //    //.Table("Income")
+            //    .KeyColumns.Add("IncomePositionId"); // references FK in Income
+
+
+            
 
         }
     }

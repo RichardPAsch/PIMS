@@ -27,11 +27,17 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
 
             Map(x => x.InvestorId, "AssetInvestorId");
             Map(x => x.LastUpdate);
+            Map(x => x.ProfileId);
+          
 
+            // NH mapping to support M:M table configuration
             HasManyToMany(x => x.Investors)
-                .Table("AssetInvestor")
+                .Cascade.All()
+                .Not.Inverse()
                 .ParentKeyColumn("AssetId")             // always current table containing this mapping
-                .ChildKeyColumn("InvestorId");          // table containing records for insertion into IList.
+                .ChildKeyColumn("InvestorId")           // table containing records for insertion into IList.
+                .Table("AssetInvestor");
+              
 
 
             // 1:M - Each Asset may have one or more Positions.
@@ -63,10 +69,22 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
                 
 
 
-            //  NH FK reference regarding M:1
+            // NH FK reference regarding M:1
+            // Mark mappings as read-only & ignore during Update/Save operations,
+            // per NH when saving during Asset creation - MapVmToAsset().
             References(x => x.Profile)
-                .Column("ProfileId");
+                .Column("ProfileId")
+                .Not.Update()  // added 6-24-15
+                .Not.Insert(); // added 6-24-15
+
+
+            // NH mapping to support M:1 object model - added 6-12-15
+            References(x => x.Investor)
+                .Column("AssetInvestorId")
+                .Not.Update()  // added 6-24-15
+                .Not.Insert(); // added 6-24-15
             
+
         }
     }
 }

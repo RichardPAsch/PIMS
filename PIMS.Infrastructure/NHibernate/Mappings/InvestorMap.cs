@@ -30,12 +30,19 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             Map(x => x.Url, "Link");
             
 
-            // NH required configuration.
+            // NH required configuration for M:M table configuration.
             HasManyToMany(x => x.Assets)
-                .Table("AssetInvestor")
+                .Cascade.All()
                 .ParentKeyColumn("InvestorId")
                 .ChildKeyColumn("AssetId")
-                .Inverse(); // 'Asset' responsible for saving
+                .Inverse() // 'Asset' responsible for saving
+                .Table("AssetInvestor");
+
+
+            // Added 6-12-15 - NH mapping support for Investor object.
+            HasMany(x => x.InvestorAssets)
+                .Table("Investor")
+                .KeyColumn("InvestorId");
 
         }
     }

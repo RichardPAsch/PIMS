@@ -16,6 +16,7 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             Map(x => x.Url, "Link");
             Map(x => x.LastUpdate); // test
             Map(x => x.Description);
+            Map(x => x.Code);
 
         }
        

@@ -26,6 +26,7 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             Map(x => x.ExDividendDate);
             Map(x => x.DividendPayDate);
             Map(x => x.Price, "UnitPrice").Precision(7);
+            Map(x => x.Url);
 
             // 1:M 
             // A Profile can be associated with an Asset with many Investors.
