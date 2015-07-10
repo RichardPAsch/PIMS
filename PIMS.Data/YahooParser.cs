@@ -29,9 +29,9 @@ namespace PIMS.Data
                                         DividendYield     = cols[4] == "N/A" ? 0 : Convert.ToDecimal(cols[4]),
                                         PE_Ratio          = cols[5] == "N/A" ? 0 : Convert.ToDecimal(cols[5]),
                                         EarningsPerShare  = cols[6] == "N/A" ? 0 : Convert.ToDecimal(cols[6]),
-                                        ExDividendDate    = cols[7] == "N/A" ? new DateTime(1900, 1, 1).ToString("d") : (cols[7]),
-                                        DividendPayDate   = cols[8] == "N/A" ? new DateTime(1900, 1, 1).ToString("d") : (cols[8]),
-                                        LastUpdate        = DateTime.UtcNow.ToString("g"),
+                                        ExDividendDate    = cols[7] == "N/A" ? new DateTime(1900, 1, 1) : DateTime.Parse(cols[7]),
+                                        DividendPayDate = cols[8] == "N/A" ? new DateTime(1900, 1, 1) : DateTime.Parse(cols[8]),
+                                        LastUpdate        = DateTime.Now,
                                         DividendFreq      = "TBD", //TODO - calculate based on payment history?
                                     }
                     )

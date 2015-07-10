@@ -59,16 +59,16 @@ namespace PIMS.Data
                                          || (recvdProfile.PE_Ratio != default(int) && yahooProfile.PE_Ratio != default(int)))
                 recvdProfile.PE_Ratio = yahooProfile.PE_Ratio;
 
-            recvdProfile.LastUpdate = DateTime.UtcNow.ToString("g");
+            recvdProfile.LastUpdate = DateTime.Now;
 
-            if ((recvdProfile.ExDividendDate == default(DateTime).ToString("d") && yahooProfile.ExDividendDate != "N/A")
-                                         || (recvdProfile.ExDividendDate != default(DateTime).ToString("d") && yahooProfile.ExDividendDate != "N/A"))
-                recvdProfile.ExDividendDate = ReformatDate(yahooProfile.ExDividendDate);
+            if ((recvdProfile.ExDividendDate == default(DateTime) || yahooProfile.ExDividendDate.HasValue)
+                                         || (recvdProfile.ExDividendDate != default(DateTime) && yahooProfile.ExDividendDate.HasValue))
+                recvdProfile.ExDividendDate = yahooProfile.ExDividendDate;
 
-          
-            if ((recvdProfile.DividendPayDate == default(DateTime).ToString("d") && yahooProfile.DividendPayDate != "N/A")
-                                         || (recvdProfile.DividendPayDate != default(DateTime).ToString("d") && yahooProfile.DividendPayDate != "N/A"))
-                recvdProfile.DividendPayDate = ReformatDate(yahooProfile.DividendPayDate);
+
+            if ((recvdProfile.DividendPayDate == default(DateTime) && yahooProfile.DividendPayDate.HasValue)
+                                         || (recvdProfile.DividendPayDate != default(DateTime) && yahooProfile.DividendPayDate.HasValue))
+                recvdProfile.DividendPayDate = yahooProfile.DividendPayDate;
                 //recvdProfile.DividendPayDate = CheckDateRelationship(ReformatDate(yahooProfile.DividendPayDate));
 
                 
