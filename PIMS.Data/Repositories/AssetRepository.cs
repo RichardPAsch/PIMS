@@ -78,14 +78,16 @@ namespace PIMS.Data.Repositories
             if (assetToDelete == null)
                 return false;
 
-
-            using (var trx = _nhSession.BeginTransaction()) {
+            
+            using (var trx = _nhSession.BeginTransaction()) 
+            {
                 try {
                     _nhSession.Delete(assetToDelete);
                     trx.Commit();
                 }
-                catch (Exception) {
+                catch (Exception ex) {
                     // TODO: Candidate for logging?
+                    var debug = ex.InnerException;
                     deleteOk = false;
                 }
             }
