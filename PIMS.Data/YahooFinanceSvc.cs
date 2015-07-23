@@ -26,8 +26,9 @@ namespace PIMS.Data
                     return updatedProfile;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                var debug = ex.Message;
                 return null;
             }
     
