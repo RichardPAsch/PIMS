@@ -8,61 +8,63 @@ namespace PIMS.Core.Models
 
     public static class ModelParser
     {
-        // Parse original Asset for possible view model edits, and update as needed.
-        public static Asset ParseAsset(AssetSummaryVm assetVmWithEdits, Asset filteredPreEditAsset, out bool isModified)
+        // Parse original Asset for possible view model edits, and update as needed. Except for:
+        // Read-only : 'TickerSymbol' - change would require Asset deletion/recreation.
+        //           : 'AccountType'  - change would require duplicate checks & merging logic
+        //                              [see PositionController.UpdatePositionsByAsset()].
+
+        public static Asset ParseAssetForUpdates(AssetSummaryVm assetPostEdits, Asset assetPreEdits, out bool isModified)
         {
-            // filteredPreEditAsset is an existing single asset filtered via current investor, ticker, and position/account for
-            // comparisons to submitted view model edits. Submitted view model may contain 1 or more updated attributes.
-
             isModified = false;
+  
+            if (assetPreEdits.Profile.TickerDescription != assetPostEdits.TickerSymbolDescription && !string.IsNullOrWhiteSpace(assetPostEdits.TickerSymbolDescription)) {
+                assetPreEdits.Profile.TickerDescription = assetPostEdits.TickerSymbolDescription.Trim();
+                 isModified = true;
+            }
+            if (assetPreEdits.AssetClass.Code != assetPostEdits.AssetClassification && !string.IsNullOrWhiteSpace(assetPostEdits.AssetClassification)) {
+                assetPreEdits.AssetClass.Code = assetPostEdits.AssetClassification.Trim();
+                if (!isModified) isModified = true;
+            }
 
-            
            
-            if (filteredPreEditAsset.Profile.TickerSymbol != assetVmWithEdits.TickerSymbol && !string.IsNullOrWhiteSpace(assetVmWithEdits.TickerSymbol)) {
-                filteredPreEditAsset.Profile.TickerSymbol = assetVmWithEdits.TickerSymbol;
-                isModified = true;
-            }
-            if (filteredPreEditAsset.Profile.TickerDescription != assetVmWithEdits.TickerSymbolDescription && !string.IsNullOrWhiteSpace(assetVmWithEdits.TickerSymbolDescription)) {
-                filteredPreEditAsset.Profile.TickerDescription = assetVmWithEdits.TickerSymbolDescription.Trim();
-                if (!isModified) isModified = true;
-            }
-            if (filteredPreEditAsset.AssetClass.Code != assetVmWithEdits.AssetClassification && !string.IsNullOrWhiteSpace(assetVmWithEdits.AssetClassification)) {
-                filteredPreEditAsset.AssetClass.Code = assetVmWithEdits.AssetClassification.Trim();
-                if (!isModified) isModified = true;
-            }
-
-            if (filteredPreEditAsset.Positions.First() != null && filteredPreEditAsset.Positions.First().Quantity != assetVmWithEdits.Quantity && assetVmWithEdits.Quantity > 0)
+            // Position attributes.
+            if (!assetPreEdits.Positions.Any()) return assetPreEdits;
+            var referencedPositionId = new Guid();
+            var assetPreEditPositionRecord = assetPreEdits.Positions.Where(p => p.Account.AccountTypeDesc.Trim() == assetPostEdits.AccountTypePreEdit.Trim()).AsQueryable();
+            if (assetPreEditPositionRecord.First().Quantity != assetPostEdits.Quantity && assetPostEdits.Quantity > 0) 
             {
-                filteredPreEditAsset.Positions.First().Quantity = assetVmWithEdits.Quantity;
+                assetPreEditPositionRecord.First().Quantity = assetPostEdits.Quantity;
+                assetPreEditPositionRecord.First().LastUpdate = DateTime.Now;
+                referencedPositionId = assetPreEditPositionRecord.First().PositionId;
+                
                 if (!isModified) isModified = true;
             }
-            if (assetVmWithEdits.UnitPrice != default(decimal) && filteredPreEditAsset.Positions.First().MarketPrice != assetVmWithEdits.UnitPrice) {
-                filteredPreEditAsset.Positions.First().Quantity = assetVmWithEdits.Quantity;
-                if (!isModified) isModified = true;
-            }
-            if (!string.IsNullOrWhiteSpace(assetVmWithEdits.AccountTypePostEdit) && filteredPreEditAsset.Positions.First() != null && filteredPreEditAsset.Positions.First().Account.AccountTypeDesc != assetVmWithEdits.AccountTypePostEdit) {
-                filteredPreEditAsset.Positions.First().Account.AccountTypeDesc = assetVmWithEdits.AccountTypePostEdit;
+            if (assetPreEditPositionRecord.First().MarketPrice != assetPostEdits.UnitPrice) {
+                assetPreEditPositionRecord.First().MarketPrice = assetPostEdits.UnitPrice;
                 if (!isModified) isModified = true;
             }
             
-            if (filteredPreEditAsset.Profile.DividendFreq != assetVmWithEdits.DividendFrequency && !string.IsNullOrWhiteSpace(assetVmWithEdits.DividendFrequency)) {
-                filteredPreEditAsset.Profile.DividendFreq = assetVmWithEdits.DividendFrequency.Trim().ToUpper();
-                if (!isModified) isModified = true;
-            }
-            if (assetVmWithEdits.IncomeRecvd != default(decimal) && filteredPreEditAsset.Revenue.First().Actual != assetVmWithEdits.IncomeRecvd) {
-                filteredPreEditAsset.Revenue.First().Actual = assetVmWithEdits.IncomeRecvd;
+
+            if (assetPreEdits.Profile.DividendFreq != assetPostEdits.DividendFrequency && !string.IsNullOrWhiteSpace(assetPostEdits.DividendFrequency)) {
+                assetPreEdits.Profile.DividendFreq = assetPostEdits.DividendFrequency.Trim().ToUpper();
                 if (!isModified) isModified = true;
             }
 
-            //  Default DateTime value: DateTime.MinValue
-            if (assetVmWithEdits.DateRecvd != DateTime.MinValue && assetVmWithEdits.DateRecvd != default(DateTime)) {
-                filteredPreEditAsset.Revenue.First().DateRecvd = assetVmWithEdits.DateRecvd;
-                if (!isModified) isModified = true;
+
+            // Income attributes.
+            if (!assetPreEdits.Revenue.Any()) return assetPreEdits;
+            var assetPreEditIncomeRecord = assetPreEdits.Revenue.Where(r => r.IncomePositionId == referencedPositionId).AsQueryable();
+            if (assetPreEditIncomeRecord.First().Actual != assetPostEdits.IncomeRecvd)
+            {
+                assetPreEditIncomeRecord.First().Actual = assetPostEdits.IncomeRecvd;
+                assetPreEditIncomeRecord.First().LastUpdate = DateTime.Now;
+                if (!isModified) isModified = true; 
             }
+            if (assetPreEditIncomeRecord.First().DateRecvd == assetPostEdits.DateRecvd) return assetPreEdits;
+            assetPreEditIncomeRecord.First().DateRecvd = assetPostEdits.DateRecvd;
+            if (!isModified) isModified = true;
 
-           
-            return filteredPreEditAsset;
-
+            return assetPreEdits;
         }
     }
 
