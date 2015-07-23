@@ -8,7 +8,8 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
     {
         public IncomeMap()
         {
-            Id(i => i.IncomeId)
+            Table("Income");
+            Id(i => i.IncomeId, "IncomeId")
                 .GeneratedBy
                 .GuidComb();
 
@@ -17,7 +18,7 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             Map(x => x.DateRecvd, "DateReceived");
             Map(x => x.LastUpdate);
             Map(x => x.AssetId, "IncomeAssetId");
-            Map(x => x.IncomePositionId); // added 5-27-15
+            Map(x => x.IncomePositionId); 
             Map(x => x.Url);
 
 
@@ -29,16 +30,6 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
                 .Not.Update()
                 .Not.Insert();
 
-            // M:1
-            // One or more Income records may be associated with a Position.
-            // References other side (many) of Position NH 1:M relationship.
-            References(x => x.IncomePosition)   // NH mapping for '1' side of relation to Position.
-                .Column("IncomePositionId")     // NH FK column in Income table.
-                .Not.Update()
-                .Not.Insert();
-
-          
-           
         }
     }
 }
