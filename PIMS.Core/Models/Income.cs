@@ -16,14 +16,15 @@ namespace PIMS.Core.Models
         // NH one-side reference for M:1 relationship to Asset.
         public virtual Asset IncomeAsset { get; set; }
 
-        // NH one-side reference for M:1 relationship to Position.
-        public virtual Position IncomePosition { get; set; }
-
+       
        
         // Referenced by domain
         public virtual Guid AssetId { get; set; }
 
-        public virtual Guid IncomePositionId { get; set; } // added 5/27/15
+        // Referenced by IncomeController.
+        public virtual Position IncomePosition { get; set; } 
+
+        public virtual Guid IncomePositionId { get; set; } 
 
         // Account type.
         public virtual string Account { get; set; }
@@ -39,7 +40,6 @@ namespace PIMS.Core.Models
         [RegularExpression(@"^((((0[13578])|([13578])|(1[02]))[\/](([1-9])|([0-2][0-9])|(3[01])))|(((0[469])|([469])|(11))[\/](([1-9])|([0-2][0-9])|(30)))|((2|02)[\/](([1-9])|([0-2][0-9]))))[\/]\d{4}$|^\d{4}$")]
         public virtual DateTime DateRecvd { get; set; }
        
-        // Added 3-10-15 
         public virtual DateTime LastUpdate { get; set; }
 
         
