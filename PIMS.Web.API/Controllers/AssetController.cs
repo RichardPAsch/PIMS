@@ -152,8 +152,6 @@ namespace PIMS.Web.Api.Controllers
         [Route("")]
         public async Task<IHttpActionResult> CreateNewAsset([FromBody] AssetCreationVm submittedAsset)
         {
-            
-            //TODO: WIP 6-18-15 
             _currentInvestor = _identityService.CurrentUser; 
             _repositoryInvestor.UrlAddress = ControllerContext.Request.RequestUri.ToString();
 
@@ -176,7 +174,7 @@ namespace PIMS.Web.Api.Controllers
             var acctTypeCtrl = new AccountTypeController(_repositoryAccountType, _repository, _identityService);
             var existingAcctTypes = await acctTypeCtrl.GetAllAccounts() as OkNegotiatedContentResult<IList<AccountTypeVm>>;
             if(existingAcctTypes == null)
-                return BadRequest("Unable to retreive required AccountType data (id) for Asset creation.");
+                return BadRequest("Unable to retreive required AccountType data for Asset creation.");
 
 
             var duplicateCheck = GetByTicker(submittedAsset.AssetTicker.Trim());
@@ -186,50 +184,44 @@ namespace PIMS.Web.Api.Controllers
                                                         ReasonPhrase = "No Asset created; duplicate Asset found for " + submittedAsset.AssetTicker.Trim()
                 });
 
-            submittedAsset.AssetInvestorId = registeredInvestor.First().InvestorId.ToString();
+            submittedAsset.AssetInvestorId = registeredInvestor.First().InvestorId.ToString();                      // Required entry.
             submittedAsset.AssetClassificationId = await Task.FromResult(_repositoryAssetClass.Retreive(ac => ac.Code.Trim() == submittedAsset.AssetClassification.Trim())
                                                                                               .AsQueryable()
                                                                                               .First()
-                                                                                              .KeyId.ToString());
+                                                                                              .KeyId.ToString());   // Required entry.
+
 
             // PROFILE.
+            // Submited Asset must contain the latest Profile information, per client validation checks.
+            if(submittedAsset.ProfileToCreate.DividendRate == 0 || submittedAsset.ProfileToCreate.DividendYield == 0)
+                return BadRequest("Asset creation aborted: missing Profile data.");
+
             var existingProfile = await Task.FromResult(_repositoryProfile.Retreive(p => p.TickerSymbol.Trim() == submittedAsset.AssetTicker.Trim())
                                                                           .AsQueryable());
+
+            var profileCtrl = new ProfileController(_repositoryProfile);
             if (existingProfile.Any())
-                submittedAsset.AssetProfileId = existingProfile.First().ProfileId.ToString();
+            {
+                if (existingProfile.First().LastUpdate >= DateTime.Now.AddHours(-24))
+                    submittedAsset.ProfileToCreate.ProfileId = existingProfile.First().ProfileId;
+                else
+                {
+                    var updatedResponse = await profileCtrl.UpdateProfile(submittedAsset.ProfileToCreate) as OkNegotiatedContentResult<string>;
+                    // We'll cancel Asset creation here, as out-of-date Profile data would render inaccurate income projections, should the user
+                    // choose to use these projections real-time.
+                    if (updatedResponse == null || !updatedResponse.Content.Contains("successfully"))
+                        return BadRequest("Asset creation aborted: unable to update Profile data.");
+                }
+            }
             else
             {
-                var profileCtrl = new ProfileController(_repositoryProfile);
-                var newProfileVm = new ProfileVm
-                                      {
-                                          TickerSymbol = submittedAsset.AssetTicker.Trim(),
-                                          TickerDescription = submittedAsset.AssetDescription.Trim(),
-                                          DividendRate = submittedAsset.DividendPerShare,
-                                          DividendYield = submittedAsset.DividendYield,
-                                          DividendFreq = !string.IsNullOrWhiteSpace(submittedAsset.DividendFrequency)
-                                              ? submittedAsset.DividendFrequency
-                                              : "U", // (U)nkown
-                                          EarningsPerShare = submittedAsset.EarningsPerShare > 0
-                                              ? submittedAsset.EarningsPerShare
-                                              : 0,
-                                          PE_Ratio = submittedAsset.PriceEarningsRatio > 0
-                                              ? submittedAsset.PriceEarningsRatio
-                                              : 0,
-                                          LastUpdate = DateTime.Now,
-                                          ExDividendDate = submittedAsset.ExDividendDate,
-                                          DividendPayDate = submittedAsset.DividendPayDate,
-                                          Url = Utilities.GetBaseUrl( _repositoryInvestor.UrlAddress) + "Profile/",
-                                          Price = submittedAsset.PricePerShare > 0
-                                              ? submittedAsset.PricePerShare
-                                              : 0
-                                      };
-
-                var createdProfile = await profileCtrl.CreateNewProfile(newProfileVm) as CreatedNegotiatedContentResult<Profile>;
+                var createdProfile = await profileCtrl.CreateNewProfile(submittedAsset.ProfileToCreate) as CreatedNegotiatedContentResult<Profile>;
                 if (createdProfile == null)
                     return BadRequest("Error creating new Profile.");
 
-                submittedAsset.AssetProfileId = createdProfile.Content.ProfileId.ToString();
+                submittedAsset.ProfileToCreate.ProfileId = createdProfile.Content.ProfileId;
             }
+
 
 
             // ASSET.
@@ -238,6 +230,7 @@ namespace PIMS.Web.Api.Controllers
                 return BadRequest("Error creating new Asset or AssetId.");
 
             submittedAsset.AssetIdentification = newAsset.Content.AssetId.ToString();
+
 
             
             // POSITION(S).
@@ -253,10 +246,20 @@ namespace PIMS.Web.Api.Controllers
                                                                                                                           .Select(at => at.KeyId);
 
                 if (!positionAcctTypeId.Any())
-                    return BadRequest("Position creation aborted, error retreiving AccountType for: " + submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.Trim().ToUpper());
+                {
+                    // Rollback Asset creation (via NH Cascade).
+                    var deleteResponse = await DeleteAsset(submittedAsset.AssetTicker.Trim()) as OkNegotiatedContentResult<string>;
+                    if(deleteResponse == null || deleteResponse.Content.Contains("Error"))
+                        return BadRequest("Asset-Position creation aborted due to Asset rollback error for bad AccountType: " 
+                                                                    + submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.Trim().ToUpper()); 
 
-                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedAccount.KeyId = positionAcctTypeId.First();
-                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedAssetId = new Guid(submittedAsset.AssetIdentification); 
+                    return BadRequest("Asset-Position creation aborted due to error retreiving AccountType for: " 
+                                                                    + submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.Trim().ToUpper()); 
+                }
+                    
+
+                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedAccount.KeyId = positionAcctTypeId.First();                // Required entry.
+                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedAssetId = new Guid(submittedAsset.AssetIdentification);    // Required entry.
                 submittedAsset.PositionsCreated.ElementAt(pos).Url = Utilities.GetBaseUrl(_repositoryInvestor.UrlAddress)
                                                                      + "Asset/"
                                                                      + submittedAsset.AssetTicker.Trim()
@@ -265,17 +268,28 @@ namespace PIMS.Web.Api.Controllers
 
                 var createdPosition = await positionCtrl.CreateNewPosition(submittedAsset.PositionsCreated.ElementAt(pos)) as CreatedNegotiatedContentResult<Position>;
                 if (createdPosition == null)
-                    return BadRequest("Error creating new Position(s).");
+                {
+                    // Rollback Asset creation.
+                    var deleteResponse = await DeleteAsset(submittedAsset.AssetTicker.Trim()) as OkNegotiatedContentResult<string>;
+                    if (deleteResponse == null || deleteResponse.Content.Contains("Error"))
+                        return BadRequest("Asset-Position creation aborted due to Asset rollback error for Position: " 
+                                                                    + submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.Trim().ToUpper());
+
+                    return BadRequest("Asset-Position creation aborted due to error creating Position for : " 
+                                                                    + submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.Trim().ToUpper());
+
+                }
                 
-                submittedAsset.PositionsCreated.ElementAt(pos).CreatedPositionId = createdPosition.Content.PositionId; // added 7-4-15
+                submittedAsset.PositionsCreated.ElementAt(pos).CreatedPositionId = createdPosition.Content.PositionId; 
             }
+
 
 
             // INCOME (optional).
             if (!submittedAsset.RevenueCreated.Any()) 
                 return ResponseMessage(new HttpResponseMessage {
                                               StatusCode = HttpStatusCode.Created,
-                                              ReasonPhrase = "Asset created - affiliated Profile, and Position(s) recorded."
+                                              ReasonPhrase = "Asset created w/o submitted Income - affiliated Profile, and Position(s) recorded."
             });
 
             var incomeCtrl = new IncomeController(_identityService, _repository, _repositoryInvestor, _repositoryIncome);
@@ -288,7 +302,7 @@ namespace PIMS.Web.Api.Controllers
                
                 var createdIncome = await incomeCtrl.CreateNewIncome2(incomeRecord) as CreatedNegotiatedContentResult<Income>;
                 if (createdIncome == null)
-                    return BadRequest("Error creating new Income record(s).");
+                    return BadRequest("Error creating new Income record(s). Please resubmit Income.");
             }
 
             return ResponseMessage(new HttpResponseMessage {
@@ -302,35 +316,25 @@ namespace PIMS.Web.Api.Controllers
         [HttpPut]
         [HttpPatch]
         [Route("{existingTicker?}")]
-        // Ex. http://localhost/Pims.Web.Api/api/Asset/VNR
+        // Ex. http://localhost/Pims.Web.Api/api/Asset/IBM  [Asset Summary edits]
         public async Task<IHttpActionResult> UpdateByTicker([FromBody] AssetSummaryVm assetViewModel, string existingTicker)
         {
             var currentInvestor = _identityService.CurrentUser;
-            var foundAssets = await Task.FromResult(_repository.Retreive(a => a.Investor
-                                                                               .LastName.ToUpper().Trim() == currentInvestor.Trim().ToUpper() &&
-                                                                                      a.Profile.TickerSymbol.ToUpper().Trim() == existingTicker.ToUpper().Trim())
-                                                               .AsQueryable());
+            var matchingAsset = await Task.FromResult(_repository.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim())
+                                                                             && a.Profile.TickerSymbol.ToUpper().Trim() == existingTicker.ToUpper().Trim())
+                                                                 .AsQueryable());
 
-            if (!foundAssets.Any())
+            if (!matchingAsset.Any())
                 return BadRequest(string.Format("Unable to find asset {0} for {1}.", existingTicker, currentInvestor));
 
             bool isUpdated;
-            // Use Position/Account to match selected individual asset.
-            var selectedAssetToUpdate = foundAssets.FirstOrDefault(a => a.Profile.TickerSymbol.ToUpper().Trim() == existingTicker.ToUpper().Trim()
-                                                                                              && a.Positions
-                                                                                                  .FirstOrDefault()
-                                                                                                  .Account
-                                                                                                  .AccountTypeDesc == assetViewModel.AccountTypePreEdit);
-            if(selectedAssetToUpdate == null)
-                return BadRequest(string.Format("No update(s) occurred; invalid data edits received for asset {0} under account {1}.",
-                                                                                        existingTicker.ToUpper(), assetViewModel.AccountTypePreEdit)); 
-
-            // Map any changes & send to repository.
-            var updatedAsset = ModelParser.ParseAsset(assetViewModel, selectedAssetToUpdate, out isUpdated);
+           
+           // Map any changes & send to repository.
+            var updatedAsset = ModelParser.ParseAssetForUpdates(assetViewModel, matchingAsset.First(), out isUpdated);
             var isPersisted = _repository.Update(updatedAsset, updatedAsset.AssetId);
-            
+
             if (isUpdated && isPersisted)
-                return Ok(updatedAsset);
+                return Ok("Asset update(s) successful for " + existingTicker.Trim().ToUpper());
             
             return BadRequest(string.Format("No update(s) occurred regarding asset {0} for investor {1}; invalid data edit(s).", 
                 existingTicker.ToUpper(), currentInvestor.ToUpper()));
@@ -346,85 +350,37 @@ namespace PIMS.Web.Api.Controllers
             _repository.UrlAddress = ControllerContext.Request.RequestUri.ToString();
             var currentInvestor = _identityService.CurrentUser;
 
-            // Validate asset to be removed belongs to currently logged in investor.
-            var assetsToRemove = await Task.FromResult(_repository.Retreive(a => a.Investor.LastName.ToUpper().Trim() == currentInvestor.Trim().ToUpper() &&
-                                                            String.Equals(a.Profile.TickerSymbol.Trim(), tickerSymbol.Trim(), StringComparison.CurrentCultureIgnoreCase))
-                                           .AsQueryable()
-                                                      );
+            var assetToRemove = await Task.FromResult(_repository.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()) 
+                                                                             && a.Profile.TickerSymbol.Trim() == tickerSymbol.Trim())
+                                                                  .AsQueryable());
 
-            if (!assetsToRemove.Any())
-                return BadRequest(string.Format("No matching assets found for investor {0}", currentInvestor.ToUpper()));
+            if (!assetToRemove.Any())
+                return BadRequest(string.Format("No assets found matching {0} for {1}", tickerSymbol.ToUpper(), currentInvestor));
 
-            if (_repository.Delete(assetsToRemove.First().AssetId))
-                return Ok(assetsToRemove);
+            
+            if (_repository.Delete(assetToRemove.First().AssetId))
+                return Ok(string.Format("Asset {0} with related Position[s] & Revenue, successfully removed", tickerSymbol));
 
             return BadRequest(string.Format("Error removing asset: {0}", tickerSymbol));
         }
 
 
 
+
         #region Helpers
-
-            private Asset InitializeUrls(Asset assetToUpdate) {
-                // Initialize with appropriate URLs.
-                assetToUpdate.Url = _repositoryInvestor.UrlAddress + "/" + assetToUpdate.Profile.TickerSymbol.ToUpper().Trim();
-                assetToUpdate.Investor.Url = _repositoryInvestor.UrlAddress.Replace("Asset",
-                                                        "Investor/" + assetToUpdate.Investor.FirstName.Trim()
-                                                        + assetToUpdate.Investor.MiddleInitial.Trim()
-                                                        + assetToUpdate.Investor.LastName.Trim());
-                assetToUpdate.AssetClass.Url = _repositoryInvestor.UrlAddress.Replace("Asset",
-                                                         "AssetClass/" + assetToUpdate.AssetClass.LastUpdate.Trim().ToUpper());
-                assetToUpdate.Profile.Url = _repositoryInvestor.UrlAddress.Replace("Asset",
-                                                        "Profile/" + assetToUpdate.Profile.TickerSymbol.Trim().ToUpper());
-                foreach (var position in assetToUpdate.Positions)
-                    position.Url = assetToUpdate.Url + "/Position/" + position.Account.AccountTypeDesc.Trim();
-
-                if (assetToUpdate.Revenue == null) return assetToUpdate;
-                foreach (var subitem in assetToUpdate.Revenue)
-                    subitem.Url = _repositoryInvestor.UrlAddress.Replace("Asset", "Income/" + Guid.NewGuid());
-
-                return assetToUpdate;
-            }
-        
-            private void InitializePositionsWithInvestorInfo(ref IList<Position> positionsToUpdate) {
-                foreach (var position in positionsToUpdate)
-                    position.InvestorKey = _currentInvestor.Trim();
-            }
-        
-            private static bool ContainsDuplicates<T>(ref IList<T> collectionToCheck) {
-                switch (typeof(T).Name) {
-                    case "Position":
-                        var positionData = collectionToCheck as IList<Position>;
-                        return positionData != null && positionData.GroupBy(p => new { p.Account.AccountTypeDesc }).Any(p => p.Skip(1).Any());
-                    case "Income":
-                        var incomeData = collectionToCheck as IList<Income>;
-                        return incomeData != null && incomeData.GroupBy(i => new { i.Account, i.DateRecvd }).Any(i => i.Skip(1).Any());
-                }
-
-                return false;
-            }
 
             private static Asset MapVmToAsset(AssetCreationVm sourceVm)
             {
                 return new Asset {
                     InvestorId = new Guid(sourceVm.AssetInvestorId),
                     AssetClassId = new Guid(sourceVm.AssetClassificationId),
-                    ProfileId = new Guid(sourceVm.AssetProfileId),
+                    ProfileId = sourceVm.ProfileToCreate.ProfileId,
                     AssetId = sourceVm.AssetIdentification == null ? new Guid() : new Guid(sourceVm.AssetIdentification),
                     LastUpdate = DateTime.Now
                 };
             }
 
-            private static AccountType MapVmToAccountType(AccountTypeVm sourceVm)
-            {
-                return new AccountType
-                       {
-                           //PositionRefId = sourceVm.PositionRefId,
-                           AccountTypeDesc = sourceVm.AccountTypeDesc,
-                           Url = ""
-                       };
-            }
-
+       
             private async Task<IHttpActionResult> SaveAssetAndGetId(AssetCreationVm assetToSave)
             {
                 var createdAsset = MapVmToAsset(assetToSave);
@@ -437,21 +393,11 @@ namespace PIMS.Web.Api.Controllers
             }
 
 
-
         #endregion
         
 
 
 
-
-        // TODO: for Position/Update ?
-        //private static bool CheckExistingPositionsAgainstNewPositions(IQueryable<Position> currentPositions, IQueryable<Position> newPositions)
-        //{
-        //    foreach (var positionToAdd in newPositions.Where(positionToAdd => Enumerable.Any(currentPositions)))
-        //    {
-        //        return currentPositions.Count(a => a.Account.AccountTypeDesc == positionToAdd.Account.AccountTypeDesc) >= 1;
-        //    }
-        //}
 
 
         #region Obsolete - handled via UI/AngularJs
