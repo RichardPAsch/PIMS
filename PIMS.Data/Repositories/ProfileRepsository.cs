@@ -53,9 +53,6 @@ namespace PIMS.Data.Repositories
         
         public bool Create(Profile newEntity)
         {
-            var existingProfiles = RetreiveAll().ToList();
-            if (existingProfiles.Any(p => p.TickerSymbol.ToUpper().Trim() == newEntity.TickerSymbol.ToUpper().Trim())) return false;
-            
             using (var trx = _nhSession.BeginTransaction())
             {
                 try {
@@ -87,7 +84,6 @@ namespace PIMS.Data.Repositories
                     updateOk = false;
                 }
             }
-            
 
             return updateOk;
         }
@@ -96,7 +92,8 @@ namespace PIMS.Data.Repositories
 
         // ** Per Admin only; rarely performed, as used by many referencing Assets. **
         // ReSharper disable once InconsistentNaming
-        public bool Delete(Guid ProfileId) {
+        public bool Delete(Guid ProfileId)
+        {
             var deleteOk = true;
 
             // ** To avoid NHibernate.Hql.Ast.ANTLR.QuerySyntaxException], NHibernate needs to load 
@@ -113,7 +110,6 @@ namespace PIMS.Data.Repositories
                     deleteOk = false;
                 }
             }
-
 
             return deleteOk;
         }
