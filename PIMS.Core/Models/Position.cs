@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 
@@ -24,8 +25,10 @@ namespace PIMS.Core.Models
         // NH - 'one' side of Position/AccountType rel.
         public virtual AccountType Account { get; set; }
 
-        // NH - 'one' side of Position/Income rel.
-        public virtual Income PositionIncome { get; set; }
+        //TODO: Superflouous - Income is associated with Asset already.
+        // NH - 'many' side of Position/Income rel.
+        //public virtual Income PositionIncome { get; set; }
+        //public virtual IList<Income> PositionIncomes { get; set; } // added 7-10-15
 
         // NH - FK ref. 
         public virtual Guid AcctTypeId { get; set; }
@@ -42,7 +45,6 @@ namespace PIMS.Core.Models
         public virtual int Quantity { get; set; }
         
         // Useful for most recent unit price info in AssetSummaryVm.
-        //TODO: Change to DateTime
         [Required]
         public virtual DateTime LastUpdate { get; set; }
 
