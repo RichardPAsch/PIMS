@@ -155,19 +155,20 @@ namespace PIMS.Web.Api.Controllers
             if (string.IsNullOrWhiteSpace(positionData.LoggedInInvestor))
                 positionData.LoggedInInvestor = _identityService.CurrentUser.Trim();
 
+
             if (!ModelState.IsValid) {
                 return ResponseMessage(new HttpResponseMessage {
-                                            StatusCode = HttpStatusCode.BadRequest,
-                                            ReasonPhrase = "Invalid data received for Position creation."
-                                      });
+                    StatusCode = HttpStatusCode.BadRequest,
+                    ReasonPhrase = "Invalid data received for Position creation."
+                });
             }
 
             var currentInvestorId = Utilities.GetInvestorId(_repositoryInvestor, _identityService.CurrentUser);
-            
-            //TODO: This won't work IF called as a RPC from another controller!! 7-8 check now if ctx is null, or can use model url. TEST this.
+
+            // Account for RPC from another controller.
             if (ControllerContext.Request != null)
                 positionData.Url = ControllerContext.Request.RequestUri.ToString();
-                
+
             var ticker = ParseUrlForTicker(positionData.Url);
             var newLocation = positionData.Url;
 
@@ -176,7 +177,7 @@ namespace PIMS.Web.Api.Controllers
                                                                          .SelectMany(a => a.Positions).Where(p => p.Account.AccountTypeDesc.Trim() == positionData.ReferencedAccount.AccountTypeDesc.Trim())
                                                                          .AsQueryable());
 
-           if (matchingPosition.Any())
+            if (matchingPosition.Any())
                 return BadRequest(string.Format("No Position created, Position {0} already exists for {1} ",
                                                                                                 positionData.ReferencedAccount.AccountTypeDesc.Trim(),
                                                                                                 ticker.ToUpper()));
