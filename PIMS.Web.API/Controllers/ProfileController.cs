@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Results;
 using PIMS.Core.Models;
 using PIMS.Data;
 using PIMS.Data.Repositories;
@@ -131,6 +132,29 @@ namespace PIMS.Web.Api.Controllers
         }
 
 
+        [HttpPut]
+        [Route("~/api/Asset/{ticker}/Profile")]
+        public async Task<IHttpActionResult> UpdateProfile([FromBody]ProfileVm editedProfile)
+        {
+            if (!ModelState.IsValid) {
+                return ResponseMessage(new HttpResponseMessage {
+                                            StatusCode = HttpStatusCode.BadRequest,
+                                            ReasonPhrase = "Invalid/Incomplete data received for Profile update."
+                });
+            }
+
+            var profileToUpdate = await GetProfileByTicker(editedProfile.TickerSymbol.Trim()) as OkNegotiatedContentResult<Profile>;
+            if (profileToUpdate == null)
+                return BadRequest("Unable to retreive Profile data for update.");
+
+            var isUpdated = await Task.FromResult(_repository.Update(profileToUpdate.Content, profileToUpdate.Content.ProfileId));
+            if (!isUpdated)
+                return BadRequest(string.Format("Unable to update Profile for: {0}", editedProfile.TickerSymbol.Trim()));
+
+            return Ok("Profile successfully updated for " + editedProfile.TickerSymbol.Trim());
+        }
+
+
 
 
         #region Helpers
@@ -153,6 +177,8 @@ namespace PIMS.Web.Api.Controllers
                            Url = sourceData.Url.Trim()
                        };
             }
+
+       
 
         #endregion
 
