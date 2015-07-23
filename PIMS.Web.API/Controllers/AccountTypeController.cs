@@ -44,12 +44,17 @@ namespace PIMS.Web.Api.Controllers
             // from 'DefaultValue' on 'NHibernate.Type.DateTimeOffsetType'.","exceptionType":"Newtonsoft.Json.JsonSerializationException"
             // Proxy setup by NH results in serialization error, although no DateTime-related types exist in projects.
             IList<AccountTypeVm> accountTypeListing = availableAccountTypes.Select(at => new AccountTypeVm {
-                                                            AccountTypeDesc = at.AccountTypeDesc,
-                                                            KeyId = at.KeyId,
-                                                            Url = string.Empty
-                                                        }).ToList();
+                                                                                    AccountTypeDesc = at.AccountTypeDesc,
+                                                                                    KeyId = at.KeyId,
+                                                                                    Url = string.Empty
+                                                                                })
+                                                                           .ToList();
+
+            if (!accountTypeListing.Any())
+                return BadRequest("Unable to retreive Account Type data.");
 
             return Ok(accountTypeListing);
+            
         }
 
 
