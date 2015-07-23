@@ -4,24 +4,30 @@ namespace PIMS.Core.Models.ViewModels
 {
     public class AssetSummaryVm
     {
-        // View model used in "Asset/Retreive-Quick Edits" menu option which 
-        // allows for selected editing while reviewing portfolio assets.
-        // "Pre-edit" fields allow for "original data" retreival, before updates
-        // are to be applied, and should not be modified by clients.
+        // View model used in "Asset/Retreive-Quick Edits" Summary menu option which 
+        // allows for selected editing while reviewing varied portfolio asset attributes.
+        
 
-        public string TickerSymbol { get; set; }
+        // Profile table.
+        public string TickerSymbol { get; set; }            //Read-Only
         public string TickerSymbolDescription { get; set; }
+        public string DividendFrequency { get; set; }
+
+        // Asset table.
         public string AssetClassification { get; set; }
+
+        //Position table.
         public string AccountTypePostEdit { get; set; }
         public string AccountTypePreEdit { get; set; }
         public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
-        public string DividendFrequency { get; set; }
-        public decimal IncomeRecvd { get; set; }
-        //public string DateRecvd { get; set; }
-        public DateTime DateRecvd { get; set; }
-        public string CurrentInvestor { get; set; }
 
+        // Income table.
+        public decimal IncomeRecvd { get; set; }
+        public DateTime DateRecvd { get; set; }
+
+        // TODO: needed?
+        public string CurrentInvestor { get; set; }
     }
 
 
