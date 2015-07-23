@@ -272,7 +272,7 @@ namespace PIMS.Data.FakeRepositories
                         if (recvdPosition != null)
                         {
                             existingPosition.First().Quantity = recvdPosition.Quantity;
-                            existingPosition.First().PositionIncome = recvdPosition.PositionIncome;
+                            //existingPosition.First().PositionIncome = recvdPosition.PositionIncome;// commented 7-10-15
                             existingPosition.First().MarketPrice = recvdPosition.MarketPrice;
                         }
                         break;
