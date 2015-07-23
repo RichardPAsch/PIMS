@@ -11,12 +11,6 @@ namespace PIMS.Core.Models
          * --------------------------- ------------------------------------------------
         */
         
-        // Read-only to prevent re-creating collection. Will create empty collection
-        // upon class instantiation.
-        // Commented: No need to have associated collection with each instance!
-        //private readonly IList<Classification> _classifications = new List<Classification>();
-        
-        
         public virtual string Url { get; set; }
 
         // NH FK mapping - IncomeAssetId
@@ -49,13 +43,9 @@ namespace PIMS.Core.Models
         public virtual DateTime? LastUpdate { get; set; }
 
         public virtual Guid ProfileId { get; set; }
-
         
 
-        
-
-
-        // TODO - implement
+        // TODO - implement vs. Asset deletion ?
         // public virtual bool IsActive {get; set;}      
 
         
