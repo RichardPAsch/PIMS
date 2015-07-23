@@ -9,7 +9,7 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
         public PositionMap()
         {
             Table("Position");
-            Id(x => x.PositionId)
+            Id(x => x.PositionId, "PositionId")
                 .GeneratedBy
                 .GuidComb();
 
@@ -33,23 +33,13 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
                  .Not.Update()
                  .Not.Insert();
 
+
             // M:1
             // One or more Positions on one or more Assets may be associated with an AccountType.
             References(x => x.Account)
                 .Column("PositionAccountTypeId")
                 .Not.Update()
                 .Not.Insert();
-
-
-            // TODO: needed ? - added 5/27/15
-            // 1:M
-            // Each Position may have one or more Income items (Revenue).
-            //HasMany<Income>(x => x.PositionIncome)
-            //    //.Table("Income")
-            //    .KeyColumns.Add("IncomePositionId"); // references FK in Income
-
-
-            
 
         }
     }
