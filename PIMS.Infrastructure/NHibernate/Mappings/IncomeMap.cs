@@ -18,7 +18,8 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             Map(x => x.DateRecvd, "DateReceived");
             Map(x => x.LastUpdate);
             Map(x => x.AssetId, "IncomeAssetId");
-            Map(x => x.IncomePositionId); 
+            //Map(x => x.IncomePositionId);  // commented 7-27-15
+            //Map(x => x.IncomePosition, "Position");
             Map(x => x.Url);
 
 
@@ -29,6 +30,12 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
                 .Column("IncomeAssetId")     // NH FK column in Income table.
                 .Not.Update()
                 .Not.Insert();
+
+            References(x => x.IncomePosition) 
+                .Column("IncomePositionId")
+                .Not.Update()
+                .Not.Insert();
+
 
         }
     }
