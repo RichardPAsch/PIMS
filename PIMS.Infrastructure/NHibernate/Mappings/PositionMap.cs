@@ -41,6 +41,9 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
                 .Not.Update()
                 .Not.Insert();
 
+            HasMany(x => x.PositionIncomes)  
+                .KeyColumn("PositionId");
+
         }
     }
 }
