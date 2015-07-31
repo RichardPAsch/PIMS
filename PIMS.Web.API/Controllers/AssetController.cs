@@ -93,6 +93,7 @@ namespace PIMS.Web.Api.Controllers
         {
             //TODO: Fiddler ok 6-15-15
             _repositoryInvestor.UrlAddress = ControllerContext.Request.RequestUri.ToString();
+            var urlForProfile = _repositoryInvestor.UrlAddress.Remove(_repositoryInvestor.UrlAddress.IndexOf("/A", 0, System.StringComparison.Ordinal));
             var currentInvestor = _identityService.CurrentUser;
 
             if (displayType == "detail")
@@ -104,7 +105,7 @@ namespace PIMS.Web.Api.Controllers
                                                                         TickerSymbol = a.Profile.TickerSymbol,
                                                                         AssetInvestor = a.Investor.FirstName  +" " + a.Investor.MiddleInitial + " " + a.Investor.LastName,
                                                                         AssetClassification = a.AssetClass.Code,
-                                                                        ProfileUrl = _repositoryInvestor.UrlAddress + "/" + a.Profile.TickerSymbol.Trim() + "/Profile",
+                                                                        ProfileUrl = urlForProfile + "/Profile/" + a.Profile.TickerSymbol.Trim().ToUpper(),
                                                                         PositionsUrl = _repositoryInvestor.UrlAddress + "/" +  a.Profile.TickerSymbol.Trim() + "/Position",
                                                                         RevenueUrl = _repositoryInvestor.UrlAddress + "/" + a.Profile.TickerSymbol.Trim() + "/Income"
                                                                     }));
