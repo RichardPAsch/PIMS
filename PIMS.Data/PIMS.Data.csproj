@@ -55,14 +55,9 @@
     <Compile Include="Repositories\AssetRepository.cs" />
     <Compile Include="Repositories\AssetClassRepository.cs" />
     <Compile Include="Repositories\IGenericAggregateRepository.cs" />
-    <Compile Include="Repositories\IAssetRepository.cs" />
     <Compile Include="Repositories\IGenericRepository.cs" />
-    <Compile Include="Repositories\ICreateSessionTest.cs" />
-    <Compile Include="Repositories\IIncomeRepository.cs" />
     <Compile Include="Repositories\IncomeRepository.cs" />
     <Compile Include="Repositories\InvestorRepository.cs" />
-    <Compile Include="Repositories\IPositionRepository.cs" />
-    <Compile Include="Repositories\IProfileRepository.cs" />
     <Compile Include="Repositories\IUserRepository.cs" />
     <Compile Include="Repositories\PositionRepository.cs" />
     <Compile Include="Repositories\ProfileRepsository.cs" />
