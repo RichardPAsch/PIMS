@@ -25,6 +25,9 @@ namespace PIMS.Core.Models
         // NH - FK ref. 
         public virtual Guid AcctTypeId { get; set; }
 
+        // NH - mapping for many side of rel: 1:M
+        public virtual IList<Income> PositionIncomes { get; set; }  
+
 
 
         public virtual string InvestorKey { get; set; }
