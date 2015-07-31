@@ -430,25 +430,25 @@ namespace PIMS.Web.Api.Controllers
 		{
 			_repositoryAsset.UrlAddress = ControllerContext.Request.RequestUri.ToString();
 			var currentInvestor = _identityService.CurrentUser;
-			IQueryable<AssetRevenueVm> matchingIncome;
+			IQueryable<AssetRevenueVm> matchingIncome = null;
 
 			if (accountType.IsEmpty())
-			{            //todo: Fiddler Ok: 5-21
+			{     
+				// TODO: RETEST Income/Position CRUD operations as result of new Income/Position NH mappings.
 				matchingIncome = await Task.FromResult(_repositoryAsset.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == ticker &&
 																					  a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
-																	   .SelectMany(a => a.Revenue)
-																	   .OrderByDescending(x => x.DateRecvd)
-																	   .AsQueryable()
-																	   .Select(r => new AssetRevenueVm
-																					{
-																						Ticker = ticker,
-																						AccountType = r.IncomePosition.Account.AccountTypeDesc,
-																						DateReceived = r.DateRecvd.ToShortDateString(),
-																						AmountReceived = r.Actual
-																					}));
-			}
-			else {
-				//todo: Fiddler Ok: 5-23
+																		   .SelectMany(a => a.Revenue)
+																		   .AsQueryable()
+																		   .OrderByDescending(x => x.DateRecvd)
+																		   .AsQueryable()
+																		   .Select(r => new AssetRevenueVm {
+																			   Ticker = ticker,
+																			   AccountType = r.IncomePosition.Account.AccountTypeDesc,
+																			   DateReceived = r.DateRecvd.ToShortDateString(),
+																			   AmountReceived = r.Actual
+																		   }));
+				
+			} else {
 				matchingIncome = await Task.FromResult(_repositoryAsset.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == ticker &&
 																					  a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
 																	  .AsQueryable()
@@ -461,13 +461,15 @@ namespace PIMS.Web.Api.Controllers
 																	  })
 																	  .OrderByDescending(r => r.AccountType));
 			}
-		   
-			if (matchingIncome.Any())
+
+			if (matchingIncome != null)
 				return Ok(matchingIncome);
 
-			return BadRequest(accountType == "" 
-				? string.Format("No Income found matching Asset: {0} ", ticker) 
+			return BadRequest(accountType == ""
+				? string.Format("No Income found matching Asset: {0} ", ticker)
 				: string.Format("No Income found matching Asset: {0} under Account: {1}", ticker, accountType.Trim()));
+
+	
 		}
 
 
@@ -475,7 +477,6 @@ namespace PIMS.Web.Api.Controllers
 		[Route("{startDate}/{endDate}")]
 		public async Task<IHttpActionResult> GetIncomeByAssetAndDates(string ticker, string startDate, string endDate)
 		{
-			//todo: Fiddler Ok: 5-25
 			if (string.IsNullOrWhiteSpace(startDate) || string.IsNullOrWhiteSpace(endDate))
 				return BadRequest(string.Format("Missing start and/or end date(s) received for Income data retreival."));
 
@@ -516,7 +517,6 @@ namespace PIMS.Web.Api.Controllers
 		[Route("{accountType}/{startDate}/{endDate}")]
 		public async Task<IHttpActionResult> GetIncomeByAssetAndAccountAndDates(string ticker, string accountType, string startDate, string endDate)
 		{
-			//todo: Fiddler Ok: 5-25
 			if (string.IsNullOrWhiteSpace(startDate) || string.IsNullOrWhiteSpace(endDate) || string.IsNullOrWhiteSpace(accountType))
 				return BadRequest(string.Format("Missing date(s) and/or AccountType for Income data retreival."));
 
@@ -554,61 +554,11 @@ namespace PIMS.Web.Api.Controllers
 		}
 		
 
-		//[HttpPost]
-		//[Route("")]
-		//public async Task<IHttpActionResult> CreateNewIncome([FromBody]IncomeVm incomeData)
-		//{
-		//    // TODO: Fiddler Ok.
-		//    // DateTimes in JSON are hard. Using Vm as workaround.
-		//   // called form aggregate root 'AssetController' OR directly via menu option.
-
-		//    if (!ModelState.IsValid) {
-		//            return ResponseMessage(new HttpResponseMessage {
-		//                            StatusCode = HttpStatusCode.BadRequest,
-		//                            ReasonPhrase = "Invalid data received for new Income creation. " + ModelState.Keys.First()
-		//            });
-		//    }
-			
-		//    _repositoryAsset.UrlAddress = ControllerContext.Request.RequestUri.ToString();
-		//    var currentInvestor = _identityService.CurrentUser;
-		//    var ticker = ParseUrlForTicker(_repositoryAsset.UrlAddress);
-
-		//    // Asset should have already been persisted, whether as part of current new Asset creation, or created previously.
-		//    // Created Income, whether first or continuing, will ALWAYS be associated with a Position-AccountType.
-		//    var availablePositions = await Task.FromResult(_repositoryAsset.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == ticker.ToUpper().Trim() &&
-		//                                                                                  a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
-		//                                                                   .SelectMany(a => a.Positions)
-		//                                                                   .Where(p => p.Account.AccountTypeDesc.Trim() == incomeData.AcctType.Trim())
-		//                                                                   .AsQueryable());
-
-		//    if (!availablePositions.Any())
-		//        return BadRequest(string.Format("No Asset/Position found matching {0} for Investor {1} ", ticker, currentInvestor));
-			
-		//    incomeData.AssetId = availablePositions.First().PositionAssetId;
-		//    incomeData.ReferencedPositionId = availablePositions.First().PositionId;
-			
-		//    var duplicateIncome = availablePositions.First().PositionAsset.Revenue.Where(r => r.DateRecvd == incomeData.DateReceived);
-		//    if (duplicateIncome.Any())
-		//        return BadRequest(string.Format("Income not saved; duplicate entry found for {0} under AccountType {1} ", ticker, incomeData.AcctType.Trim()));
-
-		//    var newLocation = ControllerContext.Request.RequestUri.AbsoluteUri; // TODO: add new IncomeId ?? how ?
-		//    incomeData.Url = newLocation;
-
-		//    var isCreated = await Task.FromResult(_repository.Create(MapVmToIncome(incomeData)));
-		//    if (!isCreated)
-		//        return BadRequest(string.Format("Unable to add Income for: {0} ", ticker.ToUpper()));
-
-		//    //var newLocation = ControllerContext.Request.RequestUri.AbsoluteUri; // TODO: add new IncomeId ?? how ?
-		//    return Created(newLocation, incomeData);
-		//}
-
-
 
 		[HttpPost]
 		[Route("")]
 		public async Task<IHttpActionResult> CreateNewIncome2([FromBody]IncomeVm incomeData)
 		{
-			//TODO: Fiddler ok - 7/6/15
 			if (!ModelState.IsValid) {
 				return ResponseMessage(new HttpResponseMessage {
 					StatusCode = HttpStatusCode.BadRequest,
@@ -678,7 +628,6 @@ namespace PIMS.Web.Api.Controllers
 		[Route("~/api/Income/{incomeId}")]
 		public async Task<IHttpActionResult> UpdateIncome([FromBody]IncomeVm editedIncome, Guid incomeId)
 		{
-			// TODO: Fiddler Ok. 6-8-15
 			if (!ModelState.IsValid || !IsValidDate(editedIncome.DateReceived.ToString())){
 				return ResponseMessage(new HttpResponseMessage {
 														StatusCode = HttpStatusCode.BadRequest,
@@ -716,7 +665,6 @@ namespace PIMS.Web.Api.Controllers
 		[Route("~/api/Income/{incomeId}")]
 		public async Task<IHttpActionResult> DeleteIncome(Guid incomeId)
 		{
-			// TODO: Fiddler Ok. 6-10-15
 			var currentInvestor = _identityService.CurrentUser;
 			var ticker = ParseUrlForTicker(ControllerContext.Request.RequestUri.AbsoluteUri);
 			var selectedIncome = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
