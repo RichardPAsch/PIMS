@@ -75,6 +75,7 @@ namespace PIMS.Web.Api.Controllers
 
         [HttpGet]
         [Route("{tickerForProfile?}")]
+        // e.g. http://localhost/Pims.Web.Api/api/Profile/IBM
         public async Task<IHttpActionResult> GetProfileByTicker(string tickerForProfile)
         {
             Profile updatedOrNewProfile;
@@ -89,7 +90,7 @@ namespace PIMS.Web.Api.Controllers
 
                 updatedOrNewProfile = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfile(tickerForProfile, existingProfile.First()));
                 if (updatedOrNewProfile != null)
-                    return Ok(updatedOrNewProfile);
+                    return Ok(MapProfileToVm(updatedOrNewProfile));
 
                 return BadRequest("Error updating Profile for ticker: " + tickerForProfile);
             }
@@ -176,6 +177,25 @@ namespace PIMS.Web.Api.Controllers
                            Price = sourceData.Price,
                            Url = sourceData.Url.Trim()
                        };
+            }
+
+            private static ProfileVm MapProfileToVm(Profile sourceData)
+            {
+                return new ProfileVm
+                {
+                    ProfileId = sourceData.ProfileId,
+                    TickerSymbol = sourceData.TickerSymbol,
+                    TickerDescription = sourceData.TickerDescription,
+                    DividendFreq = sourceData.DividendFreq,
+                    DividendRate = sourceData.DividendRate,
+                    DividendYield = sourceData.DividendYield,
+                    EarningsPerShare = sourceData.EarningsPerShare,
+                    PE_Ratio = sourceData.PE_Ratio,
+                    LastUpdate = sourceData.LastUpdate,
+                    ExDividendDate = sourceData.ExDividendDate,
+                    DividendPayDate = sourceData.DividendPayDate,
+                    Price = sourceData.Price
+                };
             }
 
        
