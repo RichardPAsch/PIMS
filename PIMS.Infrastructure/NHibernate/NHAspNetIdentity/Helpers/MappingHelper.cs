@@ -22,12 +22,13 @@ namespace PIMS.Infrastructure.NHibernate.NHAspNetIdentity.Helpers
                 typeof(EntityWithTypedId<int>), 
                 typeof(EntityWithTypedId<string>)
             };
-
+            
+            // Modified for NS: PIMS.Infrastructure.NHibernate.NHAspNetIdentity
             var allEntities = new List<System.Type> { 
-                typeof(global::NHibernate.AspNet.Identity.IdentityUser), 
-                typeof(global::NHibernate.AspNet.Identity.IdentityRole), 
-                typeof(global::NHibernate.AspNet.Identity.IdentityUserLogin), 
-                typeof(global::NHibernate.AspNet.Identity.IdentityUserClaim),
+                typeof(IdentityUser), 
+                typeof(IdentityRole), 
+                typeof(IdentityUserLogin), 
+                typeof(IdentityUserClaim),
             };
             allEntities.AddRange(additionalTypes);
 
@@ -35,10 +36,11 @@ namespace PIMS.Infrastructure.NHibernate.NHAspNetIdentity.Helpers
             DefineBaseClass(mapper, baseEntityToIgnore.ToArray());
             mapper.IsComponent((type, declared) => typeof(ValueObject).IsAssignableFrom(type));
 
-            mapper.AddMapping<global::NHibernate.AspNet.Identity.IdentityUserMap>();
-            mapper.AddMapping<global::NHibernate.AspNet.Identity.IdentityRoleMap>();
-            mapper.AddMapping<global::NHibernate.AspNet.Identity.IdentityUserClaimMap>();
-
+           // Modified for NS: PIMS.Infrastructure.NHibernate.NHAspNetIdentity
+            mapper.AddMapping<IdentityUserMap>();
+            mapper.AddMapping<IdentityRoleMap>();
+            mapper.AddMapping<IdentityUserClaimMap>();
+   
             return mapper.CompileMappingFor(allEntities);
         }
 
