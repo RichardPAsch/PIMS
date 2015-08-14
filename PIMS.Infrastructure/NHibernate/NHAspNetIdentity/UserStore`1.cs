@@ -124,9 +124,7 @@ namespace PIMS.Infrastructure.NHibernate.NHAspNetIdentity
             return entity;
 
         }
-
-
-
+        
 
         public virtual Task AddLoginAsync(TUser user, UserLoginInfo login) {
             ThrowIfDisposed();
@@ -146,6 +144,7 @@ namespace PIMS.Infrastructure.NHibernate.NHAspNetIdentity
             }
             return Task.FromResult(0);
         }
+
 
         public virtual Task RemoveLoginAsync(TUser user, UserLoginInfo login) {
             ThrowIfDisposed();
