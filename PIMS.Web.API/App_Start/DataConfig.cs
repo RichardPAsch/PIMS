@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-//using NHibernate.AspNet.Identity.Helpers;
 using NHibernate.AspNet.Identity.Helpers;
 using NHibernate.Cfg;
 using NHibernate.Mapping.ByCode;
