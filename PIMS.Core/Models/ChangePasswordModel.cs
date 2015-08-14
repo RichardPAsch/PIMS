@@ -4,7 +4,7 @@
 namespace PIMS.Core.Models
 {
     // Model for managing password edits.
-    public class ManageUserModel
+    public class ChangePasswordModel
     {
         [Required]
         [DataType(DataType.Password)]
