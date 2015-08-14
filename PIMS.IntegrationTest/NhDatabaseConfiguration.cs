@@ -21,7 +21,6 @@ namespace PIMS.IntegrationTest
                 .CurrentSessionContext("web")
 
                  // PIMS.Infrastructure mappings.
-                 //TODO: Needed ?
                 .Mappings(m => m.FluentMappings.AddFromAssemblyOf<IncomeMap>())
                 .Mappings(m => m.FluentMappings.AddFromAssemblyOf<ProfileMap>())
                 .Mappings(m => m.FluentMappings.AddFromAssemblyOf<PositionMap>())
