@@ -45,6 +45,12 @@ namespace PIMS.Core.Security
             {
                 // Validate the username and password credentials.
                 var user = await userManager.FindAsync(context.UserName, context.Password);
+
+                // Avoid error:  "No 'Access-Control-Allow-Origin' header is present on the requested resource" via
+                //               specifying CLIENT Url with port. '[EnableCorsAttribute]' annotation must be added
+                //               to all applicable controllers.
+                context.OwinContext.Response.Headers.Add("Access-Control-Allow-Origin", new[]{"http://localhost:5969/"});
+
                 if (user == null || (string.IsNullOrWhiteSpace(context.UserName) || string.IsNullOrWhiteSpace(context.Password) ))
                 {
                     context.SetError("invalid_grant", "The user name and/or password is invalid.");
