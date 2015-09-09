@@ -11,7 +11,6 @@ using PIMS.Core.Security;
 using PIMS.Web.Api.DependencyResolution;
 
 
-
 namespace PIMS.Web.Api
 {
     public partial class StartUp
@@ -26,6 +25,9 @@ namespace PIMS.Web.Api
         {
             var connString = ConfigurationManager.ConnectionStrings["PIMS-ConnString"].ConnectionString;
 
+            
+
+           
             // Pass http config object to appropriate WebApiConfig method. Includes route mapping to OWIN pipeline, 
             // eliminating need for Global.asax.
             var config = new HttpConfiguration();

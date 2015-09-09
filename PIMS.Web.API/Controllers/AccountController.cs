@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
+using System.Web.Http.Cors;
 using System.Web.Mvc;
 using Microsoft.Owin.Security;
 using Newtonsoft.Json.Linq;
@@ -17,6 +18,7 @@ using PIMS.Core.Models.ViewModels;
 namespace PIMS.Web.Api.Controllers
 {
     [System.Web.Http.RoutePrefix("api/Account")]
+    [EnableCorsAttribute("http://localhost:5969", "*", "*")]
     public class AccountController : ApiController
     {
         // TODO: Replace hard-coded path for 'localhost'
@@ -130,18 +132,19 @@ namespace PIMS.Web.Api.Controllers
                             {"password", loginData.Password}
                         };
 
-                // Access token endpoint on authorization server.
+                // Access token endpoint on authorization server. UrlBase -> http://localhost/PIMS.Web.Api
                 var response = await client.PostAsync(UrlBase + "/token", new FormUrlEncodedContent(login));
                 if (response == null)
                     return BadRequest("Unable to create access token for: " + loginData.UserName.Trim());
 
                 var content = await response.Content.ReadAsStringAsync();
 
-                var json = JObject.Parse(content);
+                var jsonResponse = JObject.Parse(content);
 
                 // TODO: Also return user name as confirmation of successful login ? returnUrl = /Account/LoginAsync ?
                 //return json["access_token"].ToString() + "[Welcome " + loginData.UserName + "]";
-                return Ok(json["access_token"].ToString());
+                //return Ok(json["access_token"].ToString());
+                return Ok(jsonResponse);
             }  
 
         }
