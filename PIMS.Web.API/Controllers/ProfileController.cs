@@ -82,20 +82,20 @@ namespace PIMS.Web.Api.Controllers
             var existingProfile = await Task.FromResult(_repository.Retreive(p => p.TickerSymbol.Trim() == tickerForProfile.Trim()).AsQueryable());
 
             // Yahoo url sample:  http://finance.yahoo.com/d/quotes.csv?s=VNR&f=nsb2dyreqr1
-            if (existingProfile != null)
+            if (existingProfile.Any() )
             {
                 // Update existing Profile only IF Profile last updated > 24hrs ago.
                 if (Convert.ToDateTime(existingProfile.First().LastUpdate) > DateTime.UtcNow.AddHours(-24))
                     return Ok(existingProfile.First());
 
-                updatedOrNewProfile = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfile(tickerForProfile, existingProfile.First()));
+                updatedOrNewProfile = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfile(tickerForProfile.Trim(), existingProfile.First()));
                 if (updatedOrNewProfile != null)
                     return Ok(MapProfileToVm(updatedOrNewProfile));
 
                 return BadRequest("Error updating Profile for ticker: " + tickerForProfile);
             }
 
-            updatedOrNewProfile = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfile(tickerForProfile, new Profile()));
+            updatedOrNewProfile = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfile(tickerForProfile.Trim(), new Profile()));
             if (updatedOrNewProfile != null)
                 return Ok(updatedOrNewProfile);
 
