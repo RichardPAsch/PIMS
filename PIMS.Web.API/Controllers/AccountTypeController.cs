@@ -45,8 +45,8 @@ namespace PIMS.Web.Api.Controllers
             // Proxy setup by NH results in serialization error, although no DateTime-related types exist in projects.
             IList<AccountTypeVm> accountTypeListing = availableAccountTypes.Select(at => new AccountTypeVm {
                                                                                     AccountTypeDesc = at.AccountTypeDesc,
-                                                                                    KeyId = at.KeyId,
-                                                                                    Url = string.Empty
+                                                                                    KeyId = at.KeyId
+                                                                                    //Url = string.Empty // 2.29.16 - Not Needed ?
                                                                                 })
                                                                            .ToList();
 
