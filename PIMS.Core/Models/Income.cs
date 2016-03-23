@@ -15,14 +15,13 @@ namespace PIMS.Core.Models
 
         // NH one-side reference for M:1 relationship to Asset.
         public virtual Asset IncomeAsset { get; set; }
-
-       
-       
+        
         // Referenced by domain
         public virtual Guid AssetId { get; set; }
 
-        // Referenced by IncomeController.
+        // NH one-side reference for M:1 relationship to Position.;  Referenced by IncomeController.
         public virtual Position IncomePosition { get; set; } 
+
 
         public virtual Guid IncomePositionId { get; set; } 
 
