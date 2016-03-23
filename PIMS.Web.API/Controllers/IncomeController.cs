@@ -17,6 +17,7 @@ using PIMS.Web.Api.Common;
 namespace PIMS.Web.Api.Controllers
 {
 	[RoutePrefix("api/Asset/{ticker}/Income")]
+	//[Authorize] // temp comment for Fiddler testing 3.22.16
 	public class IncomeController : ApiController
 	{
 		private static IGenericRepository<Asset> _repositoryAsset;
@@ -580,7 +581,7 @@ namespace PIMS.Web.Api.Controllers
 																		 .SelectMany(a => a.Positions)
 																		 .Where(p => p.Account.AccountTypeDesc.Trim() == incomeData.AcctType.Trim())
 																		 .AsQueryable());
-	  
+			
 			if (!matchingPosition.Any())
 				return BadRequest(string.Format("No matching Position-Account Type ({0}) found to record income against, for Asset {1}  ", 
 																				incomeData.AcctType.Trim().ToUpper(), 
@@ -588,32 +589,29 @@ namespace PIMS.Web.Api.Controllers
 
 			incomeData.AssetId = matchingPosition.First().PositionAssetId;
 			incomeData.ReferencedPositionId = matchingPosition.First().PositionId;
+			
 
-			var existingIncome = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == currentInvestorId)
-																	   .SelectMany(a => a.Revenue)
-																	   .Where(i => i.AssetId == incomeData.AssetId && 
-																				   i.IncomePositionId == incomeData.ReferencedPositionId)
-																	   .AsQueryable());
-
-			if (existingIncome.Any())
+			if (matchingPosition.First().PositionIncomes.Any())
 			{
-				// Ignore any possible timestamps while looping thru existing income.
-				if (Enumerable.Any(existingIncome, record => record.DateRecvd.Month == DateTime.Parse(incomeData.DateReceived.ToString()).Month &&
-															 record.DateRecvd.Day == DateTime.Parse(incomeData.DateReceived.ToString()).Day &&
-															 record.DateRecvd.Year == DateTime.Parse(incomeData.DateReceived.ToString()).Year))
-				{
-					return ResponseMessage(new HttpResponseMessage {
-																	   StatusCode = HttpStatusCode.Conflict,
-																	   ReasonPhrase = "Duplicate income found for AssetId: " 
-																						   + incomeData.AssetId 
-																						   + " recorded on "
-																						   + string.Format("{0:M/dd/yyyy}", incomeData.DateReceived)  
-																   });
+				var existingIncome = matchingPosition.First().PositionIncomes.AsQueryable();
+				if (existingIncome.Any()) {
+					// Ignore any possible timestamps while looping thru existing income.
+					if (Enumerable.Any(existingIncome, record => record.DateRecvd.Month == DateTime.Parse(incomeData.DateReceived.ToString()).Month &&
+																 record.DateRecvd.Day == DateTime.Parse(incomeData.DateReceived.ToString()).Day &&
+																 record.DateRecvd.Year == DateTime.Parse(incomeData.DateReceived.ToString()).Year)) {
+						return ResponseMessage(new HttpResponseMessage {
+							StatusCode = HttpStatusCode.Conflict,
+							ReasonPhrase = "Duplicate income found for AssetId: "
+												+ incomeData.AssetId
+												+ " recorded on "
+												+ string.Format("{0:M/dd/yyyy}", incomeData.DateReceived)
+						});
+					}
 				}
 			}
-			
-			var newLocation = incomeData.Url;
 
+		
+			var newLocation = incomeData.Url;
 			var newIncome = MapVmToIncome(incomeData);
 			var isCreated = await Task.FromResult(_repository.Create(newIncome));
 			if (!isCreated)
