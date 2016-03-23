@@ -41,8 +41,12 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
                 .Not.Update()
                 .Not.Insert();
 
+
+            // 1:M
+            // Each Position will have one or more Income records.
             HasMany(x => x.PositionIncomes)  
-                .KeyColumn("PositionId");
+                .Table("Income")
+                .KeyColumns.Add("IncomePositionId");   // references Income FK
 
         }
     }
