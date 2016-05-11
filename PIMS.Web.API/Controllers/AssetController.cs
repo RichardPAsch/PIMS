@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Results;
+using FluentNHibernate.Conventions;
 using PIMS.Core.Models;
 using PIMS.Core.Models.ViewModels;
 using PIMS.Data.Repositories;
@@ -16,6 +17,7 @@ using PIMS.Web.Api.Common;
 namespace PIMS.Web.Api.Controllers
 {
     [RoutePrefix("api/Asset")]
+    //[Authorize] // temp comment for Fiddler testing 3.22.16
     public class AssetController : ApiController
     {
         private readonly IGenericRepository<Asset> _repository;
@@ -59,9 +61,14 @@ namespace PIMS.Web.Api.Controllers
             _repositoryInvestor.UrlAddress = ControllerContext.Request.RequestUri.ToString();
             var currentInvestor = _identityService.CurrentUser;
 
+            // Allow for Fiddler debugging
+            if (currentInvestor == null)
+                currentInvestor = "rpasch2@rpclassics.net";
+            
             var assetSummary = await Task.FromResult(_repository.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim())
                                                                             && a.Profile.TickerSymbol.Trim() == tickerSymbol.Trim())
                                                                 .AsQueryable());
+
             if(!assetSummary.Any())
                 return BadRequest("No Asset found matching " + tickerSymbol.Trim() + " for Investor " + currentInvestor.Trim());
 
@@ -164,7 +171,8 @@ namespace PIMS.Web.Api.Controllers
             if (!ModelState.IsValid) {
                 return ResponseMessage(new HttpResponseMessage {
                                             StatusCode = HttpStatusCode.BadRequest,
-                                            ReasonPhrase = "Invalid/Incomplete data received for new Asset creation."});
+                                            ReasonPhrase = "Invalid/Incomplete required 'ModelState' data received for new Asset creation."
+                });
             }
 
             // Reconfirm required Position data exist.
@@ -186,16 +194,22 @@ namespace PIMS.Web.Api.Controllers
                 });
 
             submittedAsset.AssetInvestorId = registeredInvestor.First().InvestorId.ToString();                      // Required entry.
-            submittedAsset.AssetClassificationId = await Task.FromResult(_repositoryAssetClass.Retreive(ac => ac.Code.Trim() == submittedAsset.AssetClassification.Trim())
+            submittedAsset.AssetClassificationId = await Task.FromResult(_repositoryAssetClass.Retreive(ac => ac.Description.Trim() == submittedAsset.AssetClassification.Trim())
                                                                                               .AsQueryable()
                                                                                               .First()
                                                                                               .KeyId.ToString());   // Required entry.
 
 
             // PROFILE.
-            // Submited Asset must contain the latest Profile information, per client validation checks.
-            if(submittedAsset.ProfileToCreate.DividendRate == 0 || submittedAsset.ProfileToCreate.DividendYield == 0)
-                return BadRequest("Asset creation aborted: missing Profile data.");
+            // Submited Asset must contain the following minimum Profile information, per client validation checks.
+            var profileLastUpdate = Convert.ToDateTime(submittedAsset.ProfileToCreate.LastUpdate) ;
+            
+            if(submittedAsset.ProfileToCreate.TickerSymbol.IsEmpty() || 
+               submittedAsset.ProfileToCreate.TickerDescription.IsEmpty() ||
+               submittedAsset.ProfileToCreate.Price == 0 || 
+               profileLastUpdate == DateTime.MinValue ||  // unassigned
+               submittedAsset.ProfileToCreate.Url.IsEmpty())
+                    return BadRequest("Asset creation aborted: minimum Profile data [ticker,tickerDesc,Price,lastUpDate, or Url] is missing or invalid.");
 
             var existingProfile = await Task.FromResult(_repositoryProfile.Retreive(p => p.TickerSymbol.Trim() == submittedAsset.AssetTicker.Trim())
                                                                           .AsQueryable());
