@@ -125,19 +125,26 @@ namespace PIMS.Web.Api.Controllers
         {
             _repositoryAsset.UrlAddress = ControllerContext.Request.RequestUri.ToString();
             var currentInvestor = _identityService.CurrentUser;
+
+            // Allow for Fiddler debugging
+            if (currentInvestor == null)
+                currentInvestor = "rpasch2@rpclassics.net";
            
             var filteredPositions = await Task.FromResult(_repositoryAsset.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == tickerSymbol.ToUpper().Trim()
                                                                                       && a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
                                                                           .SelectMany(p => p.Positions)
                                                                           .Select(p2 => new PositionVm
                                                                                         {
+                                                                                            // TODO: 5.13.16 - reevaluate need for 1st 2 properties?
                                                                                             PreEditPositionAccount = p2.Account.AccountTypeDesc,
+                                                                                            PostEditPositionAccount = p2.Account.AccountTypeDesc,
                                                                                             CostBasis = p2.MarketPrice,
                                                                                             Qty = p2.Quantity,
                                                                                             DateOfPurchase = p2.PurchaseDate,
                                                                                             LastUpdate = p2.LastUpdate,
                                                                                             Url = p2.Url,
-                                                                                            LoggedInInvestor = p2.InvestorKey
+                                                                                            LoggedInInvestor = p2.InvestorKey,
+                                                                                            ReferencedAssetId = p2.PositionAsset.AssetId // added 5.17.16
                                                                                         })
                                                                           .AsQueryable());
 
