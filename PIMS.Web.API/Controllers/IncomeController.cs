@@ -480,12 +480,34 @@ namespace PIMS.Web.Api.Controllers
 
 
 		[HttpGet]
-		[Route("{startDate}/{endDate}")]
+		[Route("~/api/Income/{year}/{month}/{placeholder}")]
+		public async Task<IHttpActionResult> GetIncomeByYearAndMonth(string year, string month, string placeholder)
+		{
+			// placeholder only used as differentiator to similiar route pattern in GetIncomeByAssetAndDates().
+			_repositoryAsset.UrlAddress = ControllerContext.Request.RequestUri.ToString();
+			if (string.IsNullOrWhiteSpace(year) || string.IsNullOrWhiteSpace(month))
+				return BadRequest(string.Format("Invalid year and/or month received, for monthly Income data retreival."));
+
+			var currentInvestor = Utilities.GetInvestor(_identityService);
+
+			var begDate = month +  "/1/" + year;
+			var endDate = month + "/" + Utilities.GetDaysInMonth(int.Parse(year), int.Parse(month)) +"/" + year;
+			var incomeRecords = await Task.FromResult(_repositoryAsset.Retreive(a =>  a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
+																	  .SelectMany(a => a.Revenue).Where(r => r.DateRecvd >= DateTime.Parse(begDate) &&
+																											 r.DateRecvd <= DateTime.Parse(endDate))
+																	  .AsQueryable());
+			var monthlyTotal = incomeRecords.Sum(i => i.Actual);
+			if(incomeRecords.Any())
+				return Ok(monthlyTotal.ToString("##,###.##"));
+
+			return BadRequest(string.Format("No Income found for year: {0} and month: {1}", year, month));
+		}
+
+
+		[HttpGet]
+		[Route("~/api/Income/{startDate}/{endDate}")]
 		public async Task<IHttpActionResult> GetIncomeByAssetAndDates(string ticker, string startDate, string endDate)
 		{
-			if (string.IsNullOrWhiteSpace(startDate) || string.IsNullOrWhiteSpace(endDate))
-				return BadRequest(string.Format("Missing start and/or end date(s) received for Income data retreival."));
-
 			_repositoryAsset.UrlAddress = ControllerContext.Request.RequestUri.ToString();
 			if (string.IsNullOrWhiteSpace(startDate) || string.IsNullOrWhiteSpace(endDate))
 				return BadRequest(string.Format("Invalid start and/or end date received for Income data retreival."));
