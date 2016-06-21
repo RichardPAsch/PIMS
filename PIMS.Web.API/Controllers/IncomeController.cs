@@ -431,6 +431,11 @@ namespace PIMS.Web.Api.Controllers
 		{
 			_repositoryAsset.UrlAddress = ControllerContext.Request.RequestUri.ToString();
 			var currentInvestor = _identityService.CurrentUser;
+
+			// Fiddler debugging
+			if (currentInvestor == null)
+				currentInvestor = "rpasch2@rpclassics.net";
+
 			IQueryable<AssetRevenueVm> matchingIncome = null;
 
 			if (accountType.IsEmpty())
