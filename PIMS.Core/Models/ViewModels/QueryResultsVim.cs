@@ -57,7 +57,14 @@ namespace PIMS.Core.Models.ViewModels
     {
         public int RevenueMonth { get; set; }
         public decimal RevenueAmount { get; set; }
-    }                                                        
+    }
+
+    public class RevenueMonthAndYearVm
+    {
+        public int RevenueMonth { get; set; }
+        public int RevenueYear { get; set; }
+        public decimal RevenueAmount { get; set; }
+    }                                                     
       
     
                                                                  
