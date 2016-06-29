@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 
@@ -24,6 +23,7 @@ namespace PIMS.Core.Models.ViewModels
         
         
         public PositionVm PositionToCreate { get; set; }                // includes AccountType
+        [Required]                                                      // added 5.10.16 for model state validation check
         public List<PositionVm> PositionsCreated { get; set; }
         public string AssetIdentification { get; set; }                 // Map -> Position Asset ref.
  
