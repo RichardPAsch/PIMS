@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -7,6 +8,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using FluentNHibernate.Conventions;
+using FluentNHibernate.Utils;
 using PIMS.Core.Models;
 using PIMS.Core.Security;
 using PIMS.Data.Repositories;
@@ -481,8 +483,7 @@ namespace PIMS.Web.Api.Controllers
 
 		[HttpGet]
 		[Route("~/api/Income/{year}/{month}/{placeholder}")]
-		public async Task<IHttpActionResult> GetIncomeByYearAndMonth(string year, string month, string placeholder)
-		{
+		public async Task<IHttpActionResult> GetIncomeByYearAndMonth(string year, string month, string placeholder) {
 			// placeholder only used as differentiator to similiar route pattern in GetIncomeByAssetAndDates().
 			_repositoryAsset.UrlAddress = ControllerContext.Request.RequestUri.ToString();
 			if (string.IsNullOrWhiteSpace(year) || string.IsNullOrWhiteSpace(month))
@@ -490,15 +491,21 @@ namespace PIMS.Web.Api.Controllers
 
 			var currentInvestor = Utilities.GetInvestor(_identityService);
 
-			var begDate = month +  "/1/" + year;
-			var endDate = month + "/" + Utilities.GetDaysInMonth(int.Parse(year), int.Parse(month)) +"/" + year;
-			var incomeRecords = await Task.FromResult(_repositoryAsset.Retreive(a =>  a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
+			var begDate = month + "/1/" + year;
+			var endDate = month + "/" + Utilities.GetDaysInMonth(int.Parse(year), int.Parse(month)) + "/" + year;
+			var incomeRecords = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
 																	  .SelectMany(a => a.Revenue).Where(r => r.DateRecvd >= DateTime.Parse(begDate) &&
 																											 r.DateRecvd <= DateTime.Parse(endDate))
 																	  .AsQueryable());
-			var monthlyTotal = incomeRecords.Sum(i => i.Actual);
-			if(incomeRecords.Any())
-				return Ok(monthlyTotal.ToString("##,###.##"));
+
+			var monthlyTotal = incomeRecords.Select(i => new RevenueMonthAndYearVm {
+															RevenueAmount = decimal.Parse(incomeRecords.Sum(r => r.Actual).ToString("##,###.##")),
+															RevenueMonth = int.Parse(month),
+															RevenueYear = int.Parse(year)})
+											.ToList().Skip(incomeRecords.Count()-1);
+
+			if (incomeRecords.Any())
+				return Ok(monthlyTotal);
 
 			return BadRequest(string.Format("No Income found for year: {0} and month: {1}", year, month));
 		}
@@ -706,12 +713,45 @@ namespace PIMS.Web.Api.Controllers
 				: (IHttpActionResult)BadRequest("Error: unable to delete Income: " + incomeId);
 		}
 
+		/* old code
+						[HttpGet]
+						[Route("~/api/Income/{year}/{month}/{placeholder}")]
+						public async Task<IHttpActionResult> GetIncomeByYearAndMonth(string year, string month, string placeholder)
+						{
+							// placeholder only used as differentiator to similiar route pattern in GetIncomeByAssetAndDates().
+							_repositoryAsset.UrlAddress = ControllerContext.Request.RequestUri.ToString();
+							if (string.IsNullOrWhiteSpace(year) || string.IsNullOrWhiteSpace(month))
+								return BadRequest(string.Format("Invalid year and/or month received, for monthly Income data retreival."));
+
+							var currentInvestor = Utilities.GetInvestor(_identityService);
+
+							var begDate = month +  "/1/" + year;
+							var endDate = month + "/" + Utilities.GetDaysInMonth(int.Parse(year), int.Parse(month)) +"/" + year;
+							var incomeRecords = await Task.FromResult(_repositoryAsset.Retreive(a =>  a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
+																					  .SelectMany(a => a.Revenue).Where(r => r.DateRecvd >= DateTime.Parse(begDate) &&
+																															 r.DateRecvd <= DateTime.Parse(endDate))
+																					  .AsQueryable());
+
+							IList<RevenueMonthAndYearVm> monthlyTotal = incomeRecords.Select(i => new RevenueMonthAndYearVm
+																								 {
+																									 RevenueAmount = decimal.Parse(incomeRecords.Sum(r => r.Actual).ToString("##,###.##")),
+																									 RevenueMonth = int.Parse(month),
+																									 RevenueYear = int.Parse(year)
+																								 }).ToList();
+			
+							if (incomeRecords.Any())
+								return Ok(monthlyTotal.Skip(1));
+
+							return BadRequest(string.Format("No Income found for year: {0} and month: {1}", year, month));
+						}
+		*/
+
 
 
 
 		#region Helpers
 
-			public static string ParseUrlForTicker(string urlToParse) {
+		public static string ParseUrlForTicker(string urlToParse) {
 				var pos1 = urlToParse.IndexOf("Asset/", StringComparison.Ordinal) + 6;
 				var pos2 = urlToParse.IndexOf("/Income", StringComparison.Ordinal); // Position or Income
 				return urlToParse.Substring(pos1, pos2 - pos1);
