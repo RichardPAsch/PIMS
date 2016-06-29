@@ -27,6 +27,7 @@ namespace PIMS.Core.Models.ViewModels
 
         public string LoggedInInvestor { get; set; }
 
+        // TODO: 5.13.16 - Shouldn't this of type atring? Or is it really needed?
         public AccountTypeVm ReferencedAccount { get; set; }
 
         public Guid CreatedPositionId { get; set; }
