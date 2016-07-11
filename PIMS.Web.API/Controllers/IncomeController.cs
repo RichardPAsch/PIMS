@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -8,7 +7,6 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using FluentNHibernate.Conventions;
-using FluentNHibernate.Utils;
 using PIMS.Core.Models;
 using PIMS.Core.Security;
 using PIMS.Data.Repositories;
@@ -76,34 +74,69 @@ namespace PIMS.Web.Api.Controllers
 
 		#region Non-Asset specific general portfolio Income query 'GET' actions:
 
+		// TODO: Obsolete
+		//[HttpGet]
+		//[Route("~/api/Income/{startDate}/{endDate}")]
+		//// satisfies #1, #14, #15
+		//public async Task<IHttpActionResult> GetRevenueTotalForAllAssetsByDates(string startDate, string endDate)
+		//{
+		//    //todo: Fiddler Ok: 5-25
+		//    _repositoryAsset.UrlAddress = ControllerContext.Request.RequestUri.ToString();
+		//    var currentInvestor = _identityService.CurrentUser;
+
+		//    // Fiddler debugging
+		//    if (currentInvestor == null)
+		//        currentInvestor = "rpasch2@rpclassics.net";
+
+		//    if (string.IsNullOrWhiteSpace(startDate) || string.IsNullOrWhiteSpace(endDate))
+		//        return BadRequest(string.Format("Invalid start and/or end date received for Income data retreival."));
+
+		//    var fromDate = DateTime.Parse(startDate);
+		//    var toDate = DateTime.Parse(endDate);
+
+		//    if (toDate < fromDate || fromDate > toDate || fromDate == toDate)
+		//        return BadRequest(string.Format("Invalid beginning and/or end date(s) submitted for Income data retreival."));
+
+		//    var matchingIncome = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
+		//                                                               .SelectMany(a => a.Revenue)
+		//                                                               .Where(i => i.DateRecvd >= fromDate && i.DateRecvd <= toDate)
+		//                                                               .AsQueryable());
+
+		//    if (matchingIncome.Any())
+		//        return Ok(matchingIncome.Sum(i => i.Actual));
+
+		//    return BadRequest(string.Format("No Income found matching dates: {0} to {1} ", startDate, endDate));
+
+		//}
+
+
 		[HttpGet]
-		[Route("~/api/Income/{startDate}/{endDate}")]
-		// satisfies #1, #14, #15
-		public async Task<IHttpActionResult> GetRevenueTotalForAllAssetsByDates(string startDate, string endDate)
-		{
-			//todo: Fiddler Ok: 5-25
+		[Route("~/api/Income/{fromDate}/{toDate}")]
+		public async Task<IHttpActionResult> GetIncomeByDates(string fromDate, string toDate) {
 			_repositoryAsset.UrlAddress = ControllerContext.Request.RequestUri.ToString();
-			var currentInvestor = _identityService.CurrentUser;
+			if (string.IsNullOrWhiteSpace(fromDate) || string.IsNullOrWhiteSpace(toDate))
+				return BadRequest(string.Format("Invalid year and/or month received, for Income data retreival."));
 
-			if (string.IsNullOrWhiteSpace(startDate) || string.IsNullOrWhiteSpace(endDate))
-				return BadRequest(string.Format("Invalid start and/or end date received for Income data retreival."));
+			var currentInvestor = Utilities.GetInvestor(_identityService);
+			// Fiddler debugging
+			if (currentInvestor == null)
+				currentInvestor = "rpasch2@rpclassics.net";
 
-			var fromDate = DateTime.Parse(startDate);
-			var toDate = DateTime.Parse(endDate);
-
-			if (toDate < fromDate || fromDate > toDate || fromDate == toDate)
-				return BadRequest(string.Format("Invalid beginning and/or end date(s) submitted for Income data retreival."));
-
-			var matchingIncome = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
-																	  .SelectMany(a => a.Revenue)
-																	  .Where(i => i.DateRecvd >= fromDate && i.DateRecvd <= toDate)
+			var incomeRecords = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
+																	  .SelectMany(a => a.Revenue).Where(r => r.DateRecvd >= DateTime.Parse(fromDate) &&
+																											 r.DateRecvd <= DateTime.Parse(toDate))
 																	  .AsQueryable());
 
-			if (matchingIncome.Any())
-				return Ok(matchingIncome.Sum(i => i.Actual));
+			var dateRangeTotal = incomeRecords.Select(i => new RevenueByDatesVm {
+				RevenueAmount = decimal.Parse(incomeRecords.Sum(r => r.Actual).ToString("##,###.##")),
+				BeginningDate = fromDate,
+				EndingDate = toDate
+			}).ToList().Skip(incomeRecords.Count() - 1);
 
-			return BadRequest(string.Format("No Income found matching dates: {0} to {1} ", startDate, endDate));
+			if (incomeRecords.Any())
+				return Ok(dateRangeTotal);
 
+			return BadRequest(string.Format("No Income found for dates: {0} to {1}", fromDate, toDate));
 		}
 
 
@@ -438,7 +471,7 @@ namespace PIMS.Web.Api.Controllers
 			if (currentInvestor == null)
 				currentInvestor = "rpasch2@rpclassics.net";
 
-			IQueryable<AssetRevenueVm> matchingIncome = null;
+			IQueryable<AssetRevenueVm> matchingIncome;
 
 			if (accountType.IsEmpty())
 			{     
@@ -479,37 +512,7 @@ namespace PIMS.Web.Api.Controllers
 
 	
 		}
-
-
-		[HttpGet]
-		[Route("~/api/Income/{year}/{month}/{placeholder}")]
-		public async Task<IHttpActionResult> GetIncomeByYearAndMonth(string year, string month, string placeholder) {
-			// placeholder only used as differentiator to similiar route pattern in GetIncomeByAssetAndDates().
-			_repositoryAsset.UrlAddress = ControllerContext.Request.RequestUri.ToString();
-			if (string.IsNullOrWhiteSpace(year) || string.IsNullOrWhiteSpace(month))
-				return BadRequest(string.Format("Invalid year and/or month received, for monthly Income data retreival."));
-
-			var currentInvestor = Utilities.GetInvestor(_identityService);
-
-			var begDate = month + "/1/" + year;
-			var endDate = month + "/" + Utilities.GetDaysInMonth(int.Parse(year), int.Parse(month)) + "/" + year;
-			var incomeRecords = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
-																	  .SelectMany(a => a.Revenue).Where(r => r.DateRecvd >= DateTime.Parse(begDate) &&
-																											 r.DateRecvd <= DateTime.Parse(endDate))
-																	  .AsQueryable());
-
-			var monthlyTotal = incomeRecords.Select(i => new RevenueMonthAndYearVm {
-															RevenueAmount = decimal.Parse(incomeRecords.Sum(r => r.Actual).ToString("##,###.##")),
-															RevenueMonth = int.Parse(month),
-															RevenueYear = int.Parse(year)})
-											.ToList().Skip(incomeRecords.Count()-1);
-
-			if (incomeRecords.Any())
-				return Ok(monthlyTotal);
-
-			return BadRequest(string.Format("No Income found for year: {0} and month: {1}", year, month));
-		}
-
+		
 
 		[HttpGet]
 		[Route("~/api/Income/{startDate}/{endDate}")]
@@ -713,40 +716,7 @@ namespace PIMS.Web.Api.Controllers
 				: (IHttpActionResult)BadRequest("Error: unable to delete Income: " + incomeId);
 		}
 
-		/* old code
-						[HttpGet]
-						[Route("~/api/Income/{year}/{month}/{placeholder}")]
-						public async Task<IHttpActionResult> GetIncomeByYearAndMonth(string year, string month, string placeholder)
-						{
-							// placeholder only used as differentiator to similiar route pattern in GetIncomeByAssetAndDates().
-							_repositoryAsset.UrlAddress = ControllerContext.Request.RequestUri.ToString();
-							if (string.IsNullOrWhiteSpace(year) || string.IsNullOrWhiteSpace(month))
-								return BadRequest(string.Format("Invalid year and/or month received, for monthly Income data retreival."));
-
-							var currentInvestor = Utilities.GetInvestor(_identityService);
-
-							var begDate = month +  "/1/" + year;
-							var endDate = month + "/" + Utilities.GetDaysInMonth(int.Parse(year), int.Parse(month)) +"/" + year;
-							var incomeRecords = await Task.FromResult(_repositoryAsset.Retreive(a =>  a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
-																					  .SelectMany(a => a.Revenue).Where(r => r.DateRecvd >= DateTime.Parse(begDate) &&
-																															 r.DateRecvd <= DateTime.Parse(endDate))
-																					  .AsQueryable());
-
-							IList<RevenueMonthAndYearVm> monthlyTotal = incomeRecords.Select(i => new RevenueMonthAndYearVm
-																								 {
-																									 RevenueAmount = decimal.Parse(incomeRecords.Sum(r => r.Actual).ToString("##,###.##")),
-																									 RevenueMonth = int.Parse(month),
-																									 RevenueYear = int.Parse(year)
-																								 }).ToList();
-			
-							if (incomeRecords.Any())
-								return Ok(monthlyTotal.Skip(1));
-
-							return BadRequest(string.Format("No Income found for year: {0} and month: {1}", year, month));
-						}
-		*/
-
-
+		
 
 
 		#region Helpers
