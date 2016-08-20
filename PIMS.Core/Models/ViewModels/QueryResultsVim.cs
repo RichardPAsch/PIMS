@@ -59,14 +59,35 @@ namespace PIMS.Core.Models.ViewModels
         public decimal RevenueAmount { get; set; }
     }
 
-    public class RevenueMonthAndYearVm
+    public class RevenueByDatesVm
     {
-        public int RevenueMonth { get; set; }
-        public int RevenueYear { get; set; }
+        public string BeginningDate { get; set; }
+        public string EndingDate { get; set; }
         public decimal RevenueAmount { get; set; }
-    }                                                     
-      
-    
+    }
+
+    public class AssetsRevenueVm
+    {
+        public string DateReceived { get; set; }
+        public string Ticker { get; set; }
+        public string AmountReceived { get; set; }
+    }
+
+    public class RevenueByMonthAndDatesVm
+    {
+        public string YearReceived { get; set; }
+        public string MonthReceived { get; set; }
+        public decimal TotalReceived { get; set; }
+        public int AssetCount { get; set; }
+    }
+
+    public class RevenueByFrequencyAndDatesVm
+    {
+        public string TickerSymbol { get; set; }
+        public string RevenueDate { get; set; }
+        public string Revenue { get; set; }
+        public string Frequency { get; set; }
+    }
                                                                  
  }
 
