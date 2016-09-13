@@ -470,7 +470,7 @@ namespace PIMS.Web.Api.Controllers
 			DateTime fromDate;
 			DateTime toDate;
 			object revenuePeriodsVm = null;
-		    var periodListingCount = 0;
+			var periodListingCount = 0;
 
 
 			// Fiddler debugging
@@ -495,11 +495,21 @@ namespace PIMS.Web.Api.Controllers
 
 			if (period == "A")
 			{
-				// TODO: do straight Sum() on groups - 9.13.16
-			}
+			    var annualPeriods = incomeGroups.Select(grp => new RevenueByPeriodAndDatesVm<string>
+			                                                   {
+                                                                   Year = grp.Key.ToString(CultureInfo.InvariantCulture),
+                                                                   Period = "Annual",
+                                                                   Revenue = grp.Sum(r => r.Actual).ToString(CultureInfo.InvariantCulture)
+			                                                   })
+                                                .ToList()
+                                                .OrderByDescending(r => r.Year);
+
+			    periodListingCount = annualPeriods.Count();
+			    revenuePeriodsVm = annualPeriods;
+            }
 			else
 			{
-				var periodsStructure = BuildPeriodStructure(period, fromDate, toDate);  			// ok - S,M,Q
+				var periodsStructure = BuildPeriodStructure(period, fromDate, toDate);  		
 				for (var i = 0; i < periodsStructure.GetLength(0); i++)
 				{
 					var incomeRecs = incomeGroups.SelectMany(bd => bd.Where(b => b.DateRecvd >= DateTime.Parse(periodsStructure[i, 1])
@@ -507,7 +517,7 @@ namespace PIMS.Web.Api.Controllers
 					periodsStructure[i, 3] = incomeRecs.Sum(x => x.Actual).ToString(CultureInfo.InvariantCulture);
 				}
 
-				switch (period.ToUpper().Trim())        // ok : S & Q & M
+				switch (period.ToUpper().Trim())       
 				{
 					case "S":
 						var saPeriodsVm = new List<RevenueByPeriodAndDatesVm<string>>();
@@ -527,8 +537,8 @@ namespace PIMS.Web.Api.Controllers
 								semiCtr++;
 							}
 						}
-				        periodListingCount = saPeriodsVm.Count();
-                        revenuePeriodsVm = saPeriodsVm.OrderByDescending(r => r.Year).ThenByDescending(r => r.Period);
+						periodListingCount = saPeriodsVm.Count();
+						revenuePeriodsVm = saPeriodsVm.OrderByDescending(r => r.Year).ThenByDescending(r => r.Period);
 						break;
 					case "Q":
 						var qtrPeriodsVm = new List<RevenueByPeriodAndDatesVm<string>>();
@@ -546,31 +556,31 @@ namespace PIMS.Web.Api.Controllers
 								qtrCtr++;
 							}
 						}
-                        periodListingCount = qtrPeriodsVm.Count();
-                        revenuePeriodsVm = qtrPeriodsVm.OrderByDescending(r => r.Year).ThenByDescending(r => r.Period);
+						periodListingCount = qtrPeriodsVm.Count();
+						revenuePeriodsVm = qtrPeriodsVm.OrderByDescending(r => r.Year).ThenByDescending(r => r.Period);
 						break;
 					case "M":
 						var monthPeriodsVm = new List<RevenueByPeriodAndDatesVm<int>>();
-                        for (var i = 0; i < periodsStructure.GetLength(0); i++) {
+						for (var i = 0; i < periodsStructure.GetLength(0); i++) {
 							var record = new RevenueByPeriodAndDatesVm<int> {
 								Year = DateTime.Parse(periodsStructure[i, 1]).Year.ToString(CultureInfo.InvariantCulture),
 								Period = DateTime.Parse(periodsStructure[i,1]).Month,
 								Revenue = periodsStructure[i, 3]
 							};
-                            monthPeriodsVm.Add(record);
+							monthPeriodsVm.Add(record);
 						}
-                        periodListingCount = monthPeriodsVm.Count();
+						periodListingCount = monthPeriodsVm.Count();
 						revenuePeriodsVm = monthPeriodsVm.ToList().OrderByDescending(r => r.Year).ThenByDescending(r => r.Period);
 						break;
 
 				}
 			}
 
-            // Return valid date range results (at least 1 matching reporting period), regardless of recorded income or not.
-            if (periodListingCount > 0)
-                return Ok(revenuePeriodsVm);
+			// Return valid date range results (at least 1 matching reporting period), regardless of recorded income.
+			if (periodListingCount > 0)
+				return Ok(revenuePeriodsVm);
 
-            return BadRequest(string.Format("No period income found matching dates: {0} to {1} ", dateFrom, dateTo));
+			return BadRequest(string.Format("No period income found matching dates: {0} to {1} ", dateFrom, dateTo));
 
 		}
 
