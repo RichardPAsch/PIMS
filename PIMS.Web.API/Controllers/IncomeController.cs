@@ -133,8 +133,8 @@ namespace PIMS.Web.Api.Controllers
 
 			var dateRangeTotal = incomeRecords.Select(i => new RevenueByDatesVm {
 				RevenueAmount = decimal.Parse(incomeRecords.Sum(r => r.Actual).ToString("##,###.##")),
-				BeginningDate = fromDate,
-				EndingDate = toDate
+				BeginningDate = DateTime.Parse(fromDate),
+				EndingDate = DateTime.Parse(toDate)
 			}).ToList().Skip(incomeRecords.Count() - 1);
 
 			if (incomeRecords.Any())
@@ -219,6 +219,11 @@ namespace PIMS.Web.Api.Controllers
 		{
 			//todo: Fiddler Ok: 5-30
 			var currentInvestor = _identityService.CurrentUser;
+
+			// Fiddler debugging
+			if (currentInvestor == null)
+				currentInvestor = "rpasch2@rpclassics.net";
+
 			var revenueListing = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
 																	   .AsQueryable()
 																	   .SelectMany(a => a.Revenue)
@@ -341,16 +346,17 @@ namespace PIMS.Web.Api.Controllers
 																		   DateReceived = i.DateRecvd,
 																		   TickerSymbol = ParseUrlForTicker(i.Url),
 																		   AmountRecvd = i.Actual
-																	   })); 
+																	   }));
 																	
 			IList<AssetsRevenueVm> projectedMatchingIncome = matchingIncome.Select(record => new AssetsRevenueVm {
-																								DateReceived = record.DateReceived.ToString("M/dd/yyyy"),
-																								Ticker = record.TickerSymbol,
-																								AmountReceived = record.AmountRecvd.ToString("0.00")
+																	DateReceived = record.DateReceived, 
+																	//DateReceived = record.DateReceived.ToString("M/dd/yyyy"),
+																	Ticker = record.TickerSymbol,
+																	AmountReceived = record.AmountRecvd.ToString("0.00")
 																								
 			}).ToList();
 
-			var projectedMatchingIncomeOrdered = projectedMatchingIncome.OrderBy(i => i.DateReceived).ThenByDescending(i => i.Ticker);
+			var projectedMatchingIncomeOrdered = projectedMatchingIncome.OrderByDescending(i => i.DateReceived).ThenBy(i => i.Ticker);
 
 			if (projectedMatchingIncomeOrdered.Any())
 				return Ok(projectedMatchingIncomeOrdered.AsQueryable());
@@ -495,18 +501,18 @@ namespace PIMS.Web.Api.Controllers
 
 			if (period == "A")
 			{
-			    var annualPeriods = incomeGroups.Select(grp => new RevenueByPeriodAndDatesVm<string>
-			                                                   {
-                                                                   Year = grp.Key.ToString(CultureInfo.InvariantCulture),
-                                                                   Period = "Annual",
-                                                                   Revenue = grp.Sum(r => r.Actual).ToString(CultureInfo.InvariantCulture)
-			                                                   })
-                                                .ToList()
-                                                .OrderByDescending(r => r.Year);
+				var annualPeriods = incomeGroups.Select(grp => new RevenueByPeriodAndDatesVm<string>
+															   {
+																   Year = grp.Key.ToString(CultureInfo.InvariantCulture),
+																   Period = "Annual",
+																   Revenue = grp.Sum(r => r.Actual).ToString(CultureInfo.InvariantCulture)
+															   })
+												.ToList()
+												.OrderByDescending(r => r.Year);
 
-			    periodListingCount = annualPeriods.Count();
-			    revenuePeriodsVm = annualPeriods;
-            }
+				periodListingCount = annualPeriods.Count();
+				revenuePeriodsVm = annualPeriods;
+			}
 			else
 			{
 				var periodsStructure = BuildPeriodStructure(period, fromDate, toDate);  		
