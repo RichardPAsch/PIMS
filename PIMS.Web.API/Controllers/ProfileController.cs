@@ -102,8 +102,48 @@ namespace PIMS.Web.Api.Controllers
             return BadRequest(string.Format("Error creating Profile for {0}, check ticker symbol.", tickerForProfile));
 
         }
+
+
+        [HttpGet]
+        [Route("~/api/Profiles/{t1}/{t2?}/{t3?}/{t4?}/{t5?}")]
+        // e.g. http://localhost/Pims.Web.Api/api/Profiles/{t1}/{t2?}/{t3?}/{t4?}/{t5?}/ 
+        // t = ticker symbol
+        public async Task<IHttpActionResult> GetProfiles(string t1, string t2 = "", string t3 = "", string t4 = "", string t5 = "") {
+
+            if (string.IsNullOrEmpty(t1))
+                return BadRequest(string.Format("Error fetching Profile, minimum of 1 ticker symbol required."));
+
+            var tickersTemp = string.Empty;
+            tickersTemp += t1;
+            if (!string.IsNullOrEmpty(t2)) tickersTemp += "," + t2;
+            if (!string.IsNullOrEmpty(t3)) tickersTemp += "," + t3;
+            if (!string.IsNullOrEmpty(t4)) tickersTemp += "," + t4;
+            if (!string.IsNullOrEmpty(t5)) tickersTemp += "," + t5;
+
+            var tickers = tickersTemp.Split(',');
+            
+
+            // Yahoo url sample:  http://finance.yahoo.com/d/quotes.csv?s=<tickers>&f=sodyrr1
+            //if (existingProfile.Any()) {
+            //    // Update existing Profile only IF Profile last updated > 24hrs ago.
+            //    if (Convert.ToDateTime(existingProfile.First().LastUpdate) > DateTime.UtcNow.AddHours(-24))
+            //        return Ok(existingProfile.First());
+
+            //    updatedOrNewProfile = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfile(tickerForProfile.Trim(), existingProfile.First()));
+            //    if (updatedOrNewProfile != null)
+            //        return Ok(MapProfileToVm(updatedOrNewProfile));
+
+            //    return BadRequest("Error updating Profile for ticker: " + tickerForProfile);
+            //}
+
+            var initializedProfiles = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfiles(tickers));
+            if (initializedProfiles != null)
+                return Ok(initializedProfiles);
+
+            return BadRequest(string.Format("Error obtaining Profile data due to connectivity, OR invalid submitted ticker symbols. Check ticker accuracy."));
+        }
         
-        
+
         [HttpPost]
         [Route("", Name = "CreateNewProfile")]
         public async Task<IHttpActionResult> CreateNewProfile([FromBody] ProfileVm submittedProfile)
