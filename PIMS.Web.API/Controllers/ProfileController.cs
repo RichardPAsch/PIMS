@@ -140,7 +140,7 @@ namespace PIMS.Web.Api.Controllers
             if (initializedProfiles != null)
                 return Ok(initializedProfiles);
 
-            return BadRequest(string.Format("Error obtaining Profile data due to connectivity, OR invalid submitted ticker symbols. Check ticker accuracy."));
+            return BadRequest(string.Format("Error obtaining Profile data due to connectivity, invalid submitted ticker symbols, or no data available. \nCheck ticker accuracy."));
         }
         
 
