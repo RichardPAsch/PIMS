@@ -10,6 +10,7 @@ using PIMS.Core.Models;
 using PIMS.Core.Models.ViewModels;
 using PIMS.Core.Security;
 using PIMS.Data.Repositories;
+using PIMS.Web.Api.Common;
 
 
 namespace PIMS.Web.Api.Controllers
@@ -20,13 +21,15 @@ namespace PIMS.Web.Api.Controllers
         private static IGenericRepository<AccountType> _repository;
         private static IGenericRepository<Asset> _repositoryAssets;
         private readonly IPimsIdentityService _identityService;
+        private static IGenericRepository<Investor> _repositoryInvestor;
 
 
-        public AccountTypeController(IGenericRepository<AccountType> repository, IGenericRepository<Asset> repositoryAssets, IPimsIdentityService identityService)
+        public AccountTypeController(IGenericRepository<AccountType> repository, IGenericRepository<Asset> repositoryAssets, IPimsIdentityService identityService, IGenericRepository<Investor> repositoryInvestor)
         {
             _repository = repository;
             _repositoryAssets = repositoryAssets;
             _identityService = identityService;
+            _repositoryInvestor = repositoryInvestor;
         }
 
 
@@ -58,11 +61,41 @@ namespace PIMS.Web.Api.Controllers
         }
 
 
-        //TODO: 4-20-15:  Reevaluate need for this! Fiddler testing needed.
+       [HttpGet]
+       [Route("~/api/Asset/{ticker}/AccountTypes")]
+       public async Task<IHttpActionResult> GetAccountTypesByAsset(string ticker)
+       {
+            var currentInvestor = _identityService.CurrentUser;
+
+            // Allow for Fiddler debugging
+            if (currentInvestor == null)
+                currentInvestor = "rpasch2@rpclassics.net";
+       
+             var existingPositionAcctTypes = await Task.FromResult(_repositoryAssets.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == ticker.ToUpper().Trim()
+                                                                                                && a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
+                                                                                    .SelectMany(p => p.Positions)
+                                                                                    .Select(p2 => new PositionAccountTypesVm {
+                                                                                        PositionAccountType = p2.Account.AccountTypeDesc
+                                                                                     })
+                                                                                    .AsQueryable());
+             if (existingPositionAcctTypes.Any())
+                 return Ok(existingPositionAcctTypes);
+
+             return BadRequest(string.Format("No Positions were found matching {0} for investor {1} ", ticker.ToUpper(), currentInvestor.ToUpper()));
+       }
+
+
+       //TODO: 4-20-15:  Reevaluate need for this! Fiddler testing needed.
         [HttpGet]
         [Route("~/api/AccountType/{forTicker}")]
         public async Task<IHttpActionResult> GetAllAccountsForInvestor(string forTicker = "") {
+
             var currentInvestor = _identityService.CurrentUser;
+            // Allow for Fiddler debugging
+            if (currentInvestor == null)
+                currentInvestor = "rpasch2@rpclassics.net";
+
+
             IQueryable<Position> matchingPositions;
 
             if (forTicker.Trim().ToUpper() != "NONE") {
