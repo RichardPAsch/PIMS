@@ -1,5 +1,8 @@
 ﻿
 
+using System;
+using System.Threading;
+
 namespace PIMS.Core.Security
 {
     public class PimsIdentityService : IPimsIdentityService
@@ -9,11 +12,12 @@ namespace PIMS.Core.Security
             // temp until integration test begun.
             get
             {
-                return "rpasch@rpclassics.net"; // login name
-                //return "Asch";
-
+                // temp: for debug/development
+                //return "rpasch@rpclassics.net"; // login name
+                
                 // For PROD:
-                //return Thread.CurrentPrincipal.Identity.Name;
+                return Thread.CurrentPrincipal.Identity.Name;
+               
             }
         }
     }
