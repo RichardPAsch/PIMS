@@ -335,7 +335,7 @@ namespace PIMS.Web.Api.Controllers
 
             private Position MapVmToPosition(PositionVm sourceData)
             {
-                var acctTypeCtrl = new AccountTypeController(_repositoryAccountType, _repositoryAsset, _identityService);
+                var acctTypeCtrl = new AccountTypeController(_repositoryAccountType, _repositoryAsset, _identityService, _repositoryInvestor);
                 return new Position
                        {
                            // ReSharper disable once PossibleInvalidOperationException
