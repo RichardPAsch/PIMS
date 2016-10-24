@@ -1,5 +1,7 @@
 ﻿
 
+using System;
+
 namespace PIMS.Core.Models.ViewModels
 {
     // NOTE: Class names closely correspond to Income controller action names.
@@ -61,14 +63,15 @@ namespace PIMS.Core.Models.ViewModels
 
     public class RevenueByDatesVm
     {
-        public string BeginningDate { get; set; }
-        public string EndingDate { get; set; }
+        public DateTime BeginningDate { get; set; }
+        public DateTime EndingDate { get; set; }
         public decimal RevenueAmount { get; set; }
     }
 
     public class AssetsRevenueVm
     {
-        public string DateReceived { get; set; }
+        //public string DateReceived { get; set; }
+        public DateTime DateReceived { get; set; }
         public string Ticker { get; set; }
         public string AmountReceived { get; set; }
     }
@@ -87,6 +90,25 @@ namespace PIMS.Core.Models.ViewModels
         public string RevenueDate { get; set; }
         public string Revenue { get; set; }
         public string Frequency { get; set; }
+    }
+
+    public class RevenueByPeriodAndDatesVm<T>
+    {
+        public string Year { get; set; }
+        public T Period { get; set; }
+        public string Revenue { get; set; }
+    }
+
+    public class ProfileProjectionVm
+    {
+        public string Ticker { get; set; }
+        public decimal Capital { get; set; }
+        public decimal Price { get; set; }
+        public string DivYield { get; set; }
+        public decimal DivRate { get; set; }
+        public DateTime DivDate { get; set; }
+        public string PE_Ratio { get; set; }
+        public decimal ProjectedRevenue { get; set; }
     }
                                                                  
  }
