@@ -180,7 +180,7 @@ namespace PIMS.Web.Api.Controllers
                 return BadRequest("Unable to create new Asset, no Position data found.");
 
             // ACCOUNT TYPE.
-            var acctTypeCtrl = new AccountTypeController(_repositoryAccountType, _repository, _identityService);
+            var acctTypeCtrl = new AccountTypeController(_repositoryAccountType, _repository, _identityService, _repositoryInvestor);
             var existingAcctTypes = await acctTypeCtrl.GetAllAccounts() as OkNegotiatedContentResult<IList<AccountTypeVm>>;
             if(existingAcctTypes == null)
                 return BadRequest("Unable to retreive required AccountType data for Asset creation.");
