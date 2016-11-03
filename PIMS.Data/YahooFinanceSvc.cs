@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using PIMS.Core.Models;
+using PIMS.Core.Models.ViewModels;
 
 
 namespace PIMS.Data
@@ -14,7 +16,9 @@ namespace PIMS.Data
             {
                 using (var web = new WebClient())
                 {
-                    var csvProfile = web.DownloadString("http://finance.yahoo.com/d/quotes.csv?s=" + ticker + "&f=nsodyreqr1");
+                    //ticker = "CSQ,HMC";  // test x Profile-Projections
+                    var csvProfile = web.DownloadString("http://finance.yahoo.com/d/quotes.csv?s=" + ticker + "&f=nsodyreqr1"); // orig
+                    //var csvProfile = web.DownloadString("http://finance.yahoo.com/d/quotes.csv?s=" + ticker + "&f=sodyrr1");  // test x Profile-Projections
 
                     var profile = YahooParser.MapToProfile(csvProfile);
 
@@ -32,6 +36,38 @@ namespace PIMS.Data
                 return null;
             }
     
+        }
+
+
+        public static List<ProfileProjectionVm> ProcessYahooProfiles(string[] recvdTickers) {
+
+            try {
+                using (var web = new WebClient()) {
+                    var yahooUrl = "http://finance.yahoo.com/d/quotes.csv?s=";
+                    for (var t = 0; t < recvdTickers.Length; t++) {
+                        if (t == 0){
+                            yahooUrl += recvdTickers[t];
+                        }else{
+                            if (!string.IsNullOrEmpty(recvdTickers[t]))
+                                yahooUrl += "," + recvdTickers[t];
+                            else
+                                break;
+                        }
+                    }
+
+                    yahooUrl += "&f=sodyrr1";
+                    var csvProfiles = web.DownloadString(yahooUrl);
+
+                    var profileList = YahooParser.MapToProfileProjection(csvProfiles);
+                   
+                    return profileList;
+                }
+            }
+            catch (Exception ex) {
+                // Either connectivity, or bad input (ticker symbol : 'Input string was not in a correct format') issue.
+                return null;
+            }
+
         }
 
 
@@ -75,7 +111,6 @@ namespace PIMS.Data
                 
             return recvdProfile;
         }
-
 
 
         private static string ReformatDate(string dateToParse)
