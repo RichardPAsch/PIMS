@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using PIMS.Core.Models;
+using PIMS.Core.Models.ViewModels;
 
 
 namespace PIMS.Data
@@ -53,6 +54,44 @@ namespace PIMS.Data
 
                 return profile;
             }
+
+
+        public static List<ProfileProjectionVm> MapToProfileProjection(string csvProfilesToMap)
+        {
+            var profileRows = csvProfilesToMap.Replace("\r", "").Split('\n');
+            // Remove empty last array element due to trailing \n in received string.
+            profileRows = profileRows.Take(profileRows.Count() - 1).ToArray(); 
+
+            var profilesModel = profileRows.Select(profile => profile.Split(','))
+                              .Select(currentProfileData => new ProfileProjectionVm
+                                                            {
+                                                                Ticker = currentProfileData[0], 
+                                                                Capital = 0, 
+                                                                Price = currentProfileData[1] == "" 
+                                                                            ? 0 
+                                                                            : Convert.ToDecimal(currentProfileData[1]), 
+                                                                DivRate = currentProfileData[2] == "N/A" 
+                                                                            ? 0 
+                                                                            : Convert.ToDecimal(currentProfileData[2]), 
+                                                                DivYield = currentProfileData[3] == "N/A" 
+                                                                            ? "0" 
+                                                                            : currentProfileData[3], 
+                                                                PE_Ratio = currentProfileData[4] == "N/A" 
+                                                                            ? "0" 
+                                                                            : currentProfileData[4], 
+                                                                DivDate = currentProfileData[5] == "N/A" 
+                                                                            ? new DateTime(1900, 1, 1) 
+                                                                            : DateTime.Parse(BuildDateString(currentProfileData[5])), 
+                                                                ProjectedRevenue = 0
+                                                            })
+                              .ToList();
+
+            return new List<ProfileProjectionVm>(profilesModel.OrderBy(p => p.Ticker));
+        } 
+
+
+
+
 
         // A hack for unsuccessful use of Replace(), etc. in supressing escape chars in CSV data.
         private static string BuildDateString (string sourceDate)
