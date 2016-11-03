@@ -36,4 +36,7 @@ namespace PIMS.Core.Models.ViewModels
 
         public string ReferencedTickerSymbol { get; set; }
     }
+
+    
+
 }
