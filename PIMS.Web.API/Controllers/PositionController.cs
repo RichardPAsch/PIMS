@@ -120,6 +120,33 @@ namespace PIMS.Web.Api.Controllers
 
 
         [HttpGet]
+        [Route("~/api/Positions")]
+        public async Task<IHttpActionResult> GetAllPositions()
+        {
+            _repositoryAsset.UrlAddress = ControllerContext.Request.RequestUri.ToString();
+            var currentInvestor = _identityService.CurrentUser;
+
+            // Allow for Fiddler debugging
+            if (currentInvestor == null)
+                currentInvestor = "rpasch2@rpclassics.net";
+
+            var availablePositions = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
+                                                                           .SelectMany(p => p.Positions)
+                                                                           .Select(pos => new PositionsVm
+                                                                                          {
+                                                                                              PositionAccountType = pos.Account.AccountTypeDesc,
+                                                                                              PositionTickerSymbol = pos.PositionAsset.Profile.TickerSymbol
+                                                                                          })
+                                                                            .OrderBy(x => x.PositionTickerSymbol)
+                                                                            .AsQueryable());
+            if (availablePositions.Any())
+                return Ok(availablePositions);
+
+            return BadRequest(string.Format("No Positions found for investor {0} ",  currentInvestor.ToUpper()));
+        }
+
+
+        [HttpGet]
         [Route("{tickerSymbol}/Position")]
         public async Task<IHttpActionResult> GetPositionsByAsset(string tickerSymbol)
         {
