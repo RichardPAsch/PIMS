@@ -17,5 +17,6 @@ namespace PIMS.Core.Models.ViewModels
 
         // 2.29.16 - Keep for now, as used by MapVmToAccountType(). 
         public string Url { get; set; }
+        
     }
 }
