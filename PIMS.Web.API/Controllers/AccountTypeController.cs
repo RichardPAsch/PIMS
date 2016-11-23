@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Results;
 using FluentNHibernate.Conventions;
 using PIMS.Core.Models;
 using PIMS.Core.Models.ViewModels;
@@ -59,6 +60,19 @@ namespace PIMS.Web.Api.Controllers
             return Ok(accountTypeListing);
             
         }
+
+
+       [HttpGet]
+       [Route("~/api/AccountType/{acctDesc}")]
+        public async Task<IHttpActionResult> GetAccountTypeId(string acctDesc)
+       {
+           var availableAccountTypeId = await Task.FromResult(_repository.RetreiveAll()
+                                                  .Where(at => at.AccountTypeDesc == acctDesc)
+                                                  .Select(at => at.KeyId)
+                                                  .AsQueryable());
+
+           return Ok(availableAccountTypeId);
+       }
 
 
        [HttpGet]
