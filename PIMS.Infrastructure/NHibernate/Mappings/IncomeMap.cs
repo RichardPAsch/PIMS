@@ -18,7 +18,7 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             Map(x => x.Projected).Precision(6);
             Map(x => x.DateRecvd, "DateReceived");
             Map(x => x.LastUpdate);
-            Map(x => x.AssetId, "IncomeAssetId");
+            Map(x => x.AssetId, "IncomeAssetId"); 
             Map(x => x.IncomePositionId);
             Map(x => x.Url);
 
@@ -36,9 +36,9 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             // References other side (one) of Position NH 1:M relationship.
             References(x => x.IncomePosition)
                 .Column("IncomePositionId") // NH FK column in Income table.
+                .Cascade.SaveUpdate()
                 .Not.Update()
                 .Not.Insert();
-
 
         }
     }
