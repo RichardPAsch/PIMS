@@ -314,6 +314,49 @@ namespace PIMS.Web.Api.Controllers
 
 
 		[HttpGet]
+		[Route("~/api/Income/All/WithAcctTypes/{dateFrom?}/{dateTo?}")]
+		public async Task<IHttpActionResult> GetAssetRevenueHistoryByDatesWithAcctTypes(string dateFrom = "", string dateTo = "") {
+
+			var currentInvestor = _identityService.CurrentUser;
+			DateTime fromDate;
+			DateTime toDate;
+
+			// Fiddler debugging
+			if (currentInvestor == null)
+				currentInvestor = "rpasch2@rpclassics.net";
+
+			// YTD by default.
+			if (!string.IsNullOrWhiteSpace(dateFrom) && !string.IsNullOrWhiteSpace(dateTo)) {
+				fromDate = Convert.ToDateTime(dateFrom);
+				toDate = Convert.ToDateTime(dateTo);
+			} else {
+				fromDate = new DateTime(DateTime.UtcNow.Year, 1, 1);
+				toDate = Convert.ToDateTime(DateTime.UtcNow.ToString("d"));
+			}
+
+
+			var matchingRevenue = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
+																	   .SelectMany(a => a.Revenue).Where(r => r.DateRecvd >= fromDate &&
+																											  r.DateRecvd <= toDate)
+																	   .AsQueryable()
+																	   .Select(i => new AssetsRevenueWithAcctTypesVm {
+																		   Ticker = i.IncomeAsset.Profile.TickerSymbol,
+																		   AccountType = i.IncomePosition.Account.AccountTypeDesc,
+																		   DateReceived = i.DateRecvd,
+																		   RevenuePositionId = i.IncomePositionId,
+																		   AmountReceived = float.Parse(i.Actual.ToString(CultureInfo.InvariantCulture)) 
+																	   })
+																	   .OrderBy(x => x.Ticker)
+																	   .ThenBy(x => x.AccountType));
+
+			if (matchingRevenue.Any())
+				return Ok(matchingRevenue);
+
+			return BadRequest(string.Format("No Income found matching dates: {0} to {1} ", dateFrom, dateTo));
+		}
+
+
+		[HttpGet]
 		[Route("~/api/Income/All/{dateFrom?}/{dateTo?}")]
 		// satisfies #8
 		public async Task<IHttpActionResult> GetAssetRevenueHistoryByDates(string dateFrom = "", string dateTo = "")
@@ -853,7 +896,13 @@ namespace PIMS.Web.Api.Controllers
 				});
 			}
 
-			var currentInvestorId = Utilities.GetInvestorId(_repositoryInvestor, _identityService.CurrentUser);
+			var currentInvestor = _identityService.CurrentUser;
+
+			// Allow for Fiddler debugging
+			if (currentInvestor == null)
+				 currentInvestor = "rpasch2@rpclassics.net";
+
+			var currentInvestorId = Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim());
 
 			if (ControllerContext.Request != null)
 				incomeData.Url = ControllerContext.Request.RequestUri.AbsoluteUri;
@@ -920,7 +969,13 @@ namespace PIMS.Web.Api.Controllers
 			}
 
 			var currentInvestor = _identityService.CurrentUser;
-			var ticker = ParseUrlForTicker(ControllerContext.Request.RequestUri.AbsoluteUri);
+
+			// Allow for Fiddler debugging
+			if (currentInvestor == null)
+				currentInvestor = "rpasch2@rpclassics.net";
+
+
+			var ticker = ParseUrlForTicker(ControllerContext.Request.RequestUri.AbsoluteUri); // TODO: bug! 11.16.16
 			var existingIncome = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
 																	   .AsQueryable()
 																	   .SelectMany(a => a.Revenue).Where(i => i.IncomeId == incomeId));
@@ -941,6 +996,7 @@ namespace PIMS.Web.Api.Controllers
 			if (!isUpdated)
 				return BadRequest(string.Format("Unable to edit Income for Asset {0}",  ticker));
 
+			
 			return Ok(editedIncome);
 		}
 
