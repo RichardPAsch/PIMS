@@ -135,7 +135,11 @@ namespace PIMS.Web.Api.Controllers
                                                                            .Select(pos => new PositionsVm
                                                                                           {
                                                                                               PositionAccountType = pos.Account.AccountTypeDesc,
-                                                                                              PositionTickerSymbol = pos.PositionAsset.Profile.TickerSymbol
+                                                                                              PositionTickerSymbol = pos.PositionAsset.Profile.TickerSymbol,
+                                                                                              PositionAssetId = pos.PositionAsset.AssetId,
+                                                                                              PositionAddDate = pos.PurchaseDate,
+                                                                                              PositionAccountTypeId = pos.AcctTypeId,
+                                                                                              PositionId = pos.PositionId
                                                                                           })
                                                                             .OrderBy(x => x.PositionTickerSymbol)
                                                                             .AsQueryable());
@@ -323,6 +327,49 @@ namespace PIMS.Web.Api.Controllers
         }
 
 
+        [HttpPut]
+        [HttpPatch]
+        [Route("~/api/Position/{positionId}")]
+        public async Task<IHttpActionResult> UpdatePositionAccountTypeById(Guid positionId, [FromBody] AccountTypeVm editedAcctType)
+        {
+            if (!ModelState.IsValid) {
+                return ResponseMessage(new HttpResponseMessage {
+                    StatusCode = HttpStatusCode.BadRequest,
+                    ReasonPhrase = "Invalid Position data received for Position update."
+                });
+            }
+
+            var currentInvestor = _identityService.CurrentUser;
+
+            // Allow for Fiddler debugging
+            if (currentInvestor == null)
+                currentInvestor = "rpasch2@rpclassics.net";
+
+            var currentPosition = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim())) 
+                                                                        .SelectMany(a => a.Positions)
+                                                                        .Where(p => p.PositionId == positionId)
+                                                                        .AsQueryable());
+            if (!currentPosition.Any())
+                return BadRequest(string.Format("No matching Position found to update, for {0}  ", editedAcctType.AccountTypeDesc.Trim()));
+
+
+            currentPosition.First().AcctTypeId = editedAcctType.KeyId;
+            currentPosition.First().LastUpdate = DateTime.Now;
+            currentPosition.First().Url = ParseForNewPositionUrl(editedAcctType.Url, editedAcctType.AccountTypeDesc);
+            currentPosition.First().Account.AccountTypeDesc = editedAcctType.AccountTypeDesc;
+            currentPosition.First().Account.KeyId = editedAcctType.KeyId; // TODO: redundant ?
+            currentPosition.First().TickerSymbol = ExtractTickerFromUrl(currentPosition.First().Url);
+
+
+            var isUpdated = await Task.FromResult(_repository.Update(currentPosition.First(), currentPosition.First().PositionId));
+            if (!isUpdated)
+                return BadRequest(string.Format("Unable to update Position : {0} ", currentPosition.First().Account.AccountTypeDesc));
+
+            return Ok("1");
+
+        }
+
+
         [HttpDelete]
         [Route("{tickerSymbol}/Position/{accountKey}")]
         public async Task<IHttpActionResult> DeletePosition(Guid accountKey)
@@ -377,6 +424,13 @@ namespace PIMS.Web.Api.Controllers
                            Account = acctTypeCtrl.MapVmToAccountType(sourceData.ReferencedAccount),
                            Url = sourceData.Url
                        };
+            }
+
+            private static string ExtractTickerFromUrl(string sourceUrl)
+            {
+                var startIdx = sourceUrl.IndexOf("Asset", System.StringComparison.Ordinal);
+                var endIdx = sourceUrl.LastIndexOf("/Position", System.StringComparison.Ordinal);
+                return sourceUrl.Substring(startIdx + 6, endIdx - startIdx - 6);
             }
 
         #endregion
