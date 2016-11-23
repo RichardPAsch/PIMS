@@ -70,10 +70,18 @@ namespace PIMS.Core.Models.ViewModels
 
     public class AssetsRevenueVm
     {
-        //public string DateReceived { get; set; }
         public DateTime DateReceived { get; set; }
         public string Ticker { get; set; }
         public string AmountReceived { get; set; }
+    }
+
+    public class AssetsRevenueWithAcctTypesVm
+    {
+        public DateTime DateReceived { get; set; }
+        public string Ticker { get; set; }
+        public float AmountReceived { get; set; }
+        public string AccountType { get; set; }
+        public Guid RevenuePositionId { get; set; }
     }
 
     public class RevenueByMonthAndDatesVm
