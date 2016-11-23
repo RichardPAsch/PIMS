@@ -102,7 +102,9 @@ namespace PIMS.Data.Repositories
                     _nhSession.Merge(entity);
                     trx.Commit();
                 }
-                catch (Exception) {
+                catch (Exception ex)
+                {
+                    var res = ex.Message;
                     return false;
                 }
             }
