@@ -141,7 +141,7 @@ namespace PIMS.Web.Api.Controllers
                                                                                               PositionAccountTypeId = pos.AcctTypeId,
                                                                                               PositionId = pos.PositionId
                                                                                           })
-                                                                            .OrderBy(x => x.PositionTickerSymbol)
+                                                                            .OrderBy(x => x.PositionAccountType)
                                                                             .AsQueryable());
             if (availablePositions.Any())
                 return Ok(availablePositions);
