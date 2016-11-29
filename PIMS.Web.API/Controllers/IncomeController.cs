@@ -342,7 +342,8 @@ namespace PIMS.Web.Api.Controllers
 																	   .Select(i => new AssetsRevenueWithAcctTypesVm {
 																		   Ticker = i.IncomeAsset.Profile.TickerSymbol,
 																		   AccountType = i.IncomePosition.Account.AccountTypeDesc,
-																		   DateReceived = i.DateRecvd,
+																		   DateReceived = i.DateRecvd, 
+																		   RevenueId = i.IncomeId,
 																		   RevenuePositionId = i.IncomePositionId,
 																		   AmountReceived = float.Parse(i.Actual.ToString(CultureInfo.InvariantCulture)) 
 																	   })
@@ -973,15 +974,14 @@ namespace PIMS.Web.Api.Controllers
 			// Allow for Fiddler debugging
 			if (currentInvestor == null)
 				currentInvestor = "rpasch2@rpclassics.net";
-
-
-			var ticker = ParseUrlForTicker(ControllerContext.Request.RequestUri.AbsoluteUri); // TODO: bug! 11.16.16
+			
 			var existingIncome = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
 																	   .AsQueryable()
 																	   .SelectMany(a => a.Revenue).Where(i => i.IncomeId == incomeId));
 
+			
 			if (!existingIncome.Any())
-				return BadRequest(string.Format("No matching Income found to update, for {0}", ticker ));
+				return BadRequest(string.Format("No matching Income found to update."));
 
 			// Satisfy FK constraints.
 			editedIncome.AssetId = existingIncome.First().AssetId;
@@ -993,11 +993,10 @@ namespace PIMS.Web.Api.Controllers
 
 			// Partial Income replacement.
 			var isUpdated = await Task.FromResult(_repository.Update(MapVmToIncomeEdits(editedIncome), incomeId));
-			if (!isUpdated)
-				return BadRequest(string.Format("Unable to edit Income for Asset {0}",  ticker));
+		    if (isUpdated) return Ok(editedIncome);
 
-			
-			return Ok(editedIncome);
+		    var ticker = ParseUrlForTicker(existingIncome.First().Url);
+		    return BadRequest(string.Format("Unable to edit Income for Asset {0}", ticker));
 		}
 
 
@@ -1006,6 +1005,11 @@ namespace PIMS.Web.Api.Controllers
 		public async Task<IHttpActionResult> DeleteIncome(Guid incomeId)
 		{
 			var currentInvestor = _identityService.CurrentUser;
+
+			// Allow for Fiddler debugging
+			if (currentInvestor == null)
+				currentInvestor = "rpasch2@rpclassics.net";
+
 			var ticker = ParseUrlForTicker(ControllerContext.Request.RequestUri.AbsoluteUri);
 			var selectedIncome = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
 																				   .AsQueryable()
