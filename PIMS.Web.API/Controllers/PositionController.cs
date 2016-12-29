@@ -74,7 +74,7 @@ namespace PIMS.Web.Api.Controllers
                                                                          .Select(p2 => new PositionVm {
                                                                              PostEditPositionAccount = p2.Account.AccountTypeDesc,
                                                                              PreEditPositionAccount = p2.Account.AccountTypeDesc,
-                                                                             CostBasis = p2.MarketPrice,
+                                                                             UnitCosts = p2.MarketPrice,
                                                                              Qty = p2.Quantity,
                                                                              DateOfPurchase = p2.PurchaseDate,
                                                                              LastUpdate = p2.LastUpdate,
@@ -102,7 +102,7 @@ namespace PIMS.Web.Api.Controllers
                                                                     .Select(x => new PositionVm
                                                                                  {
                                                                                      PreEditPositionAccount = x.Account.AccountTypeDesc,
-                                                                                     CostBasis = x.MarketPrice,
+                                                                                     UnitCosts = x.MarketPrice,
                                                                                      Qty = x.Quantity,
                                                                                      DateOfPurchase = x.PurchaseDate,
                                                                                      LastUpdate = x.LastUpdate,
@@ -156,27 +156,29 @@ namespace PIMS.Web.Api.Controllers
         {
             _repositoryAsset.UrlAddress = ControllerContext.Request.RequestUri.ToString();
             var currentInvestor = _identityService.CurrentUser;
+           
 
             // Allow for Fiddler debugging
             if (currentInvestor == null)
                 currentInvestor = "rpasch2@rpclassics.net";
-           
+
             var filteredPositions = await Task.FromResult(_repositoryAsset.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == tickerSymbol.ToUpper().Trim()
                                                                                       && a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
                                                                           .SelectMany(p => p.Positions)
-                                                                          .Select(p2 => new PositionVm
-                                                                                        {
-                                                                                            // TODO: 5.13.16 - reevaluate need for 1st 2 properties?
-                                                                                            PreEditPositionAccount = p2.Account.AccountTypeDesc,
-                                                                                            PostEditPositionAccount = p2.Account.AccountTypeDesc,
-                                                                                            CostBasis = p2.MarketPrice,
-                                                                                            Qty = p2.Quantity,
-                                                                                            DateOfPurchase = p2.PurchaseDate,
-                                                                                            LastUpdate = p2.LastUpdate,
-                                                                                            Url = p2.Url,
-                                                                                            LoggedInInvestor = p2.InvestorKey,
-                                                                                            ReferencedAssetId = p2.PositionAsset.AssetId // added 5.17.16
-                                                                                        })
+                                                                          .Select(p2 => new PositionVm {
+                                                                              // TODO: 5.13.16 - reevaluate need for 1st 2 properties?
+                                                                              PreEditPositionAccount = p2.Account.AccountTypeDesc,
+                                                                              PostEditPositionAccount = p2.Account.AccountTypeDesc,
+                                                                              UnitCosts = p2.MarketPrice,
+                                                                              Qty = p2.Quantity,
+                                                                              DateOfPurchase = p2.PurchaseDate,
+                                                                              DatePositionAdded = p2.PositionDate,
+                                                                              LastUpdate = p2.LastUpdate,
+                                                                              Url = p2.Url,
+                                                                              LoggedInInvestor = p2.InvestorKey,
+                                                                              ReferencedTickerSymbol = tickerSymbol,
+                                                                              ReferencedAssetId = p2.PositionAsset.AssetId // added 5.17.16
+                                                                          })
                                                                           .AsQueryable());
 
             if (filteredPositions.Any())
@@ -184,6 +186,42 @@ namespace PIMS.Web.Api.Controllers
             
             return BadRequest(string.Format("No Positions found matching {0} for investor {1} ", tickerSymbol.ToUpper(), currentInvestor.ToUpper()));
         }
+
+
+
+        [HttpGet]
+        [Route("{tickerSymbol}/Position/Edit")]
+        public async Task<IHttpActionResult> GetPositionsByAssetForEdits(string tickerSymbol)
+        {
+            _repositoryAsset.UrlAddress = ControllerContext.Request.RequestUri.ToString();
+            var currentInvestor = _identityService.CurrentUser;
+
+
+            // Allow for Fiddler debugging
+            if (currentInvestor == null)
+                currentInvestor = "rpasch2@rpclassics.net";
+
+            var availablePositions = await Task.FromResult(_repositoryAsset.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == tickerSymbol.ToUpper().Trim()
+                                                                                       && a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
+                                                                      .SelectMany(p => p.Positions)
+                                                                      .Select(p2 => new PositionEditsVm()  {
+                                                                          ReferencedTickerSymbol = tickerSymbol,
+                                                                          PreEditPositionAccount = p2.Account.AccountTypeDesc,
+                                                                          Qty = p2.Quantity,
+                                                                          UnitCosts = p2.MarketPrice,
+                                                                          DateOfPurchase = p2.PurchaseDate,
+                                                                          DatePositionAdded = p2.PositionDate,
+                                                                          LastUpdate = DateTime.Now,
+                                                                          PositionId = p2.PositionId
+                                                                      })
+                                                                      .AsQueryable());
+
+            if (availablePositions.Any())
+                return Ok(availablePositions);
+
+            return BadRequest(string.Format("No Positions were found matching {0} ", tickerSymbol.ToUpper()));
+        }
+
 
 
         [HttpPost]
@@ -279,7 +317,7 @@ namespace PIMS.Web.Api.Controllers
                 targetPosition.First().Url = newLocation.Trim();
 
                 editedPosition.PostEditPositionAccount = targetPosition.First().Account.AccountTypeDesc;
-                editedPosition.CostBasis = targetPosition.First().MarketPrice;
+                editedPosition.UnitCosts = targetPosition.First().MarketPrice;
                 editedPosition.Qty = targetPosition.First().Quantity;
                 editedPosition.Url = targetPosition.First().Url;
                 editedPosition.LastUpdate = targetPosition.First().LastUpdate;
@@ -314,7 +352,7 @@ namespace PIMS.Web.Api.Controllers
 
                 // Only selected attributes are available for editing.
                 positionToUpdate.First().Quantity = editedPosition.Qty;
-                positionToUpdate.First().MarketPrice = editedPosition.CostBasis;
+                positionToUpdate.First().MarketPrice = editedPosition.UnitCosts;
 
 
                 var isUpdated = await Task.FromResult(_repository.Update(positionToUpdate.First(), positionToUpdate.First().PositionId));
@@ -415,7 +453,7 @@ namespace PIMS.Web.Api.Controllers
                            // ReSharper disable once PossibleInvalidOperationException
                            PurchaseDate = (DateTime) sourceData.DateOfPurchase,
                            Quantity = sourceData.Qty,
-                           MarketPrice = sourceData.CostBasis,
+                           MarketPrice = sourceData.UnitCosts,
                            InvestorKey = Utilities.GetInvestorId(_repositoryInvestor, _identityService.CurrentUser).ToString(),
                            AcctTypeId = sourceData.ReferencedAccount.KeyId,
                            PositionAssetId = sourceData.ReferencedAssetId, 
