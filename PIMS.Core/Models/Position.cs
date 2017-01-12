@@ -31,7 +31,11 @@ namespace PIMS.Core.Models
 
 
         public virtual string InvestorKey { get; set; }
+
+        // (I)nactive or (A)ctive
+        public virtual string Status { get; set; }
         
+
         [Required]
         public virtual DateTime PurchaseDate { get; set; }
 
@@ -48,6 +52,10 @@ namespace PIMS.Core.Models
 
         [Required]
         public virtual string TickerSymbol { get; set; }
+
+        // TODO: set [Required] attr?
+        // Date Position added for asset; used in Revenue editing (back-dating checks)
+        public virtual DateTime PositionDate { get; set; } // added 12.6.16
 
 
 
