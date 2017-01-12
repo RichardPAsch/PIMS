@@ -19,8 +19,10 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             Map(x => x.Quantity);
             Map(x => x.MarketPrice, "UnitCost").Precision(6).Scale(2);
             Map(x => x.LastUpdate);
-            Map(x => x.InvestorKey); // added 4-14-15
+            Map(x => x.InvestorKey);   
             Map(x => x.Url);
+            Map(x => x.PositionDate);  
+            Map(x => x.Status);        
             
             
 
