@@ -19,7 +19,7 @@ namespace PIMS.Data.Repositories
         bool Create(T newEntity);
         bool Delete(Guid idGuid);
         bool Update(T entity, object id);
-        
+
     }
 
 }

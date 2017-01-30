@@ -59,6 +59,7 @@
     <Compile Include="Repositories\IGenericRepository.cs" />
     <Compile Include="Repositories\IncomeRepository.cs" />
     <Compile Include="Repositories\InvestorRepository.cs" />
+    <Compile Include="Repositories\IPositionEditsRepository.cs" />
     <Compile Include="Repositories\IUserRepository.cs" />
     <Compile Include="Repositories\PositionRepository.cs" />
     <Compile Include="Repositories\ProfileRepsository.cs" />
