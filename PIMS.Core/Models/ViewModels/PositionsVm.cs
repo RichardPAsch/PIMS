@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 
 
 namespace PIMS.Core.Models.ViewModels
@@ -9,6 +10,16 @@ namespace PIMS.Core.Models.ViewModels
         public string PositionAccountType { get; set; }
 
         public string PositionTickerSymbol { get; set; }
+
+        public Guid PositionAssetId { get; set; }
+
+        public DateTime PositionAddDate { get; set; }
+
+        public Guid PositionId { get; set; }
+
+        public Guid PositionAccountTypeId { get; set; }
+
+        public Guid PositionInvestorId { get; set; }
 
     }
 
