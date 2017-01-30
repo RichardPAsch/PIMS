@@ -7,7 +7,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using FluentNHibernate.Conventions;
-using NHibernate.Exceptions;
+//using NHibernate.Exceptions;
 using PIMS.Core.Models;
 using PIMS.Core.Security;
 using PIMS.Data.Repositories;
