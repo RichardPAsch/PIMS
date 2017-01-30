@@ -70,6 +70,7 @@ namespace PIMS.Web.Api.DependencyResolution {
                             x.For<IGenericRepository<AccountType>>().Use<AccountTypeRepository>();
                             x.For<IGenericRepository<Asset>>().Use<AssetRepository>();
                             x.For<IGenericRepository<Position>>().Use<PositionRepository>();
+                            x.For<IPositionEditsRepository<Position>>().Use<PositionRepository>();
                             x.For<IGenericRepository<Income>>().Use<IncomeRepository>();
                             x.For<IGenericRepository<Investor>>().Use<InvestorRepository>();
                             x.For<IGenericRepository<Profile>>().Use<ProfileRepository>();
