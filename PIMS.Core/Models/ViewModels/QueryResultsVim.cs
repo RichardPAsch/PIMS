@@ -82,6 +82,7 @@ namespace PIMS.Core.Models.ViewModels
         public float AmountReceived { get; set; }
         public string AccountType { get; set; }
         public Guid RevenuePositionId { get; set; }
+        public Guid RevenueId { get; set; }
     }
 
     public class RevenueByMonthAndDatesVm
