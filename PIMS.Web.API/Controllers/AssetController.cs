@@ -27,6 +27,7 @@ namespace PIMS.Web.Api.Controllers
         private readonly IGenericRepository<Profile> _repositoryProfile;
         private readonly IGenericRepository<AccountType> _repositoryAccountType;
         private readonly IGenericRepository<Position> _repositoryPosition;
+        private readonly IPositionEditsRepository<Position> _repositoryEdits;
         private readonly IGenericRepository<Income> _repositoryIncome;
         private const string DefaultDisplayType = "detail";
         private string _currentInvestor;
@@ -38,6 +39,7 @@ namespace PIMS.Web.Api.Controllers
                                                                      IGenericRepository<Profile> repositoryProfile,
                                                                      IGenericRepository<AccountType> repositoryAccountType,
                                                                      IGenericRepository<Position> repositoryPosition,
+                                                                     IPositionEditsRepository<Position> repositoryEdits,
                                                                      IGenericRepository<Income> repositoryIncome )
         {
             _repository = repository;
@@ -48,6 +50,7 @@ namespace PIMS.Web.Api.Controllers
             _repositoryAccountType = repositoryAccountType;
             _repositoryPosition = repositoryPosition;
             _repositoryIncome = repositoryIncome;
+            _repositoryEdits = repositoryEdits;
         }
 
 
@@ -249,7 +252,7 @@ namespace PIMS.Web.Api.Controllers
 
             
             // POSITION(S).
-            var positionCtrl = new PositionController(_identityService, _repository, _repositoryInvestor, _repositoryPosition, _repositoryAccountType);
+            var positionCtrl = new PositionController(_identityService, _repository, _repositoryInvestor, _repositoryPosition, _repositoryAccountType, _repositoryEdits);
             for(var pos = 0; pos < submittedAsset.PositionsCreated.Count; pos++)
             {
                 // ReSharper disable once AccessToModifiedClosure
