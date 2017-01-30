@@ -49,14 +49,18 @@ namespace PIMS.Web.Api.Controllers
         private readonly IPimsIdentityService _identityService;
         private static IGenericRepository<Position> _repository;
         private static IGenericRepository<AccountType> _repositoryAccountType;
+        private static IPositionEditsRepository<Position> _repositoryEdits;
 
-        public PositionController(IPimsIdentityService identitySvc, IGenericRepository<Asset> repositoryAsset, IGenericRepository<Investor> repositoryInvestor, IGenericRepository<Position> repository, IGenericRepository<AccountType> repositoryAccountType)
+        public PositionController(IPimsIdentityService identitySvc, IGenericRepository<Asset> repositoryAsset, 
+                                  IGenericRepository<Investor> repositoryInvestor, IGenericRepository<Position> repository,
+                                  IGenericRepository<AccountType> repositoryAccountType, IPositionEditsRepository<Position> repositoryEdits)
         {
             _repositoryAsset = repositoryAsset;
             _identityService = identitySvc;
             _repositoryInvestor = repositoryInvestor;
             _repository = repository;
             _repositoryAccountType = repositoryAccountType;
+            _repositoryEdits = repositoryEdits;
         }
 
 
@@ -139,7 +143,8 @@ namespace PIMS.Web.Api.Controllers
                                                                                               PositionAssetId = pos.PositionAsset.AssetId,
                                                                                               PositionAddDate = pos.PurchaseDate,
                                                                                               PositionAccountTypeId = pos.AcctTypeId,
-                                                                                              PositionId = pos.PositionId
+                                                                                              PositionId = pos.PositionId,
+                                                                                              PositionInvestorId = Guid.Parse(pos.InvestorKey) 
                                                                                           })
                                                                             .OrderBy(x => x.PositionAccountType)
                                                                             .AsQueryable());
@@ -204,11 +209,11 @@ namespace PIMS.Web.Api.Controllers
             var availablePositions = await Task.FromResult(_repositoryAsset.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == tickerSymbol.ToUpper().Trim()
                                                                                        && a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
                                                                       .SelectMany(p => p.Positions)
-                                                                      .Select(p2 => new PositionEditsVm()  {
+                                                                      .Select(p2 => new PositionsByAssetVm  {
                                                                           ReferencedTickerSymbol = tickerSymbol,
                                                                           PreEditPositionAccount = p2.Account.AccountTypeDesc,
                                                                           Qty = p2.Quantity,
-                                                                          UnitCosts = p2.MarketPrice,
+                                                                          UnitCost = p2.MarketPrice,
                                                                           DateOfPurchase = p2.PurchaseDate,
                                                                           DatePositionAdded = p2.PositionDate,
                                                                           LastUpdate = DateTime.Now,
@@ -265,7 +270,61 @@ namespace PIMS.Web.Api.Controllers
             if (!isCreated) return BadRequest(string.Format("Unable to add Position for: {0} ", ticker.ToUpper()));
             return Created(newLocation + positionToCreate.AcctTypeId, positionToCreate);
         }
-        
+
+
+
+
+        // API for client positionCreateSvc.processPositions() calls.
+        [HttpPatch]
+        [Route("~/api/Positions/Update")]
+        public async Task<IHttpActionResult> UpdateEditedPositions([FromBody] PositionEditsVm editedPositions) {
+
+            // 1.25.17
+            if (!ModelState.IsValid) {
+                return ResponseMessage(new HttpResponseMessage {
+                    StatusCode = HttpStatusCode.BadRequest,
+                    ReasonPhrase = "Invalid model state received for one or more Positions."
+                });
+            }
+            var currentInvestor = _identityService.CurrentUser ?? "rpasch2@rpclassics.net";
+            
+            // TODO: 1.27.17 - Note modifications made to AssetController to accommodate this.
+            var positionFrom = MapEditsVmToPosition(editedPositions, "from");
+            var positionTo = MapEditsVmToPosition(editedPositions, "to");
+            var updateOk = await Task.FromResult(_repositoryEdits.UpdatePositions(positionFrom, positionTo));
+
+            if (updateOk)
+                return Ok();
+
+            return BadRequest(string.Format("Unable to update Position edits."));
+        }
+
+        [HttpPut]
+        [Route("~/api/Positions/UpdateCreate")]
+        public async Task<IHttpActionResult> UpdateCreateEditedPositions([FromBody] PositionEditsVm editedPositions) {
+
+            if (!ModelState.IsValid) {
+                return ResponseMessage(new HttpResponseMessage {
+                    StatusCode = HttpStatusCode.BadRequest,
+                    ReasonPhrase = "Invalid model state received for one or more Positions."
+                });
+            }
+            var currentInvestor = _identityService.CurrentUser ?? "rpasch2@rpclassics.net";
+            
+            var positionFrom = MapEditsVmToPosition(editedPositions, "from");
+            var positionTo = MapEditsVmToPosition(editedPositions, "to");
+            var updateOk = await Task.FromResult(_repositoryEdits.UpdateCreatePositions(positionFrom, positionTo));
+
+            if (updateOk)
+                return Ok();
+
+            return BadRequest(string.Format("Unable to update/create Position edits."));
+        }
+
+
+
+
+
 
         [HttpPut]
         [HttpPatch]
@@ -282,6 +341,7 @@ namespace PIMS.Web.Api.Controllers
             var currentInvestor = _identityService.CurrentUser;
             string ticker;
 
+            // TODO: re-eval the need for this logic. - 1.25.17
             // Check for AccountType consolidation (rollover) Example: [Roth-IRA <- from IRRA].
             if(editedPosition.PreEditPositionAccount.Trim() != editedPosition.PostEditPositionAccount.Trim())
             {
@@ -445,6 +505,24 @@ namespace PIMS.Web.Api.Controllers
 
             }
 
+            private static Position MapEditsVmToPosition(PositionEditsVm sourceVm, string sourcePosition)
+            {
+                // TODO: re-eval need for "Purchase Date" - we now have "Position Date" that reflects date position was created.
+                return new Position {
+                    PositionId = sourcePosition == "from" ? sourceVm.FromPosId : sourceVm.ToPosId,
+                    PositionAssetId = sourceVm.PositionAssetId,
+                    AcctTypeId = sourceVm.PositionAccountId, // same for both 'from' and 'to' ?
+                    Status = sourcePosition == "from" ? sourceVm.FromPositionStatus : sourceVm.ToPositionStatus,
+                    PositionDate = sourcePosition == "from" ? sourceVm.FromPositionDate : sourceVm.ToPositionDate,
+                    PurchaseDate = DateTime.Now,
+                    Quantity = sourcePosition == "from" ? sourceVm.FromQty : sourceVm.ToQty,
+                    MarketPrice = sourcePosition == "from" ? sourceVm.FromUnitCost : sourceVm.ToUnitCost,
+                    LastUpdate = DateTime.Now,
+                    InvestorKey = sourceVm.PositionInvestorId.ToString(),
+                    Url = ""
+                };
+            }
+
             private Position MapVmToPosition(PositionVm sourceData)
             {
                 var acctTypeCtrl = new AccountTypeController(_repositoryAccountType, _repositoryAsset, _identityService, _repositoryInvestor);
@@ -466,8 +544,8 @@ namespace PIMS.Web.Api.Controllers
 
             private static string ExtractTickerFromUrl(string sourceUrl)
             {
-                var startIdx = sourceUrl.IndexOf("Asset", System.StringComparison.Ordinal);
-                var endIdx = sourceUrl.LastIndexOf("/Position", System.StringComparison.Ordinal);
+                var startIdx = sourceUrl.IndexOf("Asset", StringComparison.Ordinal);
+                var endIdx = sourceUrl.LastIndexOf("/Position", StringComparison.Ordinal);
                 return sourceUrl.Substring(startIdx + 6, endIdx - startIdx - 6);
             }
 
