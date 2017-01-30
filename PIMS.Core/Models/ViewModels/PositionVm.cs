@@ -15,7 +15,7 @@ namespace PIMS.Core.Models.ViewModels
         public int Qty { get; set; }
 
         [Required]
-        public decimal CostBasis { get; set; }
+        public decimal UnitCosts { get; set; }
 
         [Required]
         public DateTime? DateOfPurchase { get; set; }
@@ -27,7 +27,7 @@ namespace PIMS.Core.Models.ViewModels
 
         public string LoggedInInvestor { get; set; }
 
-        // TODO: 5.13.16 - Shouldn't this of type atring? Or is it really needed?
+        // TODO: 5.13.16 - Shouldn't this be of type atring? Or is it really needed?
         public AccountTypeVm ReferencedAccount { get; set; }
 
         public Guid CreatedPositionId { get; set; }
@@ -35,8 +35,9 @@ namespace PIMS.Core.Models.ViewModels
         public Guid ReferencedAssetId { get; set; }
 
         public string ReferencedTickerSymbol { get; set; }
-    }
 
+        public DateTime? DatePositionAdded { get; set; }
+    }
     
 
 }
