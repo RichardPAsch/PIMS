@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -19,6 +18,7 @@ namespace PIMS.UnitTest
     [TestFixture]
     public class VerifyAsset
     {
+        /*  1.26.17 - Commented all to accomodate IPositionEditsRepository addition. Not using these tests currently !!
         private AssetController _ctrl;
         private const string UrlBase = "http://localhost/PIMS.Web.API/api/Asset"; // 10/28 - correct ??
         private Mock<InMemoryAssetRepository> _mockRepo;
@@ -29,7 +29,7 @@ namespace PIMS.UnitTest
         private Mock<InMemoryAccountTypeRepository> _mockRepoAcctType;
         private Mock<InMemoryPositionRepository> _mockRepoPosition;
         private Mock<InMemoryIncomeRepository> _mockRepoIncome;
-
+        */
 
          /* -- Developer notes --
           SetUp() is used to instruct the repository how to behave under different scenarios, when testing behavior.
@@ -68,7 +68,7 @@ namespace PIMS.UnitTest
         //                       as such, provided no duplicate entries e.g.,  Asset-Account-Date Reeceived, are found.
         //----------------------------------------------------------------------------------------------------------------------------
 
-
+        /*
         [SetUp]
         public void Init() {
             _mockRepo = new Mock<InMemoryAssetRepository>();
@@ -1003,12 +1003,6 @@ namespace PIMS.UnitTest
 
         }
 
-        
-
-
-
-
-
-
+        */
     }
 }
