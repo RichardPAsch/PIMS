@@ -8,7 +8,7 @@ using PIMS.Core.Models;
 
 namespace PIMS.Data.Repositories
 {
-    public class PositionRepository : IGenericRepository<Position>
+    public class PositionRepository : IGenericRepository<Position>, IPositionEditsRepository<Position>
     {
         // All Actions delegated to aggregate root (AssetRepository).
 
@@ -104,6 +104,44 @@ namespace PIMS.Data.Repositories
                 }
                 catch (Exception ex)
                 {
+                    var res = ex.Message;
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+
+        // API to handle multiple Position edits: rollovers, updates.
+        public bool UpdatePositions(Position origPos, Position newPos)
+        {
+            using (var trx = _nhSession.BeginTransaction()) {
+                try {
+                    _nhSession.Merge(origPos);
+                    if(newPos != null)
+                        _nhSession.Merge(newPos);
+
+                    trx.Commit();
+                }
+                catch (Exception ex) {
+                    var res = ex.Message;
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public bool UpdateCreatePositions(Position origPos, Position newPos) {
+            using (var trx = _nhSession.BeginTransaction()) {
+                try {
+                    _nhSession.Merge(origPos);
+                    _nhSession.Save(newPos);
+
+                    trx.Commit();
+                }
+                catch (Exception ex) {
                     var res = ex.Message;
                     return false;
                 }
