@@ -36,7 +36,7 @@ namespace PIMS.Core.Models
         public virtual string Status { get; set; }
         
 
-        [Required]
+        //[Required]
         public virtual DateTime PurchaseDate { get; set; }
 
         [Required]
