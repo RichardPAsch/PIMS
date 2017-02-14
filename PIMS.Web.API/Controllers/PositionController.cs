@@ -209,6 +209,7 @@ namespace PIMS.Web.Api.Controllers
             var availablePositions = await Task.FromResult(_repositoryAsset.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == tickerSymbol.ToUpper().Trim()
                                                                                        && a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
                                                                       .SelectMany(p => p.Positions)
+                                                                      .Where(p => p.Status != "I")
                                                                       .Select(p2 => new PositionsByAssetVm  {
                                                                           ReferencedTickerSymbol = tickerSymbol,
                                                                           PreEditPositionAccount = p2.Account.AccountTypeDesc,
@@ -216,7 +217,7 @@ namespace PIMS.Web.Api.Controllers
                                                                           UnitCost = p2.MarketPrice,
                                                                           DateOfPurchase = p2.PurchaseDate,
                                                                           DatePositionAdded = p2.PositionDate,
-                                                                          LastUpdate = DateTime.Now,
+                                                                          LastUpdate = p2.LastUpdate,
                                                                           PositionId = p2.PositionId
                                                                       })
                                                                       .AsQueryable());
@@ -275,33 +276,40 @@ namespace PIMS.Web.Api.Controllers
 
 
         // API for client positionCreateSvc.processPositions() calls.
-        [HttpPatch]
-        [Route("~/api/Positions/Update")]
-        public async Task<IHttpActionResult> UpdateEditedPositions([FromBody] PositionEditsVm editedPositions) {
+        //[HttpPut]
+        //[Route("~/api/Positions/Update")]
+        //public async Task<IHttpActionResult> UpdateEditedPositions([FromBody] PositionEditsVm editedPositions) {
 
-            // 1.25.17
-            if (!ModelState.IsValid) {
-                return ResponseMessage(new HttpResponseMessage {
-                    StatusCode = HttpStatusCode.BadRequest,
-                    ReasonPhrase = "Invalid model state received for one or more Positions."
-                });
-            }
-            var currentInvestor = _identityService.CurrentUser ?? "rpasch2@rpclassics.net";
+        //    // 1.25.17
+        //    if (!ModelState.IsValid) {
+        //        return ResponseMessage(new HttpResponseMessage {
+        //            StatusCode = HttpStatusCode.BadRequest,
+        //            ReasonPhrase = "Invalid model state received for one or more Positions."
+        //        });
+        //    }
+        //    var currentInvestor = _identityService.CurrentUser ?? "rpasch2@rpclassics.net";
             
-            // TODO: 1.27.17 - Note modifications made to AssetController to accommodate this.
-            var positionFrom = MapEditsVmToPosition(editedPositions, "from");
-            var positionTo = MapEditsVmToPosition(editedPositions, "to");
-            var updateOk = await Task.FromResult(_repositoryEdits.UpdatePositions(positionFrom, positionTo));
+        //    // TODO: 1.27.17 - Note modifications made to AssetController to accommodate this.
+        //    var positionFrom = MapEditsVmToPosition(editedPositions, "from");
+        //    var positionTo = MapEditsVmToPosition(editedPositions, "to");
+        //    // TODO: 2.3.17 - error on db trx commit.
+        //    var updateOk = await Task.FromResult(_repositoryEdits.UpdatePositions(positionFrom, positionTo));
 
-            if (updateOk)
-                return Ok();
+        //    if (updateOk)
+        //        return Ok();
 
-            return BadRequest(string.Format("Unable to update Position edits."));
-        }
+        //    return BadRequest(string.Format("Unable to update Position edits."));
+        //}
 
-        [HttpPut]
+
+
+
+        [HttpPatch]
         [Route("~/api/Positions/UpdateCreate")]
         public async Task<IHttpActionResult> UpdateCreateEditedPositions([FromBody] PositionEditsVm editedPositions) {
+            /* 
+                Handles all Position edits, i.e., rollovers, purchases, sales, or simple edits. 
+            */
 
             if (!ModelState.IsValid) {
                 return ResponseMessage(new HttpResponseMessage {
@@ -310,15 +318,41 @@ namespace PIMS.Web.Api.Controllers
                 });
             }
             var currentInvestor = _identityService.CurrentUser ?? "rpasch2@rpclassics.net";
-            
-            var positionFrom = MapEditsVmToPosition(editedPositions, "from");
-            var positionTo = MapEditsVmToPosition(editedPositions, "to");
-            var updateOk = await Task.FromResult(_repositoryEdits.UpdateCreatePositions(positionFrom, positionTo));
 
-            if (updateOk)
+            var mappedPositionFrom = MapEditsVmToPosition(editedPositions, "from");
+            var mappedPositionTo = MapEditsVmToPosition(editedPositions, "to");
+            var updatesOk = false;
+
+            // This has no effect, as conversion to DateTime inherently includes time stamp.
+            //positionFrom.PurchaseDate = Convert.ToDateTime(positionFrom.PurchaseDate.ToShortDateString());
+            //positionTo.PurchaseDate = Convert.ToDateTime(positionTo.PurchaseDate.ToShortDateString());
+            //positionFrom.PositionDate = Convert.ToDateTime(mappedPositionFrom.PositionDate.ToShortDateString());
+            //positionTo.PositionDate = Convert.ToDateTime(positionTo.PositionDate.ToShortDateString());
+
+            /* Delegate back-end processing to appropriate repository method based on received
+               editedPositions.DbActionNew/DbActionOrig values.
+                    dbActionOrig = source Position 
+                    dbActionNew  = target Position
+             */
+            switch (editedPositions.DbActionOrig.Trim() + "-" + editedPositions.DbActionNew.Trim())
+            {
+                 case "update-update":
+                 case "update-na":
+                    updatesOk = await Task.FromResult(_repositoryEdits.UpdatePositions(mappedPositionFrom, mappedPositionTo));
+                    break;
+                 case "update-insert":
+                    updatesOk = await Task.FromResult(_repositoryEdits.UpdateCreatePositions(mappedPositionFrom, mappedPositionTo));
+                    break;
+
+            }
+
+
+            //var updatesOk = await Task.FromResult(_repositoryEdits.UpdatePositions(positionFrom, positionTo));
+
+            if (updatesOk)
                 return Ok();
 
-            return BadRequest(string.Format("Unable to update/create Position edits."));
+           return BadRequest(string.Format("Unable to update/create Position edits."));
         }
 
 
@@ -505,22 +539,58 @@ namespace PIMS.Web.Api.Controllers
 
             }
 
-            private static Position MapEditsVmToPosition(PositionEditsVm sourceVm, string sourcePosition)
+            private static Position MapEditsVmToPosition(PositionEditsVm sourceVm, string targetPositionDirection)
             {
-                // TODO: re-eval need for "Purchase Date" - we now have "Position Date" that reflects date position was created.
-                return new Position {
-                    PositionId = sourcePosition == "from" ? sourceVm.FromPosId : sourceVm.ToPosId,
-                    PositionAssetId = sourceVm.PositionAssetId,
-                    AcctTypeId = sourceVm.PositionAccountId, // same for both 'from' and 'to' ?
-                    Status = sourcePosition == "from" ? sourceVm.FromPositionStatus : sourceVm.ToPositionStatus,
-                    PositionDate = sourcePosition == "from" ? sourceVm.FromPositionDate : sourceVm.ToPositionDate,
-                    PurchaseDate = DateTime.Now,
-                    Quantity = sourcePosition == "from" ? sourceVm.FromQty : sourceVm.ToQty,
-                    MarketPrice = sourcePosition == "from" ? sourceVm.FromUnitCost : sourceVm.ToUnitCost,
-                    LastUpdate = DateTime.Now,
-                    InvestorKey = sourceVm.PositionInvestorId.ToString(),
-                    Url = ""
-                };
+          
+                var updatedOrNewPosition = new Position
+                                           {
+                                               PositionId = targetPositionDirection == "from"
+                                                   ? sourceVm.FromPosId
+                                                   : sourceVm.ToPosId,
+                                               PositionAssetId = sourceVm.PositionAssetId,
+                                               AcctTypeId = targetPositionDirection == "from"
+                                                   ? sourceVm.FromPositionAccountId
+                                                   : sourceVm.ToPositionAccountId,
+                                               Status = targetPositionDirection == "from"
+                                                   ? sourceVm.FromPositionStatus
+                                                   : sourceVm.ToPositionStatus,
+                                               Quantity = targetPositionDirection == "from" 
+                                                   ? sourceVm.FromQty 
+                                                   : sourceVm.ToQty,
+                                               MarketPrice = targetPositionDirection == "from"
+                                                   ? sourceVm.FromUnitCost
+                                                   : sourceVm.ToUnitCost,
+                                               LastUpdate = DateTime.Now,
+                                               InvestorKey = sourceVm.PositionInvestorId.ToString(),
+                                               PositionDate = targetPositionDirection == "from"
+                                                   ? sourceVm.FromPosDate
+                                                   : sourceVm.ToPosDate,
+                                               PurchaseDate = targetPositionDirection == "from"
+                                                   ? sourceVm.FromPurchaseDate
+                                                   : sourceVm.ToPurchaseDate
+                                           };
+
+               
+                
+                // DateRecvd = sourceVm.DateReceived.HasValue ? (DateTime)sourceVm.DateReceived : default(DateTime),
+                
+                //return new Position {
+                //    PositionId = targetPositionDirection == "from" ? sourceVm.FromPosId : sourceVm.ToPosId,
+                //    PositionAssetId = sourceVm.PositionAssetId,
+                //    AcctTypeId = targetPositionDirection == "from" ? sourceVm.FromPositionAccountId : sourceVm.ToPositionAccountId, 
+                //    Status = targetPositionDirection == "from" ? sourceVm.FromPositionStatus : sourceVm.ToPositionStatus,
+                //    PositionDate = targetPositionDirection == "from" ? sourceVm.FromPositionDate : sourceVm.ToPositionDate,
+                //    PurchaseDate = DateTime.Now,
+                //    Quantity = targetPositionDirection == "from" ? sourceVm.FromQty : sourceVm.ToQty,
+                //    MarketPrice = targetPositionDirection == "from" ? sourceVm.FromUnitCost : sourceVm.ToUnitCost,
+                //    LastUpdate = DateTime.Now,
+                //    InvestorKey = sourceVm.PositionInvestorId.ToString(),
+                //    Url = ""
+                //};
+
+                return updatedOrNewPosition;
+                //TODO: 2.2.2017 - ready to use test data (testData.txt) for Fiddler WebApi tests.
+                //TODO: 'PurchaseDate' - should NOT be required; change attribute in Position. DONE.
             }
 
             private Position MapVmToPosition(PositionVm sourceData)
