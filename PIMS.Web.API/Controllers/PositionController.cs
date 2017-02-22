@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.ModelBinding;
 using System.Web.Http.Results;
 using PIMS.Core.Models;
 using PIMS.Core.Models.ViewModels;
@@ -136,6 +138,7 @@ namespace PIMS.Web.Api.Controllers
 
             var availablePositions = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
                                                                            .SelectMany(p => p.Positions)
+                                                                           .Where(p => p.Status != "I")
                                                                            .Select(pos => new PositionsVm
                                                                                           {
                                                                                               PositionAccountType = pos.Account.AccountTypeDesc,
@@ -275,80 +278,57 @@ namespace PIMS.Web.Api.Controllers
 
 
 
-        // API for client positionCreateSvc.processPositions() calls.
-        //[HttpPut]
-        //[Route("~/api/Positions/Update")]
-        //public async Task<IHttpActionResult> UpdateEditedPositions([FromBody] PositionEditsVm editedPositions) {
-
-        //    // 1.25.17
-        //    if (!ModelState.IsValid) {
-        //        return ResponseMessage(new HttpResponseMessage {
-        //            StatusCode = HttpStatusCode.BadRequest,
-        //            ReasonPhrase = "Invalid model state received for one or more Positions."
-        //        });
-        //    }
-        //    var currentInvestor = _identityService.CurrentUser ?? "rpasch2@rpclassics.net";
-            
-        //    // TODO: 1.27.17 - Note modifications made to AssetController to accommodate this.
-        //    var positionFrom = MapEditsVmToPosition(editedPositions, "from");
-        //    var positionTo = MapEditsVmToPosition(editedPositions, "to");
-        //    // TODO: 2.3.17 - error on db trx commit.
-        //    var updateOk = await Task.FromResult(_repositoryEdits.UpdatePositions(positionFrom, positionTo));
-
-        //    if (updateOk)
-        //        return Ok();
-
-        //    return BadRequest(string.Format("Unable to update Position edits."));
-        //}
-
-
-
-
         [HttpPatch]
         [Route("~/api/Positions/UpdateCreate")]
         public async Task<IHttpActionResult> UpdateCreateEditedPositions([FromBody] PositionEditsVm editedPositions) {
             /* 
                 Handles all Position edits, i.e., rollovers, purchases, sales, or simple edits. 
             */
-
             if (!ModelState.IsValid) {
-                return ResponseMessage(new HttpResponseMessage {
+                    return ResponseMessage(new HttpResponseMessage {
                     StatusCode = HttpStatusCode.BadRequest,
-                    ReasonPhrase = "Invalid model state received for one or more Positions."
+                    ReasonPhrase = string.Format("Invalid model state received for: " + BuildModelStateErrorList(ModelState))
                 });
             }
+
+            // TODO: Remove this check when close to Production.
             var currentInvestor = _identityService.CurrentUser ?? "rpasch2@rpclassics.net";
 
-            var mappedPositionFrom = MapEditsVmToPosition(editedPositions, "from");
-            var mappedPositionTo = MapEditsVmToPosition(editedPositions, "to");
             var updatesOk = false;
+            var mappedPositionTo = new Position();
+            var mappedPositionFrom = new Position();
 
-            // This has no effect, as conversion to DateTime inherently includes time stamp.
-            //positionFrom.PurchaseDate = Convert.ToDateTime(positionFrom.PurchaseDate.ToShortDateString());
-            //positionTo.PurchaseDate = Convert.ToDateTime(positionTo.PurchaseDate.ToShortDateString());
-            //positionFrom.PositionDate = Convert.ToDateTime(mappedPositionFrom.PositionDate.ToShortDateString());
-            //positionTo.PositionDate = Convert.ToDateTime(positionTo.PositionDate.ToShortDateString());
+            if (editedPositions.DbActionOrig.Trim() != "na") {
+                mappedPositionFrom = MapEditsVmToPosition(editedPositions, "from");
+            }
+
+            if (editedPositions.DbActionNew.Trim() != "na")
+            {
+                mappedPositionTo = MapEditsVmToPosition(editedPositions, "to");
+            }
+                
 
             /* Delegate back-end processing to appropriate repository method based on received
-               editedPositions.DbActionNew/DbActionOrig values.
+               editedPositions.DbActionNew/DbActionOrig values:
                     dbActionOrig = source Position 
                     dbActionNew  = target Position
              */
             switch (editedPositions.DbActionOrig.Trim() + "-" + editedPositions.DbActionNew.Trim())
             {
                  case "update-update":
-                 case "update-na":
                     updatesOk = await Task.FromResult(_repositoryEdits.UpdatePositions(mappedPositionFrom, mappedPositionTo));
+                    break;
+                 case "update-na":
+                    updatesOk = await Task.FromResult(_repositoryEdits.UpdatePositions(mappedPositionFrom, null));
                     break;
                  case "update-insert":
                     updatesOk = await Task.FromResult(_repositoryEdits.UpdateCreatePositions(mappedPositionFrom, mappedPositionTo));
                     break;
-
+                 case "na-insert":
+                    updatesOk = await Task.FromResult(_repositoryEdits.UpdateCreatePositions(null, mappedPositionTo));
+                    break;
             }
-
-
-            //var updatesOk = await Task.FromResult(_repositoryEdits.UpdatePositions(positionFrom, positionTo));
-
+            
             if (updatesOk)
                 return Ok();
 
@@ -549,8 +529,8 @@ namespace PIMS.Web.Api.Controllers
                                                    : sourceVm.ToPosId,
                                                PositionAssetId = sourceVm.PositionAssetId,
                                                AcctTypeId = targetPositionDirection == "from"
-                                                   ? sourceVm.FromPositionAccountId
-                                                   : sourceVm.ToPositionAccountId,
+                                                   ? sourceVm.PositionFromAccountId
+                                                   : sourceVm.PositionToAccountId,
                                                Status = targetPositionDirection == "from"
                                                    ? sourceVm.FromPositionStatus
                                                    : sourceVm.ToPositionStatus,
@@ -563,8 +543,8 @@ namespace PIMS.Web.Api.Controllers
                                                LastUpdate = DateTime.Now,
                                                InvestorKey = sourceVm.PositionInvestorId.ToString(),
                                                PositionDate = targetPositionDirection == "from"
-                                                   ? sourceVm.FromPosDate
-                                                   : sourceVm.ToPosDate,
+                                                   ? sourceVm.FromPositionDate
+                                                   : sourceVm.ToPositionDate,
                                                PurchaseDate = targetPositionDirection == "from"
                                                    ? sourceVm.FromPurchaseDate
                                                    : sourceVm.ToPurchaseDate
@@ -617,6 +597,17 @@ namespace PIMS.Web.Api.Controllers
                 var startIdx = sourceUrl.IndexOf("Asset", StringComparison.Ordinal);
                 var endIdx = sourceUrl.LastIndexOf("/Position", StringComparison.Ordinal);
                 return sourceUrl.Substring(startIdx + 6, endIdx - startIdx - 6);
+            }
+
+            // TODO: Candidate for Common.Utilities ?
+            private static string BuildModelStateErrorList(IEnumerable<KeyValuePair<string, ModelState>> errorsCollection)
+            {
+                var errorString = errorsCollection.Aggregate(string.Empty, (current, errorKey) => current + (errorKey.Key + " , "));
+
+                var idx = errorString.LastIndexOf(',');
+                errorString = errorString.Remove(idx, 1);
+
+                return errorString;
             }
 
         #endregion
