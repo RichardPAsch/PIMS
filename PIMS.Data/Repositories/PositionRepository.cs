@@ -133,11 +133,21 @@ namespace PIMS.Data.Repositories
             return true;
         }
 
+
         public bool UpdateCreatePositions(Position origPos, Position newPos) {
+            // Also accomodate 'null' origPos scenario: adding a new account/position ['buy']
+            // not involving a rollover.
             using (var trx = _nhSession.BeginTransaction()) {
                 try {
-                    _nhSession.Merge(origPos);
-                    _nhSession.Save(newPos);
+                    if (origPos != null)
+                    {
+                        _nhSession.Merge(origPos);
+                        _nhSession.Save(newPos);
+                    }
+                    else
+                    {
+                        _nhSession.Save(newPos); 
+                    }
 
                     trx.Commit();
                 }
