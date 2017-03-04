@@ -126,6 +126,42 @@ namespace PIMS.Web.Api.Controllers
 
 
         [HttpGet]
+        [Route("~/api/Positions/Summary")]
+        public async Task<IHttpActionResult> GetAllPositionSummaries() {
+
+            // Satisfies "Show Positions for all assets" menu functionality.
+            _repositoryAsset.UrlAddress = ControllerContext.Request.RequestUri.ToString();
+            var currentInvestor = _identityService.CurrentUser;
+
+            // Allow for Fiddler debugging
+            if (currentInvestor == null)
+                currentInvestor = "rpasch2@rpclassics.net";
+            
+            var availablePositions = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
+                                                                           .SelectMany(p => p.Positions)
+                                                                           .Where(p => p.Status != "I")
+                                                                           .Select(pos => new PositionsSummaryVm {
+                                                                               PositionSummaryAccountType = pos.Account.AccountTypeDesc,
+                                                                               PositionSummaryTickerSymbol = pos.PositionAsset.Profile.TickerSymbol,
+                                                                               PositionSummaryQty = pos.Quantity,
+                                                                               PositionSummaryValuation = pos.MarketPrice * pos.Quantity,
+                                                                               PositionSummaryGainLoss = 0
+                                                                           })
+                                                                           .OrderBy(x => x.PositionSummaryTickerSymbol)
+                                                                           .ThenBy(x => x.PositionSummaryAccountType)
+                                                                           .AsQueryable());
+
+            availablePositions =  CalculateGainLoss(availablePositions).AsQueryable();
+
+            if (availablePositions.Any())
+                return Ok(availablePositions);
+
+            return BadRequest(string.Format("Error retreiving summary Position data, or no Positions found for investor {0} ", currentInvestor.ToUpper()));
+        }
+
+
+
+        [HttpGet]
         [Route("~/api/Positions")]
         public async Task<IHttpActionResult> GetAllPositions()
         {
@@ -144,7 +180,7 @@ namespace PIMS.Web.Api.Controllers
                                                                                               PositionAccountType = pos.Account.AccountTypeDesc,
                                                                                               PositionTickerSymbol = pos.PositionAsset.Profile.TickerSymbol,
                                                                                               PositionAssetId = pos.PositionAsset.AssetId,
-                                                                                              PositionAddDate = pos.PurchaseDate,
+                                                                                              PositionAddDate = pos.PositionDate,
                                                                                               PositionAccountTypeId = pos.AcctTypeId,
                                                                                               PositionId = pos.PositionId,
                                                                                               PositionInvestorId = Guid.Parse(pos.InvestorKey) 
@@ -609,6 +645,25 @@ namespace PIMS.Web.Api.Controllers
 
                 return errorString;
             }
+
+
+            private static IEnumerable<PositionsSummaryVm> CalculateGainLoss(IQueryable<PositionsSummaryVm> preInitializedGLdata)
+            {
+                var tickers = preInitializedGLdata.Select(p => p.PositionSummaryTickerSymbol).ToArray();
+                var profiles = Task.FromResult(YahooFinanceSvc.ProcessYahooProfiles(tickers));
+                var i = 0;
+                // By calling ToList() on the IQueryable, we're creating an in-memory updateable List with all the results of the query.
+                var preInitializedGLdataListing = preInitializedGLdata.ToList();
+
+                foreach (var pos in preInitializedGLdataListing)
+                {
+                    pos.PositionSummaryGainLoss = (profiles.Result[i].Price * pos.PositionSummaryQty) - pos.PositionSummaryValuation;
+                    i++;
+                }
+  
+                return preInitializedGLdataListing;
+            }
+
 
         #endregion
 
