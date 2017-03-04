@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
+using System.Runtime.CompilerServices;
 
 
 namespace PIMS.Core.Models.ViewModels
@@ -9,13 +10,17 @@ namespace PIMS.Core.Models.ViewModels
         [Required]
         public Guid FromPosId { get; set; }
 
+        
         public Guid ToPosId { get; set; }
 
         [Required]
         public Guid PositionAssetId { get; set; }
 
         [Required]
-        public Guid PositionAccountId { get; set; }
+        public Guid PositionFromAccountId { get; set; }
+
+        [Required]
+        public Guid PositionToAccountId { get; set; }
 
         [Required]
         public string FromPositionStatus { get; set; }
@@ -48,6 +53,11 @@ namespace PIMS.Core.Models.ViewModels
 
         [Required]
         public string DbActionNew { get; set; }
+        
+        [Required]
+        public DateTime FromPurchaseDate { get; set; }
+
+        public DateTime ToPurchaseDate { get; set; }
 
     }
 }
