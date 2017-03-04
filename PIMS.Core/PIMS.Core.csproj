@@ -70,6 +70,7 @@
     <Compile Include="Models\ViewModels\PositionAccountTypesVm.cs" />
     <Compile Include="Models\ViewModels\PositionEditsVm.cs" />
     <Compile Include="Models\ViewModels\PositionsByAssetVm.cs" />
+    <Compile Include="Models\ViewModels\PositionsSummaryVm.cs" />
     <Compile Include="Models\ViewModels\PositionsVm.cs" />
     <Compile Include="Models\ViewModels\PositionVm.cs" />
     <Compile Include="Models\ViewModels\AssetSummaryVm.cs" />
