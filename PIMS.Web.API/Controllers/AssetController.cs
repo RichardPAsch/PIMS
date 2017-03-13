@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Security.Cryptography.X509Certificates;
+using System.Security.Policy;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Results;
 using FluentNHibernate.Conventions;
+using NHibernate.Linq;
 using PIMS.Core.Models;
 using PIMS.Core.Models.ViewModels;
 using PIMS.Data.Repositories;
@@ -51,6 +54,49 @@ namespace PIMS.Web.Api.Controllers
             _repositoryPosition = repositoryPosition;
             _repositoryIncome = repositoryIncome;
             _repositoryEdits = repositoryEdits;
+        }
+
+
+
+        [HttpGet]
+        [Route("~/api/Assets/{status}")]
+        public async Task<IHttpActionResult> GetAssetSummaries(string status)
+        {
+            _repositoryInvestor.UrlAddress = ControllerContext.Request.RequestUri.ToString();
+            var currentInvestor = _identityService.CurrentUser;
+
+            // Allow for Fiddler debugging
+            if (currentInvestor == null)
+                currentInvestor = "rpasch2@rpclassics.net";
+
+            var assetSummary = await Task.FromResult(_repository.RetreiveAll()
+                .Where(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
+                .Select(a => new
+                             {
+                                 AvailablePositions = a.Positions,
+                                 AvailableProfile = a.Profile,
+                                 AssetClassifications = a.AssetClass
+                             })
+                .SelectMany(p => p.AvailablePositions)
+                .Where(p => p.Status == status)
+                .Select(x => new AssetSummaryQueryVm
+                             {
+                                 TickerSymbol = x.PositionAsset.Profile.TickerSymbol,
+                                 TickerDescription = x.PositionAsset.Profile.TickerDescription,
+                                 AssetClassification = x.PositionAsset.AssetClass.Description
+                             })
+
+                .AsQueryable()
+                );
+
+            // TODO: Temporary workaround for NHibernate bug re: "GroupBy". Fixed in v4.1.0,
+            // TODO: however, deferring upgrade (v.3.3.1) for fear of breaking changes.
+            assetSummary = CheckForDuplicateTickers(assetSummary);
+                //.GroupBy(x => x.TickerSymbol)
+                //.Select(x => x.First())
+                //);
+           
+            return Ok(assetSummary);                         
         }
 
 
@@ -408,6 +454,31 @@ namespace PIMS.Web.Api.Controllers
 
                 //TODO: Use routeData for URL.
                return Created("http://localhost/Pims.Web.Api/api/Asset/", createdAsset);
+            }
+
+
+            private static IQueryable<AssetSummaryQueryVm> CheckForDuplicateTickers(IEnumerable<AssetSummaryQueryVm> sourceCollection)
+            {
+                var previousTicker = string.Empty;
+                var sourceCollection2 = new List<AssetSummaryQueryVm>();
+                sourceCollection = sourceCollection.ToList().OrderBy(p => p.TickerSymbol);
+
+                foreach (var asset in sourceCollection)
+                {
+                    if (asset.TickerSymbol.Trim() != previousTicker.Trim())
+                    {
+                        sourceCollection2.Add(new AssetSummaryQueryVm
+                                                {
+                                                    TickerSymbol = asset.TickerSymbol,
+                                                    TickerDescription = asset.TickerDescription,
+                                                    AssetClassification = asset.AssetClassification
+                                                }
+                                             );
+                    }
+                    previousTicker = asset.TickerSymbol;
+                }
+
+                return sourceCollection2.AsQueryable();
             }
 
 
