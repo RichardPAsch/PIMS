@@ -334,7 +334,7 @@ namespace PIMS.Web.Api.Controllers
 				toDate = Convert.ToDateTime(DateTime.UtcNow.ToString("d"));
 			}
 
-
+			//var x = new AssetsRevenueWithAcctTypesVm();
 			var matchingRevenue = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
 																	   .SelectMany(a => a.Revenue).Where(r => r.DateRecvd >= fromDate &&
 																											  r.DateRecvd <= toDate)
@@ -342,10 +342,10 @@ namespace PIMS.Web.Api.Controllers
 																	   .Select(i => new AssetsRevenueWithAcctTypesVm {
 																		   Ticker = i.IncomeAsset.Profile.TickerSymbol,
 																		   AccountType = i.IncomePosition.Account.AccountTypeDesc,
-																		   DateReceived = i.DateRecvd, 
+																		   DateReceived = i.DateRecvd,
 																		   RevenueId = i.IncomeId,
 																		   RevenuePositionId = i.IncomePositionId,
-																		   AmountReceived = float.Parse(i.Actual.ToString(CultureInfo.InvariantCulture)) 
+																		   AmountReceived = float.Parse(i.Actual.ToString(CultureInfo.InvariantCulture))
 																	   })
 																	   .OrderBy(x => x.Ticker)
 																	   .ThenBy(x => x.AccountType));
@@ -993,10 +993,10 @@ namespace PIMS.Web.Api.Controllers
 
 			// Partial Income replacement.
 			var isUpdated = await Task.FromResult(_repository.Update(MapVmToIncomeEdits(editedIncome), incomeId));
-		    if (isUpdated) return Ok(editedIncome);
+			if (isUpdated) return Ok(editedIncome);
 
-		    var ticker = ParseUrlForTicker(existingIncome.First().Url);
-		    return BadRequest(string.Format("Unable to edit Income for Asset {0}", ticker));
+			var ticker = ParseUrlForTicker(existingIncome.First().Url);
+			return BadRequest(string.Format("Unable to edit Income for Asset {0}", ticker));
 		}
 
 
