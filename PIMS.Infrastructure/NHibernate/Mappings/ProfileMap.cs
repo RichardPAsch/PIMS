@@ -30,11 +30,11 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
 
             // 1:M 
             // A Profile can be associated with an Asset with many Investors.
-            HasMany(x => x.AssetProfile)
-                .Table("Profile")
-                .KeyColumn("ProfileId")
-                .Cascade
-                .All();
+            //HasMany(x => x.AssetProfile)
+            //    .Table("Profile")
+            //    .KeyColumn("ProfileId")
+            //    .Cascade
+            //    .All();
 
 
         }
