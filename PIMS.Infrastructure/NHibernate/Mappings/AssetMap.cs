@@ -59,6 +59,7 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
 
 
             // M:1
+            // Each Asset may have one Asset Classification.
             References(x => x.AssetClass)
                 .Column("AssetClassId")
                 .Not.Update()
