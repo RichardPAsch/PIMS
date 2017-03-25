@@ -80,7 +80,7 @@ namespace PIMS.Web.Api.Controllers
                                                                          .Select(p2 => new PositionVm {
                                                                              PostEditPositionAccount = p2.Account.AccountTypeDesc,
                                                                              PreEditPositionAccount = p2.Account.AccountTypeDesc,
-                                                                             UnitCosts = p2.MarketPrice,
+                                                                             UnitCost = p2.MarketPrice,
                                                                              Qty = p2.Quantity,
                                                                              DateOfPurchase = p2.PurchaseDate,
                                                                              LastUpdate = p2.LastUpdate,
@@ -108,7 +108,7 @@ namespace PIMS.Web.Api.Controllers
                                                                     .Select(x => new PositionVm
                                                                                  {
                                                                                      PreEditPositionAccount = x.Account.AccountTypeDesc,
-                                                                                     UnitCosts = x.MarketPrice,
+                                                                                     UnitCost = x.MarketPrice,
                                                                                      Qty = x.Quantity,
                                                                                      DateOfPurchase = x.PurchaseDate,
                                                                                      LastUpdate = x.LastUpdate,
@@ -213,7 +213,7 @@ namespace PIMS.Web.Api.Controllers
                                                                               // TODO: 5.13.16 - reevaluate need for 1st 2 properties?
                                                                               PreEditPositionAccount = p2.Account.AccountTypeDesc,
                                                                               PostEditPositionAccount = p2.Account.AccountTypeDesc,
-                                                                              UnitCosts = p2.MarketPrice,
+                                                                              UnitCost = p2.MarketPrice,
                                                                               Qty = p2.Quantity,
                                                                               DateOfPurchase = p2.PurchaseDate,
                                                                               DatePositionAdded = p2.PositionDate,
@@ -427,7 +427,7 @@ namespace PIMS.Web.Api.Controllers
                 targetPosition.First().Url = newLocation.Trim();
 
                 editedPosition.PostEditPositionAccount = targetPosition.First().Account.AccountTypeDesc;
-                editedPosition.UnitCosts = targetPosition.First().MarketPrice;
+                editedPosition.UnitCost = targetPosition.First().MarketPrice;
                 editedPosition.Qty = targetPosition.First().Quantity;
                 editedPosition.Url = targetPosition.First().Url;
                 editedPosition.LastUpdate = targetPosition.First().LastUpdate;
@@ -462,7 +462,7 @@ namespace PIMS.Web.Api.Controllers
 
                 // Only selected attributes are available for editing.
                 positionToUpdate.First().Quantity = editedPosition.Qty;
-                positionToUpdate.First().MarketPrice = editedPosition.UnitCosts;
+                positionToUpdate.First().MarketPrice = editedPosition.UnitCost;
 
 
                 var isUpdated = await Task.FromResult(_repository.Update(positionToUpdate.First(), positionToUpdate.First().PositionId));
@@ -616,15 +616,17 @@ namespace PIMS.Web.Api.Controllers
                        {
                            // ReSharper disable once PossibleInvalidOperationException
                            PurchaseDate = (DateTime) sourceData.DateOfPurchase,
+                           PositionDate = sourceData.DatePositionAdded != null ? DateTime.Parse(sourceData.DatePositionAdded.ToString()) : DateTime.Now,
                            Quantity = sourceData.Qty,
-                           MarketPrice = sourceData.UnitCosts,
+                           MarketPrice = sourceData.UnitCost,
                            InvestorKey = Utilities.GetInvestorId(_repositoryInvestor, _identityService.CurrentUser).ToString(),
                            AcctTypeId = sourceData.ReferencedAccount.KeyId,
                            PositionAssetId = sourceData.ReferencedAssetId, 
                            LastUpdate = DateTime.Now,
                            TickerSymbol = sourceData.ReferencedTickerSymbol,
                            Account = acctTypeCtrl.MapVmToAccountType(sourceData.ReferencedAccount),
-                           Url = sourceData.Url
+                           Url = sourceData.Url,
+                           Status = sourceData.Status
                        };
             }
 
