@@ -209,7 +209,11 @@ namespace PIMS.Web.Api.Controllers
         [Route("")]
         public async Task<IHttpActionResult> CreateNewAsset([FromBody] AssetCreationVm submittedAsset)
         {
-            _currentInvestor = _identityService.CurrentUser; 
+            _currentInvestor = _identityService.CurrentUser;
+
+            if (_currentInvestor == null)
+                _currentInvestor = "joeblow@yahoo.com";
+
             _repositoryInvestor.UrlAddress = ControllerContext.Request.RequestUri.ToString();
 
             // Confirm investors' registration for idempotent operations.
@@ -228,7 +232,9 @@ namespace PIMS.Web.Api.Controllers
             if (!submittedAsset.PositionsCreated.Any())
                 return BadRequest("Unable to create new Asset, no Position data found.");
 
-            // ACCOUNT TYPE.
+
+
+            // * ACCOUNT TYPE.*
             var acctTypeCtrl = new AccountTypeController(_repositoryAccountType, _repository, _identityService, _repositoryInvestor);
             var existingAcctTypes = await acctTypeCtrl.GetAllAccounts() as OkNegotiatedContentResult<IList<AccountTypeVm>>;
             if(existingAcctTypes == null)
@@ -249,7 +255,8 @@ namespace PIMS.Web.Api.Controllers
                                                                                               .KeyId.ToString());   // Required entry.
 
 
-            // PROFILE.
+
+            // * PROFILE.*
             // Submited Asset must contain the following minimum Profile information, per client validation checks.
             var profileLastUpdate = Convert.ToDateTime(submittedAsset.ProfileToCreate.LastUpdate) ;
             
@@ -288,7 +295,7 @@ namespace PIMS.Web.Api.Controllers
 
 
 
-            // ASSET.
+            // * ASSET.*
             var newAsset = await SaveAssetAndGetId(submittedAsset) as CreatedNegotiatedContentResult<Asset>;;
             if (newAsset == null)
                 return BadRequest("Error creating new Asset or AssetId.");
@@ -296,8 +303,9 @@ namespace PIMS.Web.Api.Controllers
             submittedAsset.AssetIdentification = newAsset.Content.AssetId.ToString();
 
 
+
             
-            // POSITION(S).
+            // * POSITION(S).*
             var positionCtrl = new PositionController(_identityService, _repository, _repositoryInvestor, _repositoryPosition, _repositoryAccountType, _repositoryEdits);
             for(var pos = 0; pos < submittedAsset.PositionsCreated.Count; pos++)
             {
@@ -349,7 +357,7 @@ namespace PIMS.Web.Api.Controllers
 
 
 
-            // INCOME (optional).
+            // * INCOME (optional). *
             if (!submittedAsset.RevenueCreated.Any()) 
                 return ResponseMessage(new HttpResponseMessage {
                                               StatusCode = HttpStatusCode.Created,
