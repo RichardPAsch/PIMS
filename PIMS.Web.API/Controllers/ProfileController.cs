@@ -82,24 +82,30 @@ namespace PIMS.Web.Api.Controllers
             var existingProfile = await Task.FromResult(_repository.Retreive(p => p.TickerSymbol.Trim() == tickerForProfile.Trim()).AsQueryable());
 
             // Yahoo url sample:  http://finance.yahoo.com/d/quotes.csv?s=VNR&f=nsb2dyreqr1
-            if (existingProfile.Any() )
+            if (existingProfile.Any())
             {
-                // Update existing Profile only IF Profile last updated > 24hrs ago.
-                if (Convert.ToDateTime(existingProfile.First().LastUpdate) > DateTime.UtcNow.AddHours(-24))
+                // Update Profile table only IF existing Profile was last updated > 24hrs ago; return updated Profile.
+                if (Convert.ToDateTime(existingProfile.First().LastUpdate) < DateTime.UtcNow.AddHours(-24))
+                {
+                    updatedOrNewProfile = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfile(tickerForProfile.Trim(), existingProfile.First()));
+                    if (updatedOrNewProfile != null)
+                        return Ok(updatedOrNewProfile);
+                }
+                else
+                {
+                    // Return existing table Profile
                     return Ok(existingProfile.First());
-
-                updatedOrNewProfile = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfile(tickerForProfile.Trim(), existingProfile.First()));
+                }
+            }
+            else
+            {
+                // Return new Profile.
+                updatedOrNewProfile = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfile(tickerForProfile.Trim(), new Profile()));
                 if (updatedOrNewProfile != null)
-                    return Ok(MapProfileToVm(updatedOrNewProfile));
-
-                return BadRequest("Error updating Profile for ticker: " + tickerForProfile);
+                    return Ok(updatedOrNewProfile);
             }
 
-            updatedOrNewProfile = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfile(tickerForProfile.Trim(), new Profile()));
-            if (updatedOrNewProfile != null)
-                return Ok(updatedOrNewProfile);
-
-            return BadRequest(string.Format("Error creating Profile for {0}, check ticker symbol.", tickerForProfile));
+            return BadRequest(string.Format("Error creating or updating Profile for {0}, check ticker symbol.", tickerForProfile));
 
         }
 
@@ -219,26 +225,26 @@ namespace PIMS.Web.Api.Controllers
                        };
             }
 
-            private static ProfileVm MapProfileToVm(Profile sourceData)
-            {
-                return new ProfileVm
-                {
-                    ProfileId = sourceData.ProfileId,
-                    TickerSymbol = sourceData.TickerSymbol,
-                    TickerDescription = sourceData.TickerDescription,
-                    DividendFreq = sourceData.DividendFreq,
-                    DividendRate = sourceData.DividendRate,
-                    DividendYield = sourceData.DividendYield,
-                    EarningsPerShare = sourceData.EarningsPerShare,
-                    PE_Ratio = sourceData.PE_Ratio,
-                    LastUpdate = sourceData.LastUpdate,
-                    ExDividendDate = sourceData.ExDividendDate,
-                    DividendPayDate = sourceData.DividendPayDate,
-                    Price = sourceData.Price
-                };
-            }
+            // Deferred
+            //private static ProfileVm MapProfileToVm(Profile sourceData)
+            //{
+            //    return new ProfileVm
+            //    {
+            //        ProfileId = sourceData.ProfileId,
+            //        TickerSymbol = sourceData.TickerSymbol,
+            //        TickerDescription = sourceData.TickerDescription,
+            //        DividendFreq = sourceData.DividendFreq,
+            //        DividendRate = sourceData.DividendRate,
+            //        DividendYield = sourceData.DividendYield,
+            //        EarningsPerShare = sourceData.EarningsPerShare,
+            //        PE_Ratio = sourceData.PE_Ratio,
+            //        LastUpdate = sourceData.LastUpdate,
+            //        ExDividendDate = sourceData.ExDividendDate,
+            //        DividendPayDate = sourceData.DividendPayDate,
+            //        Price = sourceData.Price
+            //    };
+            //}
 
-       
 
         #endregion
 
