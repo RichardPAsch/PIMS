@@ -22,7 +22,7 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             Map(x => x.InvestorKey);   
             Map(x => x.Url);
             Map(x => x.PositionDate);  
-            Map(x => x.Status);        
+            Map(x => x.Status);
             
             
 
