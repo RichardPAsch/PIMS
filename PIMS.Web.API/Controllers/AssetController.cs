@@ -358,7 +358,7 @@ namespace PIMS.Web.Api.Controllers
 
 
             // * INCOME (optional). *
-            if (!submittedAsset.RevenueCreated.Any()) 
+            if (submittedAsset.RevenueCreated == null) 
                 return ResponseMessage(new HttpResponseMessage {
                                               StatusCode = HttpStatusCode.Created,
                                               ReasonPhrase = "Asset created w/o submitted Income - affiliated Profile, and Position(s) recorded."
@@ -447,7 +447,7 @@ namespace PIMS.Web.Api.Controllers
                     InvestorId = new Guid(sourceVm.AssetInvestorId),
                     AssetClassId = new Guid(sourceVm.AssetClassificationId),
                     ProfileId = sourceVm.ProfileToCreate.ProfileId,
-                    AssetId = sourceVm.AssetIdentification == null ? new Guid() : new Guid(sourceVm.AssetIdentification),
+                    AssetId = sourceVm.AssetIdentification == null ? Guid.NewGuid() : new Guid(sourceVm.AssetIdentification),
                     LastUpdate = DateTime.Now
                 };
             }
