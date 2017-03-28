@@ -18,25 +18,17 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             Map(x => x.TickerSymbol);
             Map(x => x.TickerDescription);
             Map(x => x.DividendFreq, "DividendFrequency");
-            Map(x => x.DividendRate).Precision(5);
-            Map(x => x.DividendYield).Precision(4);
+            Map(x => x.DividendRate).Precision(5).Scale(4);
+            Map(x => x.DividendYield).Precision(6).Scale(4);
             Map(x => x.EarningsPerShare).Precision(6);
             Map(x => x.PE_Ratio,"PERatio").Precision(4);
             Map(x => x.LastUpdate);
             Map(x => x.ExDividendDate);
             Map(x => x.DividendPayDate);
-            Map(x => x.Price, "UnitPrice").Precision(7);
+            Map(x => x.Price, "UnitPrice").Precision(7).Scale(4);
             Map(x => x.Url);
 
-            // 1:M 
-            // A Profile can be associated with an Asset with many Investors.
-            //HasMany(x => x.AssetProfile)
-            //    .Table("Profile")
-            //    .KeyColumn("ProfileId")
-            //    .Cascade
-            //    .All();
-
-
+           
         }
     }
 }
