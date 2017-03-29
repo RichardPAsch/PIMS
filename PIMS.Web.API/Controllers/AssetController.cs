@@ -273,7 +273,7 @@ namespace PIMS.Web.Api.Controllers
             var profileCtrl = new ProfileController(_repositoryProfile);
             if (existingProfile.Any())
             {
-                if (existingProfile.First().LastUpdate >= DateTime.Now.AddHours(-24))
+                if (existingProfile.First().LastUpdate <= DateTime.Now.AddHours(-24))
                     submittedAsset.ProfileToCreate.ProfileId = existingProfile.First().ProfileId;
                 else
                 {
