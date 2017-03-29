@@ -27,15 +27,14 @@ namespace PIMS.Core.Models
 
         // NH - mapping for many side of rel: 1:M
         public virtual IList<Income> PositionIncomes { get; set; }  
-
-
+        
 
         public virtual string InvestorKey { get; set; }
 
         // (I)nactive or (A)ctive
         public virtual string Status { get; set; }
-        
 
+        
         //[Required]
         public virtual DateTime PurchaseDate { get; set; }
 
@@ -55,7 +54,10 @@ namespace PIMS.Core.Models
 
         // TODO: set [Required] attr?
         // Date Position added for asset; used in Revenue editing (back-dating checks)
-        public virtual DateTime PositionDate { get; set; } // added 12.6.16
+        public virtual DateTime PositionDate { get; set; }
+
+        [Range(0.01, 30000.00)]
+        public virtual decimal Fees { get; set; }
 
 
 
