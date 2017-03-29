@@ -374,8 +374,6 @@ namespace PIMS.Web.Api.Controllers
 
 
 
-
-
         [HttpPut]
         [HttpPatch]
         [Route("{tickerSymbol}/Position")]
@@ -626,7 +624,8 @@ namespace PIMS.Web.Api.Controllers
                            TickerSymbol = sourceData.ReferencedTickerSymbol,
                            Account = acctTypeCtrl.MapVmToAccountType(sourceData.ReferencedAccount),
                            Url = sourceData.Url,
-                           Status = sourceData.Status
+                           Status = sourceData.Status,
+                           Fees = sourceData.TransactionFees
                        };
             }
 
