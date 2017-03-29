@@ -23,6 +23,7 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             Map(x => x.Url);
             Map(x => x.PositionDate);  
             Map(x => x.Status);
+            Map(x => x.Fees).Precision(7).Scale(2);
             
             
 
