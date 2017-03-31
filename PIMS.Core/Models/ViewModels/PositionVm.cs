@@ -15,7 +15,7 @@ namespace PIMS.Core.Models.ViewModels
         public int Qty { get; set; }
 
         [Required]
-        public decimal UnitCosts { get; set; }
+        public decimal UnitCost { get; set; }
 
         [Required]
         public DateTime? DateOfPurchase { get; set; }
@@ -37,6 +37,10 @@ namespace PIMS.Core.Models.ViewModels
         public string ReferencedTickerSymbol { get; set; }
 
         public DateTime? DatePositionAdded { get; set; }
+
+        public string Status { get; set; }
+
+        public decimal TransactionFees { get; set; }
     }
     
 
