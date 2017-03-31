@@ -21,6 +21,8 @@ namespace PIMS.Core.Models.ViewModels
 
         public Guid PositionInvestorId { get; set; }
 
+        public decimal PositionFees { get; set; }
+
     }
 
 
