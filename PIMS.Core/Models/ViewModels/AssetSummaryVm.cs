@@ -41,4 +41,12 @@ namespace PIMS.Core.Models.ViewModels
         public string RevenueUrl { get; set; }
 
     }
+
+    public class AssetSummaryQueryVm
+    {
+        public string TickerSymbol { get; set; }
+        public string TickerDescription { get; set; }
+        public string AssetClassification { get; set; }
+
+    }
 }
