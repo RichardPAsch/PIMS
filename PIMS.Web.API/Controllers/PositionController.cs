@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -175,18 +176,18 @@ namespace PIMS.Web.Api.Controllers
             var availablePositions = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
                                                                            .SelectMany(p => p.Positions)
                                                                            .Where(p => p.Status != "I")
-                                                                           .Select(pos => new PositionsVm
-                                                                                          {
-                                                                                              PositionAccountType = pos.Account.AccountTypeDesc,
-                                                                                              PositionTickerSymbol = pos.PositionAsset.Profile.TickerSymbol,
-                                                                                              PositionAssetId = pos.PositionAsset.AssetId,
-                                                                                              PositionAddDate = pos.PositionDate,
-                                                                                              PositionAccountTypeId = pos.AcctTypeId,
-                                                                                              PositionId = pos.PositionId,
-                                                                                              PositionInvestorId = Guid.Parse(pos.InvestorKey) 
-                                                                                          })
-                                                                            .OrderBy(x => x.PositionAccountType)
-                                                                            .AsQueryable());
+                                                                           .Select(pos => new PositionsVm {
+                                                                               PositionAccountType = pos.Account.AccountTypeDesc,
+                                                                               PositionTickerSymbol = pos.PositionAsset.Profile.TickerSymbol,
+                                                                               PositionAssetId = pos.PositionAsset.AssetId,
+                                                                               PositionAddDate = pos.PositionDate,
+                                                                               PositionAccountTypeId = pos.AcctTypeId,
+                                                                               PositionId = pos.PositionId,
+                                                                               PositionInvestorId = Guid.Parse(pos.InvestorKey),
+                                                                               PositionFees = decimal.Parse(pos.Fees.ToString(CultureInfo.InvariantCulture))
+                                                                           })
+                                                                          .OrderBy(x => x.PositionAccountType)
+                                                                          .AsQueryable());
             if (availablePositions.Any())
                 return Ok(availablePositions);
 
@@ -581,27 +582,13 @@ namespace PIMS.Web.Api.Controllers
                                                    : sourceVm.ToPositionDate,
                                                PurchaseDate = targetPositionDirection == "from"
                                                    ? sourceVm.FromPurchaseDate
-                                                   : sourceVm.ToPurchaseDate
+                                                   : sourceVm.ToPurchaseDate,
+                                               Fees = targetPositionDirection == "from" 
+                                                   ? sourceVm.FromFees 
+                                                   : sourceVm.ToFees
                                            };
 
-               
-                
-                // DateRecvd = sourceVm.DateReceived.HasValue ? (DateTime)sourceVm.DateReceived : default(DateTime),
-                
-                //return new Position {
-                //    PositionId = targetPositionDirection == "from" ? sourceVm.FromPosId : sourceVm.ToPosId,
-                //    PositionAssetId = sourceVm.PositionAssetId,
-                //    AcctTypeId = targetPositionDirection == "from" ? sourceVm.FromPositionAccountId : sourceVm.ToPositionAccountId, 
-                //    Status = targetPositionDirection == "from" ? sourceVm.FromPositionStatus : sourceVm.ToPositionStatus,
-                //    PositionDate = targetPositionDirection == "from" ? sourceVm.FromPositionDate : sourceVm.ToPositionDate,
-                //    PurchaseDate = DateTime.Now,
-                //    Quantity = targetPositionDirection == "from" ? sourceVm.FromQty : sourceVm.ToQty,
-                //    MarketPrice = targetPositionDirection == "from" ? sourceVm.FromUnitCost : sourceVm.ToUnitCost,
-                //    LastUpdate = DateTime.Now,
-                //    InvestorKey = sourceVm.PositionInvestorId.ToString(),
-                //    Url = ""
-                //};
-
+             
                 return updatedOrNewPosition;
                 //TODO: 2.2.2017 - ready to use test data (testData.txt) for Fiddler WebApi tests.
                 //TODO: 'PurchaseDate' - should NOT be required; change attribute in Position. DONE.
