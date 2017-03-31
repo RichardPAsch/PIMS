@@ -59,5 +59,9 @@ namespace PIMS.Core.Models.ViewModels
 
         public DateTime ToPurchaseDate { get; set; }
 
+        public decimal FromFees { get; set; }
+
+        public decimal ToFees { get; set; }
+
     }
 }
