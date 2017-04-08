@@ -22,6 +22,10 @@ namespace PIMS.Core.Models
         // NH - 'one' side of Position/AccountType rel.
         public virtual AccountType Account { get; set; }
 
+        // added 4.7.17
+        // NH one-side reference for M:1 relationship to Transaction
+        public virtual IList<Transaction> PositionTransactions { get; set; } 
+
         // NH - FK ref. 
         public virtual Guid AcctTypeId { get; set; }
 
