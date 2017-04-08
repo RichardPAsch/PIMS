@@ -52,6 +52,13 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
                 .Table("Income")
                 .KeyColumns.Add("IncomePositionId");   // references Income FK
 
+
+            // 1:M added - 4.7.17
+            // Each Position will have one or more Transction records.
+            HasMany(x => x.PositionTransactions)
+                .Table("Transactions")
+                .KeyColumns.Add("PositionId");   // references Transactions FK
+
         }
     }
 }
