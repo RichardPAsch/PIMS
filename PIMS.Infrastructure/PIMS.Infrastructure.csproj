@@ -61,6 +61,7 @@
     <Compile Include="NHibernate\Mappings\InvestorMap.cs" />
     <Compile Include="NHibernate\Mappings\PositionMap.cs" />
     <Compile Include="NHibernate\Mappings\ProfileMap.cs" />
+    <Compile Include="NHibernate\Mappings\TransactionMap.cs" />
     <Compile Include="NHibernate\NHAspNetIdentity\DomainModel\BaseObject.cs" />
     <Compile Include="NHibernate\NHAspNetIdentity\DomainModel\BaseObjectEqualityComparer.cs" />
     <Compile Include="NHibernate\NHAspNetIdentity\DomainModel\DomainSignatureAttribute.cs" />
