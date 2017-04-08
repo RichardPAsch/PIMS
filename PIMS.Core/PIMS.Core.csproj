@@ -64,6 +64,7 @@
     <Compile Include="Models\ChangePasswordModel.cs" />
     <Compile Include="Models\ModelParser.cs" />
     <Compile Include="Models\RegistrationModel.cs" />
+    <Compile Include="Models\Transaction.cs" />
     <Compile Include="Models\ViewModels\AccountTypeVm.cs" />
     <Compile Include="Models\ViewModels\AssetCreationVm.cs" />
     <Compile Include="Models\ViewModels\ChangePasswordVm.cs" />
