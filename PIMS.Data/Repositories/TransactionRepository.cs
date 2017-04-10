@@ -26,8 +26,8 @@ namespace PIMS.Data.Repositories
 
 
         public IQueryable<Transaction> RetreiveAll() {
-            var positionQuery = (from position in _nhSession.Query<Transaction>() select position);
-            return positionQuery.AsQueryable();
+            var transactionQuery = (from trx in _nhSession.Query<Transaction>() select trx);
+            return transactionQuery.AsQueryable();
         }
 
 
