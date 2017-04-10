@@ -16,7 +16,7 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             Map(x => x.PositionId);
             Map(x => x.Action);
             Map(x => x.Units);
-            Map(x => x.UnitPrice).Precision(7).Scale(3);
+            Map(x => x.MktPrice).Precision(7).Scale(3);
             Map(x => x.Fees).Precision(6).Scale(2);
             Map(x => x.Date);
             Map(x => x.UnitCost).Precision(9).Scale(4);
