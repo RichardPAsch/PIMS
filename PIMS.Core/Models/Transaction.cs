@@ -16,7 +16,7 @@ namespace PIMS.Core.Models
 
         public virtual int Units { get; set; }
 
-        public virtual decimal UnitPrice { get; set; }
+        public virtual decimal MktPrice { get; set; }
 
         public virtual decimal Fees { get; set; }
 
