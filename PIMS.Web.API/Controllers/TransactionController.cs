@@ -47,12 +47,13 @@ namespace PIMS.Web.Api.Controllers
                                                                             Fees = t.Fees,
                                                                             UnitCost = t.UnitCost,
                                                                             CostBasis = t.CostBasis,
-                                                                            Valuation = t.Valuation
+                                                                            Valuation = t.Valuation,
+                                                                            DateCreated = t.Date
                                                                         })
                                          .AsQueryable());
 
             if (matchingTrxs != null)
-                return Ok(matchingTrxs);
+                return Ok(matchingTrxs.OrderByDescending(a => a.DateCreated));
 
             return BadRequest(string.Format("Error retreiving Position transactions for {0}.", positionId));
 
