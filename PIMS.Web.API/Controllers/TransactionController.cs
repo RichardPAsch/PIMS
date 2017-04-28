@@ -43,6 +43,7 @@ namespace PIMS.Web.Api.Controllers
             var matchingTrxs = await Task.FromResult(_repository.Retreive(p => p.PositionId == positionId)
                                          .Select(t => new TransactionVm {
                                                                             PositionId = t.PositionId,
+                                                                            TransactionId = t.TransactionId,
                                                                             Units = t.Units,
                                                                             MktPrice = t.MktPrice,
                                                                             Fees = t.Fees,
