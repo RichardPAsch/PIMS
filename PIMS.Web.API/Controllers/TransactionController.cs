@@ -64,8 +64,8 @@ namespace PIMS.Web.Api.Controllers
 
         [HttpPut]
         [HttpPatch]
-        [Route("~/transactionId")]
-        public async Task<IHttpActionResult> UpdatePositionTransaction([FromBody] TransactionVm editedTransaction)
+        [Route("{transactionId}")]
+        public async Task<IHttpActionResult> UpdatePositionTransaction(Guid transactionId, [FromBody] TransactionVm editedTransaction)
         {
             if (!ModelState.IsValid) {
                 return ResponseMessage(new HttpResponseMessage {
@@ -78,13 +78,13 @@ namespace PIMS.Web.Api.Controllers
 
             // Allow for Fiddler debugging
             if (currentInvestor == null)
-                currentInvestor = "rpasch2@rpclassics.net";
+                currentInvestor = "joeblow@yahoo.com";
 
             var currentTrx = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
                                                                    .SelectMany(a => a.Positions)
                                                                    .Where(p => p.PositionId == editedTransaction.PositionId)
                                                                    .SelectMany(t => t.PositionTransactions)
-                                                                   .Where(t => t.TransactionId == editedTransaction.TransactionId)
+                                                                   .Where(t => t.TransactionId == transactionId)
                                                                    .AsQueryable());
 
             if(currentTrx.IsEmpty())
