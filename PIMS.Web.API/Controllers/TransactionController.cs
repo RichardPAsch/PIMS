@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -38,24 +39,33 @@ namespace PIMS.Web.Api.Controllers
         // e.g. http://localhost/Pims.Web.Api/api/PositionTransactions/cac9f68c-8d64-410a-afa5-8d18b6f0ed70
         public async Task<IHttpActionResult> GetTransactionsForPosition(Guid positionId)
         {
+            var currentInvestor = _identityService.CurrentUser;
+
+            // Allow for Fiddler debugging
+            if (currentInvestor == null)
+                currentInvestor = "joeblow@yahoo.com";
+
             _repository.UrlAddress = ControllerContext.Request.RequestUri.ToString();
 
-            var matchingTrxs = await Task.FromResult(_repository.Retreive(p => p.PositionId == positionId)
-                                         .Select(t => new TransactionVm {
-                                                                            PositionId = t.PositionId,
-                                                                            TransactionId = t.TransactionId,
-                                                                            Units = t.Units,
-                                                                            MktPrice = t.MktPrice,
-                                                                            Fees = t.Fees,
-                                                                            UnitCost = t.UnitCost,
-                                                                            CostBasis = t.CostBasis,
-                                                                            Valuation = t.Valuation,
-                                                                            DateCreated = t.Date
-                                                                        })
+            var matchingTrxs = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
+                                                                     .SelectMany(a => a.Positions) 
+                                                                     .Where(p => p.PositionId == positionId)
+                                                                     .SelectMany(p => p.PositionTransactions)
+                                                                     .Select(t => new TransactionVm {
+                                                                         TransactionId = t.TransactionId,
+                                                                         PositionId = positionId,
+                                                                         Units = t.Units,
+                                                                         MktPrice = t.MktPrice,
+                                                                         Fees = t.Fees,
+                                                                         UnitCost = t.UnitCost,
+                                                                         CostBasis = t.CostBasis,
+                                                                         Valuation = t.Valuation,
+                                                                         DateCreated = t.Date
+                                                                     })
                                          .AsQueryable());
 
             if (matchingTrxs != null)
-                return Ok(matchingTrxs.OrderByDescending(a => a.DateCreated));
+                return Ok(matchingTrxs.OrderByDescending(t => t.DateCreated));
 
             return BadRequest(string.Format("Error retreiving Position transactions for {0}.", positionId));
 
@@ -90,6 +100,7 @@ namespace PIMS.Web.Api.Controllers
             if(currentTrx.IsEmpty())
                 return BadRequest(string.Format("No matching Position transaction found to update, for {0}  ", editedTransaction.TransactionId));
 
+            currentTrx.First().TransactionPositionId = editedTransaction.PositionId;
             currentTrx.First().Units = editedTransaction.Units;
             currentTrx.First().MktPrice = editedTransaction.MktPrice;
             currentTrx.First().Fees = editedTransaction.Fees;
