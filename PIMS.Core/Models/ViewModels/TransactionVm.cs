@@ -13,5 +13,6 @@ namespace PIMS.Core.Models.ViewModels
         public decimal UnitCost { get; set; }
         public  decimal CostBasis { get; set; }
         public decimal Valuation { get; set; }
+        public DateTime DateCreated { get; set; }
     }
 }
