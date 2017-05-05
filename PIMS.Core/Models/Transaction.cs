@@ -10,8 +10,11 @@ namespace PIMS.Core.Models
         public virtual Guid TransactionId { get; set; }
 
         [Required]
-        public virtual Guid PositionId { get; set; }
+        public virtual Guid TransactionPositionId { get; set; }
 
+        // NH - references 'one' side of Position/Transaction relationship.
+        public virtual Position TransactionPosition { get; set; }
+        
         public virtual string Action { get; set; }
 
         public virtual int Units { get; set; }
@@ -29,9 +32,7 @@ namespace PIMS.Core.Models
         public virtual decimal Valuation { get; set; }
 
 
-        // NH - references 'one' side of Position/Transaction rel.
-        public virtual Position TransactionPosition { get; set; }
-
+        
 
 
     }
