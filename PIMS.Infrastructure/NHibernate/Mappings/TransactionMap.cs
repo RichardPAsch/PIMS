@@ -13,7 +13,6 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
                 .GeneratedBy
                 .GuidComb();
 
-            Map(x => x.PositionId);
             Map(x => x.Action);
             Map(x => x.Units);
             Map(x => x.MktPrice).Precision(7).Scale(3);
@@ -27,8 +26,8 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             // M:1
             // One or more Transaction records may be associated with a Position.
             // References other side (one) of Position NH 1:M relationship.
-            References(x => x.TransactionPosition)  // NH mapping for '1' side of relation to Asset.
-                .Column("PositionId")               // NH FK column in Transactions table.
+            References(x => x.TransactionPosition) // NH mapping for '1' side of relation to Position.
+                .Column("TransactionPositionId") // NH FK column in Transactions table.
                 .Not.Update()
                 .Not.Insert();
 
