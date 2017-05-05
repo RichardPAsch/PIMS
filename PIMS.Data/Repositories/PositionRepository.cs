@@ -125,7 +125,7 @@ namespace PIMS.Data.Repositories
                     trx.Commit();
                 }
                 catch (Exception ex) {
-                    var res = ex.Message;
+                    var res = ex.InnerException;
                     return false;
                 }
             }
