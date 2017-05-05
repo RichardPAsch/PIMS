@@ -314,65 +314,88 @@ namespace PIMS.Web.Api.Controllers
 
 
 
+        // Commented 5.2.17 - new TRX implementations
+        //[HttpPatch]
+        //[Route("~/api/Positions/UpdateCreate")]
+        //public async Task<IHttpActionResult> UpdateCreateEditedPositions([FromBody] PositionEditsVm editedPositions) {
+        //    /* 
+        //        Handles all Position edits, i.e., rollovers, purchases, sales, or simple edits. 
+        //    */
+        //    if (!ModelState.IsValid) {
+        //            return ResponseMessage(new HttpResponseMessage {
+        //            StatusCode = HttpStatusCode.BadRequest,
+        //            ReasonPhrase = string.Format("Invalid model state received for: " + BuildModelStateErrorList(ModelState))
+        //        });
+        //    }
 
-        [HttpPatch]
+        //    // TODO: Remove this check when close to Production.
+        //    var currentInvestor = _identityService.CurrentUser ?? "rpasch2@rpclassics.net";
+
+        //    var updatesOk = false;
+        //    var mappedPositionTo = new Position();
+        //    var mappedPositionFrom = new Position();
+
+        //    if (editedPositions.DbActionOrig.Trim() != "na") {
+        //        mappedPositionFrom = MapEditsVmToPosition(editedPositions, "from");
+        //    }
+
+        //    if (editedPositions.DbActionNew.Trim() != "na")
+        //    {
+        //        mappedPositionTo = MapEditsVmToPosition(editedPositions, "to");
+        //    }
+                
+
+        //    /* Delegate back-end processing to appropriate repository method based on received
+        //       editedPositions.DbActionNew/DbActionOrig values:
+        //            dbActionOrig = source Position 
+        //            dbActionNew  = target Position
+        //     */
+        //    switch (editedPositions.DbActionOrig.Trim() + "-" + editedPositions.DbActionNew.Trim())
+        //    {
+        //         case "update-update":
+        //            updatesOk = await Task.FromResult(_repositoryEdits.UpdatePositions(mappedPositionFrom, mappedPositionTo));
+        //            break;
+        //         case "update-na":
+        //            updatesOk = await Task.FromResult(_repositoryEdits.UpdatePositions(mappedPositionFrom, null));
+        //            break;
+        //         case "update-insert":
+        //            updatesOk = await Task.FromResult(_repositoryEdits.UpdateCreatePositions(mappedPositionFrom, mappedPositionTo));
+        //            break;
+        //         case "na-insert":
+        //            updatesOk = await Task.FromResult(_repositoryEdits.UpdateCreatePositions(null, mappedPositionTo));
+        //            break;
+        //    }
+            
+        //    if (updatesOk)
+        //        return Ok();
+
+        //   return BadRequest(string.Format("Unable to update/create Position edits."));
+        //}
+
+
+        [HttpPatch]  // Revised Fx
         [Route("~/api/Positions/UpdateCreate")]
-        public async Task<IHttpActionResult> UpdateCreateEditedPositions([FromBody] PositionEditsVm editedPositions) {
+        public async Task<IHttpActionResult> UpdateCreateEditedPositions([FromBody] Position editedPosition) {
             /* 
                 Handles all Position edits, i.e., rollovers, purchases, sales, or simple edits. 
             */
             if (!ModelState.IsValid) {
-                    return ResponseMessage(new HttpResponseMessage {
+                return ResponseMessage(new HttpResponseMessage {
                     StatusCode = HttpStatusCode.BadRequest,
                     ReasonPhrase = string.Format("Invalid model state received for: " + BuildModelStateErrorList(ModelState))
                 });
             }
 
-            // TODO: Remove this check when close to Production.
-            var currentInvestor = _identityService.CurrentUser ?? "rpasch2@rpclassics.net";
+            var currentInvestor = _identityService.CurrentUser ?? "joeblow@yahoo.com";
 
-            var updatesOk = false;
-            var mappedPositionTo = new Position();
-            var mappedPositionFrom = new Position();
-
-            if (editedPositions.DbActionOrig.Trim() != "na") {
-                mappedPositionFrom = MapEditsVmToPosition(editedPositions, "from");
-            }
-
-            if (editedPositions.DbActionNew.Trim() != "na")
-            {
-                mappedPositionTo = MapEditsVmToPosition(editedPositions, "to");
-            }
-                
-
-            /* Delegate back-end processing to appropriate repository method based on received
-               editedPositions.DbActionNew/DbActionOrig values:
-                    dbActionOrig = source Position 
-                    dbActionNew  = target Position
-             */
-            switch (editedPositions.DbActionOrig.Trim() + "-" + editedPositions.DbActionNew.Trim())
-            {
-                 case "update-update":
-                    updatesOk = await Task.FromResult(_repositoryEdits.UpdatePositions(mappedPositionFrom, mappedPositionTo));
-                    break;
-                 case "update-na":
-                    updatesOk = await Task.FromResult(_repositoryEdits.UpdatePositions(mappedPositionFrom, null));
-                    break;
-                 case "update-insert":
-                    updatesOk = await Task.FromResult(_repositoryEdits.UpdateCreatePositions(mappedPositionFrom, mappedPositionTo));
-                    break;
-                 case "na-insert":
-                    updatesOk = await Task.FromResult(_repositoryEdits.UpdateCreatePositions(null, mappedPositionTo));
-                    break;
-            }
+            var updatesOk = await Task.FromResult(_repositoryEdits.UpdatePositions(editedPosition, null));
             
+
             if (updatesOk)
                 return Ok();
 
-           return BadRequest(string.Format("Unable to update/create Position edits."));
+            return BadRequest(string.Format("Unable to update/create Position edit."));
         }
-
-
 
 
         [HttpPut]
