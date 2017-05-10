@@ -577,45 +577,45 @@ namespace PIMS.Web.Api.Controllers
 
             }
 
-            private static Position MapEditsVmToPosition(PositionEditsVm sourceVm, string targetPositionDirection)
-            {
+            //private static Position MapEditsVmToPosition(PositionEditsVm sourceVm, string targetPositionDirection)
+            //{
           
-                var updatedOrNewPosition = new Position
-                                           {
-                                               PositionId = targetPositionDirection == "from"
-                                                   ? sourceVm.FromPosId
-                                                   : sourceVm.ToPosId,
-                                               PositionAssetId = sourceVm.PositionAssetId,
-                                               AcctTypeId = targetPositionDirection == "from"
-                                                   ? sourceVm.PositionFromAccountId
-                                                   : sourceVm.PositionToAccountId,
-                                               Status = targetPositionDirection == "from"
-                                                   ? sourceVm.FromPositionStatus
-                                                   : sourceVm.ToPositionStatus,
-                                               Quantity = targetPositionDirection == "from" 
-                                                   ? sourceVm.FromQty 
-                                                   : sourceVm.ToQty,
-                                               MarketPrice = targetPositionDirection == "from"
-                                                   ? sourceVm.FromUnitCost
-                                                   : sourceVm.ToUnitCost,
-                                               LastUpdate = DateTime.Now,
-                                               InvestorKey = sourceVm.PositionInvestorId.ToString(),
-                                               PositionDate = targetPositionDirection == "from"
-                                                   ? sourceVm.FromPositionDate
-                                                   : sourceVm.ToPositionDate,
-                                               PurchaseDate = targetPositionDirection == "from"
-                                                   ? sourceVm.FromPurchaseDate
-                                                   : sourceVm.ToPurchaseDate,
-                                               Fees = targetPositionDirection == "from" 
-                                                   ? sourceVm.FromFees 
-                                                   : sourceVm.ToFees
-                                           };
+            //    var updatedOrNewPosition = new Position
+            //                               {
+            //                                   PositionId = targetPositionDirection == "from"
+            //                                       ? sourceVm.FromPosId
+            //                                       : sourceVm.ToPosId,
+            //                                   PositionAssetId = sourceVm.PositionAssetId,
+            //                                   AcctTypeId = targetPositionDirection == "from"
+            //                                       ? sourceVm.PositionFromAccountId
+            //                                       : sourceVm.PositionToAccountId,
+            //                                   Status = targetPositionDirection == "from"
+            //                                       ? sourceVm.FromPositionStatus
+            //                                       : sourceVm.ToPositionStatus,
+            //                                   Quantity = targetPositionDirection == "from" 
+            //                                       ? sourceVm.FromQty 
+            //                                       : sourceVm.ToQty,
+            //                                   MarketPrice = targetPositionDirection == "from"
+            //                                       ? sourceVm.FromUnitCost
+            //                                       : sourceVm.ToUnitCost,
+            //                                   LastUpdate = DateTime.Now,
+            //                                   InvestorKey = sourceVm.PositionInvestorId.ToString(),
+            //                                   PositionDate = targetPositionDirection == "from"
+            //                                       ? sourceVm.FromPositionDate
+            //                                       : sourceVm.ToPositionDate,
+            //                                   PurchaseDate = targetPositionDirection == "from"
+            //                                       ? sourceVm.FromPurchaseDate
+            //                                       : sourceVm.ToPurchaseDate,
+            //                                   Fees = targetPositionDirection == "from" 
+            //                                       ? sourceVm.FromFees 
+            //                                       : sourceVm.ToFees
+            //                               };
 
              
-                return updatedOrNewPosition;
-                //TODO: 2.2.2017 - ready to use test data (testData.txt) for Fiddler WebApi tests.
-                //TODO: 'PurchaseDate' - should NOT be required; change attribute in Position. DONE.
-            }
+            //    return updatedOrNewPosition;
+            //    //TODO: 2.2.2017 - ready to use test data (testData.txt) for Fiddler WebApi tests.
+            //    //TODO: 'PurchaseDate' - should NOT be required; change attribute in Position. DONE.
+            //}
 
             private Position MapVmToPosition(PositionVm sourceData)
             {
