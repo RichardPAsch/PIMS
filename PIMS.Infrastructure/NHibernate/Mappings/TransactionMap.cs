@@ -21,7 +21,12 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             Map(x => x.UnitCost).Precision(9).Scale(4);
             Map(x => x.CostBasis).Precision(8).Scale(2);
             Map(x => x.Valuation).Precision(9).Scale(2);
+            Map(x => x.TransactionPositionId);  
 
+            /*
+                FK MUST 'Allow Nulls", which allows insertion of a null value into the table. 
+                Therefore, if you have a non-nullable column, with NO default value, a SQL Exception will be generated.
+            */
 
             // M:1
             // One or more Transaction records may be associated with a Position.
@@ -30,7 +35,6 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
                 .Column("TransactionPositionId") // NH FK column in Transactions table.
                 .Not.Update()
                 .Not.Insert();
-
         }
     }
 
