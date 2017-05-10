@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Results;
 using FluentNHibernate.Conventions;
 using PIMS.Core.Models;
 using PIMS.Core.Models.ViewModels;
@@ -115,6 +116,58 @@ namespace PIMS.Web.Api.Controllers
 
             return Ok();
         }
+
+
+        [HttpPost]
+        [Route("")]
+        // e.g. http://localhost/Pims.Web.Api/api/PositionTransactions
+        public async Task<IHttpActionResult> CreateNewTransaction([FromBody]TransactionVm transactionData) {
+
+           if (!ModelState.IsValid) {
+                return ResponseMessage(new HttpResponseMessage {
+                    StatusCode = HttpStatusCode.BadRequest,
+                    ReasonPhrase = "Invalid data received for Transaction creation."
+                });
+            }
+
+            // Allow for Fiddler debugging
+            var currentInvestor = _identityService.CurrentUser ?? "joeblow@yahoo.com";
+
+            var transactionToCreate = MapVmToTransaction(transactionData);
+            var isCreated = await Task.FromResult(_repository.Create(transactionToCreate));
+
+
+            if(!isCreated)
+                return BadRequest(string.Format("Error adding transaction for Position: {0} ", transactionData.PositionId));
+
+            return Created("http://localhost/PIMS.Web.Api/api/PositionTransactions", transactionToCreate);
+        }
+
+
+
+
+        #region Helpers
+
+        private static Transaction MapVmToTransaction(TransactionVm sourceData )
+        {
+            return new Transaction
+                   {
+                       Action = sourceData.TransactionEvent,
+                       TransactionId = sourceData.TransactionId,
+                       TransactionPositionId = sourceData.PositionId,
+                       Units = sourceData.Units,
+                       MktPrice = sourceData.MktPrice,
+                       Valuation = sourceData.Valuation,
+                       Fees = sourceData.Fees,
+                       CostBasis = sourceData.CostBasis,
+                       UnitCost = sourceData.UnitCost,
+                       Date = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day)
+                   };
+
+        }
+
+
+        #endregion
 
     }
 
