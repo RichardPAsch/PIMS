@@ -57,8 +57,10 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             // Each Position will have one or more Transction records.
             HasMany(x => x.PositionTransactions)
                 .Table("Transactions")
-                .KeyColumns.Add("TransactionPositionId") // references Transactions FK commented 5.4.17
-                .Inverse();                              // Make Transaction side responsible for saving.
+                .KeyColumn("TransactionPositionId")  // references Transactions FK commented 5.4.17
+                .Not.KeyNullable()
+                .KeyUpdate()
+                .Inverse();                          // Make Transaction side responsible for saving.
 
         }
     }
