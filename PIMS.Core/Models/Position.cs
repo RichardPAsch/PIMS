@@ -36,8 +36,7 @@ namespace PIMS.Core.Models
         public virtual string InvestorKey { get; set; }
 
         // (I)nactive or (A)ctive
-        public virtual string Status { get; set; }
-
+        public virtual char Status { get; set; }
         
         //[Required]
         public virtual DateTime PurchaseDate { get; set; }
@@ -62,6 +61,9 @@ namespace PIMS.Core.Models
 
         [Range(0.01, 30000.00)]
         public virtual decimal Fees { get; set; }
+
+        [Range(0.01, 9000.00)]
+        public virtual decimal UnitCost { get; set; }
 
 
 
