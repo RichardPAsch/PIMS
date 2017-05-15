@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.ModelBinding;
 using System.Web.Http.Results;
+using NHibernate.Hql.Ast.ANTLR;
 using PIMS.Core.Models;
 using PIMS.Core.Models.ViewModels;
 using PIMS.Core.Security;
@@ -140,7 +141,7 @@ namespace PIMS.Web.Api.Controllers
             
             var availablePositions = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
                                                                            .SelectMany(p => p.Positions)
-                                                                           .Where(p => p.Status != "I")
+                                                                           .Where(p => p.Status != 'I')
                                                                            .Select(pos => new PositionsSummaryVm {
                                                                                PositionSummaryAccountType = pos.Account.AccountTypeDesc,
                                                                                PositionSummaryTickerSymbol = pos.PositionAsset.Profile.TickerSymbol,
@@ -175,7 +176,7 @@ namespace PIMS.Web.Api.Controllers
 
             var availablePositions = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
                                                                            .SelectMany(p => p.Positions)
-                                                                           .Where(p => p.Status != "I")
+                                                                           .Where(p => p.Status != 'I')
                                                                            .Select(pos => new PositionsVm {
                                                                                PositionAccountType = pos.Account.AccountTypeDesc,
                                                                                PositionTickerSymbol = pos.PositionAsset.Profile.TickerSymbol,
@@ -244,17 +245,17 @@ namespace PIMS.Web.Api.Controllers
 
             // Allow for Fiddler debugging
             if (currentInvestor == null)
-                currentInvestor = "rpasch2@rpclassics.net";
+                currentInvestor = "joeblow@yahoo.com";
 
             var availablePositions = await Task.FromResult(_repositoryAsset.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == tickerSymbol.ToUpper().Trim()
                                                                                        && a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
                                                                       .SelectMany(p => p.Positions)
-                                                                      .Where(p => p.Status != "I")
+                                                                      .Where(p => p.Status != 'I')
                                                                       .Select(p2 => new PositionsByAssetVm  {
                                                                           ReferencedTickerSymbol = tickerSymbol,
                                                                           PreEditPositionAccount = p2.Account.AccountTypeDesc,
                                                                           Qty = p2.Quantity,
-                                                                          UnitCost = p2.MarketPrice,
+                                                                          UnitCost = p2.UnitCost,
                                                                           DateOfPurchase = p2.PurchaseDate,
                                                                           DatePositionAdded = p2.PositionDate,
                                                                           LastUpdate = p2.LastUpdate,
@@ -265,7 +266,7 @@ namespace PIMS.Web.Api.Controllers
             if (availablePositions.Any())
                 return Ok(availablePositions);
 
-            return BadRequest(string.Format("No Positions were found matching {0} ", tickerSymbol.ToUpper()));
+            return BadRequest(string.Format("No Positions were found matching {0} for investor {1}", tickerSymbol.ToUpper(), currentInvestor));
         }
 
 
@@ -386,11 +387,14 @@ namespace PIMS.Web.Api.Controllers
                 });
             }
 
+            editedPosition.AcctTypeId = new Guid(editedPosition.AcctTypeId.ToString());
+            editedPosition.PositionAssetId = new Guid(editedPosition.PositionAssetId.ToString());
+            editedPosition.PositionId = new Guid(editedPosition.PositionId.ToString());
+  
             var currentInvestor = _identityService.CurrentUser ?? "joeblow@yahoo.com";
-
+            
             var updatesOk = await Task.FromResult(_repositoryEdits.UpdatePositions(editedPosition, null));
             
-
             if (updatesOk)
                 return Ok();
 
@@ -634,7 +638,7 @@ namespace PIMS.Web.Api.Controllers
                            TickerSymbol = sourceData.ReferencedTickerSymbol,
                            Account = acctTypeCtrl.MapVmToAccountType(sourceData.ReferencedAccount),
                            Url = sourceData.Url,
-                           Status = sourceData.Status,
+                           Status = char.Parse(sourceData.Status),
                            Fees = sourceData.TransactionFees
                        };
             }
