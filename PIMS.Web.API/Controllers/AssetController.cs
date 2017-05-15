@@ -78,7 +78,7 @@ namespace PIMS.Web.Api.Controllers
                                  AssetClassifications = a.AssetClass
                              })
                 .SelectMany(p => p.AvailablePositions)
-                .Where(p => p.Status == status)
+                .Where(p => p.Status == char.Parse(status))
                 .Select(x => new AssetSummaryQueryVm
                              {
                                  TickerSymbol = x.PositionAsset.Profile.TickerSymbol,
