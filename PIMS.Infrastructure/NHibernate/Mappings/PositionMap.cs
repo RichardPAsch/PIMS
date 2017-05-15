@@ -17,8 +17,7 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             Map(x => x.AcctTypeId, "PositionAccountTypeId");
             Map(x => x.PurchaseDate);
             Map(x => x.Quantity);
-            // TODO: fix -> MarketPrice != UnitCost
-            Map(x => x.MarketPrice, "UnitCost").Precision(7).Scale(3);
+            Map(x => x.UnitCost).Precision(7).Scale(3);
             Map(x => x.LastUpdate);
             Map(x => x.InvestorKey);   
             Map(x => x.Url);
