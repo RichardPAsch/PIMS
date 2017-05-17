@@ -161,7 +161,7 @@ namespace PIMS.Web.Api.Controllers
                        Fees = sourceData.Fees,
                        CostBasis = sourceData.CostBasis,
                        UnitCost = sourceData.UnitCost,
-                       Date = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day)
+                       Date = DateTime.Now
                    };
 
         }
