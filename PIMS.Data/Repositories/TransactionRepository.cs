@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using NHibernate;
@@ -8,7 +9,7 @@ using PIMS.Core.Models;
 
 namespace PIMS.Data.Repositories
 {
-    public class TransactionRepository : IGenericRepository<Transaction>
+    public class TransactionRepository : IGenericRepository<Transaction>, ITransactionEditsRepository<Transaction>
     {
 
         private readonly ISession _nhSession;
@@ -102,7 +103,33 @@ namespace PIMS.Data.Repositories
             return true;
         }
 
-        
+
+      
+
+        public bool UpdateTransactions(IEnumerable<Transaction> transactions)
+        {
+            var trx = _nhSession.BeginTransaction();
+            foreach (var transaction in transactions) {
+                try {
+                    _nhSession.SaveOrUpdate(transaction);
+                    trx.Commit();
+                }
+                catch (Exception ex) {
+                    var res = ex.Message;
+                    return false;
+                }
+
+                // Receive NHibernate error: "Cannot access a disposed object.\r\nObject name: 'AdoTransaction'."
+                // after initial db commit, perhaps an exception is thrown or related to 'using' clause? Therefore, 
+                // have to create a new trx to continue.
+                if (!trx.IsActive)
+                    trx = _nhSession.BeginTransaction();
+            }
+
+            trx.Dispose();
+            return true;
+        }
+
     }
 }
 
