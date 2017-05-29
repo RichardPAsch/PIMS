@@ -112,7 +112,7 @@ namespace PIMS.Data.Repositories
             foreach (var transaction in transactions) {
                 try {
                     _nhSession.SaveOrUpdate(transaction);
-                    trx.Commit();
+                    trx.Commit(); 
                 }
                 catch (Exception ex) {
                     var res = ex.Message;
@@ -120,8 +120,8 @@ namespace PIMS.Data.Repositories
                 }
 
                 // Receive NHibernate error: "Cannot access a disposed object.\r\nObject name: 'AdoTransaction'."
-                // after initial db commit, perhaps an exception is thrown or related to 'using' clause? Therefore, 
-                // have to create a new trx to continue.
+                // after initial db commit, perhaps due to some exception, or use of 'using' clause ? Therefore, 
+                // will have to create a new trx to continue.
                 if (!trx.IsActive)
                     trx = _nhSession.BeginTransaction();
             }
