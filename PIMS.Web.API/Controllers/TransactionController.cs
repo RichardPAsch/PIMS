@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
-using System.Web.Http.Results;
-using FluentNHibernate.Conventions;
 using PIMS.Core.Models;
 using PIMS.Core.Models.ViewModels;
 using PIMS.Core.Security;
@@ -23,14 +20,16 @@ namespace PIMS.Web.Api.Controllers
         private readonly IPimsIdentityService _identityService;
         private static IGenericRepository<Investor> _repositoryInvestor;
         private static IGenericRepository<Asset> _repositoryAsset;
+        private static ITransactionEditsRepository<Transaction> _repositoryTransaction;
 
 
-        public TransactionController(IGenericRepository<Transaction> repository, IPimsIdentityService identitySvc, IGenericRepository<Investor> repositoryInvestor, IGenericRepository<Asset> repositoryAsset)
+        public TransactionController(IGenericRepository<Transaction> repository, IPimsIdentityService identitySvc, IGenericRepository<Investor> repositoryInvestor, IGenericRepository<Asset> repositoryAsset, ITransactionEditsRepository<Transaction> repositoryTransaction )
         {
             _repository = repository;
             _identityService = identitySvc;
             _repositoryInvestor = repositoryInvestor;
             _repositoryAsset = repositoryAsset;
+            _repositoryTransaction = repositoryTransaction;
         }
 
 
@@ -54,6 +53,9 @@ namespace PIMS.Web.Api.Controllers
                                                                      .SelectMany(p => p.PositionTransactions)
                                                                      .Select(t => new TransactionVm {
                                                                          TransactionId = t.TransactionId,
+                                                                         DatePositionCreated = t.TransactionPosition.PositionDate,
+                                                                         DateCreated = t.TransactionPosition.PurchaseDate,
+                                                                         TransactionEvent = t.Action,
                                                                          PositionId = positionId,
                                                                          Units = t.Units,
                                                                          MktPrice = t.MktPrice,
@@ -61,8 +63,8 @@ namespace PIMS.Web.Api.Controllers
                                                                          UnitCost = t.UnitCost,
                                                                          CostBasis = t.CostBasis,
                                                                          Valuation = t.Valuation,
-                                                                         DateCreated = t.Date
-                                                                     })
+                                                                         TickerSymbol = t.TransactionPosition.PositionAsset.Profile.TickerSymbol
+                                                               })
                                          .AsQueryable());
 
             if (matchingTrxs != null)
@@ -73,11 +75,59 @@ namespace PIMS.Web.Api.Controllers
         }
 
 
+        //[HttpPut]
+        //[HttpPatch]
+        //[Route("{transactionId?}")]
+        //public async Task<IHttpActionResult> UpdatePositionTransaction(Guid transactionId, [FromBody] TransactionVm editedTransaction)
+        //{
+        //    if (!ModelState.IsValid) {
+        //        return ResponseMessage(new HttpResponseMessage {
+        //            StatusCode = HttpStatusCode.BadRequest,
+        //            ReasonPhrase = "Invalid Position transaction received for updating."
+        //        });
+        //    }
+
+        //    var currentInvestor = _identityService.CurrentUser;
+
+        //    // Allow for Fiddler debugging
+        //    if (currentInvestor == null)
+        //        currentInvestor = "joeblow@yahoo.com";
+
+        //    var currentTrx = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
+        //                                                           .SelectMany(a => a.Positions)
+        //                                                           .Where(p => p.PositionId == editedTransaction.PositionId)
+        //                                                           .SelectMany(t => t.PositionTransactions)
+        //                                                           //.Where(t => t.TransactionId == transactionId)
+        //                                                           .Where(t => t.TransactionId == editedTransaction.TransactionId)
+        //                                                           .AsQueryable());
+
+        //    if(currentTrx.IsEmpty())
+        //        return BadRequest(string.Format("No matching Position transaction found to update, for {0}  ", editedTransaction.TransactionId));
+
+        //    currentTrx.First().TransactionPositionId = editedTransaction.PositionId;
+        //    currentTrx.First().TransactionId = editedTransaction.TransactionId;
+        //    currentTrx.First().Units = editedTransaction.Units;
+        //    currentTrx.First().MktPrice = editedTransaction.MktPrice;
+        //    currentTrx.First().Fees = editedTransaction.Fees;
+        //    currentTrx.First().UnitCost = editedTransaction.UnitCost;
+        //    currentTrx.First().CostBasis = editedTransaction.CostBasis;
+        //    currentTrx.First().Valuation = editedTransaction.Valuation;
+
+
+        //    var isUpdated = await Task.FromResult(_repository.Update(currentTrx.First(), new Guid(currentTrx.First().TransactionId.ToString())));
+        //    if (!isUpdated)
+        //        return BadRequest(string.Format("Unable to update Position transaction : {0} ", currentTrx.First().TransactionId));
+
+        //    return Ok();
+        //}
+
+
         [HttpPut]
         [HttpPatch]
-        [Route("{transactionId}")]
-        public async Task<IHttpActionResult> UpdatePositionTransaction(Guid transactionId, [FromBody] TransactionVm editedTransaction)
-        {
+        [Route("")]
+        public async Task<IHttpActionResult> UpdatePositionTransaction([FromBody] TransactionVm[] editedTransactions) {
+
+            // TODO: ready to test: 5.25.17 ** 
             if (!ModelState.IsValid) {
                 return ResponseMessage(new HttpResponseMessage {
                     StatusCode = HttpStatusCode.BadRequest,
@@ -86,33 +136,19 @@ namespace PIMS.Web.Api.Controllers
             }
 
             var currentInvestor = _identityService.CurrentUser;
+            var mappedTransactions = new Transaction[editedTransactions.Length]; 
 
             // Allow for Fiddler debugging
             if (currentInvestor == null)
                 currentInvestor = "joeblow@yahoo.com";
 
-            var currentTrx = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
-                                                                   .SelectMany(a => a.Positions)
-                                                                   .Where(p => p.PositionId == editedTransaction.PositionId)
-                                                                   .SelectMany(t => t.PositionTransactions)
-                                                                   .Where(t => t.TransactionId == transactionId)
-                                                                   .AsQueryable());
+            for (var i = 0; i < editedTransactions.Length; i++)
+                mappedTransactions[i] = MapVmToTransaction(editedTransactions[i]);
+            
 
-            if(currentTrx.IsEmpty())
-                return BadRequest(string.Format("No matching Position transaction found to update, for {0}  ", editedTransaction.TransactionId));
-
-            currentTrx.First().TransactionPositionId = editedTransaction.PositionId;
-            currentTrx.First().Units = editedTransaction.Units;
-            currentTrx.First().MktPrice = editedTransaction.MktPrice;
-            currentTrx.First().Fees = editedTransaction.Fees;
-            currentTrx.First().UnitCost = editedTransaction.UnitCost;
-            currentTrx.First().CostBasis = editedTransaction.CostBasis;
-            currentTrx.First().Valuation = editedTransaction.Valuation;
-
-
-            var isUpdated = await Task.FromResult(_repository.Update(currentTrx.First(), currentTrx.First().TransactionId));
+            var isUpdated = await Task.FromResult(_repositoryTransaction.UpdateTransactions(mappedTransactions));
             if (!isUpdated)
-                return BadRequest(string.Format("Unable to update Position transaction : {0} ", currentTrx.First().TransactionId));
+                return BadRequest(string.Format("Unable to update one or more transactions for Position : {0} ", mappedTransactions[0].TransactionPositionId));
 
             return Ok();
         }
