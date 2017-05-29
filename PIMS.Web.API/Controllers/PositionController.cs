@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.ModelBinding;
 using System.Web.Http.Results;
-using NHibernate.Hql.Ast.ANTLR;
 using PIMS.Core.Models;
 using PIMS.Core.Models.ViewModels;
 using PIMS.Core.Security;
@@ -381,6 +380,46 @@ namespace PIMS.Web.Api.Controllers
         //}
 
 
+        [HttpPatch]  
+        [Route("~/api/Asset/{ticker}/Position/{positionId}")]
+        public async Task<IHttpActionResult> UpdatePosition(string ticker, Guid positionId, [FromBody] Position editedPosition) {
+           
+            if (!ModelState.IsValid) {
+                return ResponseMessage(new HttpResponseMessage {
+                    StatusCode = HttpStatusCode.BadRequest,
+                    ReasonPhrase = string.Format("Invalid model state received for: " + BuildModelStateErrorList(ModelState))
+                });
+            }
+
+            var currentInvestor = _identityService.CurrentUser;
+
+            // Allow for Fiddler debugging
+            if (currentInvestor == null)
+                currentInvestor = "joeblow@yahoo.com";
+
+            var currentPosition = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
+                                                                        .SelectMany(a => a.Positions)
+                                                                        .Where(p => p.PositionId == positionId)
+                                                                        .AsQueryable());
+
+            if (!currentPosition.Any())
+                return BadRequest(string.Format("No matching Position found to update for {0}  ", currentPosition.First() .TickerSymbol.Trim() ));
+
+
+            currentPosition.First().Status = editedPosition.Status;
+            currentPosition.First().Quantity = editedPosition.Quantity;
+            currentPosition.First().UnitCost = editedPosition.UnitCost;
+            currentPosition.First().Fees = editedPosition.Fees;
+            currentPosition.First().LastUpdate = DateTime.UtcNow;
+
+            var isUpdated = await Task.FromResult(_repository.Update(currentPosition.First(), currentPosition.First().PositionId));
+            if (!isUpdated)
+                return BadRequest(string.Format("Unable to update Position for : {0} ", currentPosition.First().TickerSymbol.Trim()));
+            
+            return Ok("Position updated");
+        }
+
+
         [HttpPatch]  // Revised Fx
         [Route("~/api/Positions/UpdateCreate")]
         public async Task<IHttpActionResult> UpdateCreateEditedPositions([FromBody] Position editedPosition) {
@@ -588,50 +627,10 @@ namespace PIMS.Web.Api.Controllers
                 return currentProfile == null ? 0 : currentProfile.Price;
 
             }
-
-            //private static Position MapEditsVmToPosition(PositionEditsVm sourceVm, string targetPositionDirection)
-            //{
-          
-            //    var updatedOrNewPosition = new Position
-            //                               {
-            //                                   PositionId = targetPositionDirection == "from"
-            //                                       ? sourceVm.FromPosId
-            //                                       : sourceVm.ToPosId,
-            //                                   PositionAssetId = sourceVm.PositionAssetId,
-            //                                   AcctTypeId = targetPositionDirection == "from"
-            //                                       ? sourceVm.PositionFromAccountId
-            //                                       : sourceVm.PositionToAccountId,
-            //                                   Status = targetPositionDirection == "from"
-            //                                       ? sourceVm.FromPositionStatus
-            //                                       : sourceVm.ToPositionStatus,
-            //                                   Quantity = targetPositionDirection == "from" 
-            //                                       ? sourceVm.FromQty 
-            //                                       : sourceVm.ToQty,
-            //                                   MarketPrice = targetPositionDirection == "from"
-            //                                       ? sourceVm.FromUnitCost
-            //                                       : sourceVm.ToUnitCost,
-            //                                   LastUpdate = DateTime.Now,
-            //                                   InvestorKey = sourceVm.PositionInvestorId.ToString(),
-            //                                   PositionDate = targetPositionDirection == "from"
-            //                                       ? sourceVm.FromPositionDate
-            //                                       : sourceVm.ToPositionDate,
-            //                                   PurchaseDate = targetPositionDirection == "from"
-            //                                       ? sourceVm.FromPurchaseDate
-            //                                       : sourceVm.ToPurchaseDate,
-            //                                   Fees = targetPositionDirection == "from" 
-            //                                       ? sourceVm.FromFees 
-            //                                       : sourceVm.ToFees
-            //                               };
-
-             
-            //    return updatedOrNewPosition;
-            //    //TODO: 2.2.2017 - ready to use test data (testData.txt) for Fiddler WebApi tests.
-            //    //TODO: 'PurchaseDate' - should NOT be required; change attribute in Position. DONE.
-            //}
-
+        
             private Position MapVmToPosition(PositionVm sourceData)
             {
-                var acctTypeCtrl = new AccountTypeController(_repositoryAccountType, _repositoryAsset, _identityService, _repositoryInvestor);
+                //var acctTypeCtrl = new AccountTypeController(_repositoryAccountType, _repositoryAsset, _identityService, _repositoryInvestor);
                 return new Position
                        {
                            // ReSharper disable once PossibleInvalidOperationException
