@@ -18,4 +18,5 @@ namespace PIMS.Core.Models.ViewModels
         public DateTime DatePositionCreated { get; set; }
         public string TickerSymbol { get; set; }
     }
+
 }
