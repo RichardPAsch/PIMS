@@ -42,27 +42,24 @@ namespace PIMS.Core.Models
         public virtual DateTime PurchaseDate { get; set; }
 
         [Required]
-        [Range(1,10000)]
+        [Range(0,10000)]
         public virtual int Quantity { get; set; }
         
         [Required]
         public virtual DateTime LastUpdate { get; set; }
 
-        [Required]
-        [Range(0.01, 10000.00)]
         public virtual decimal MarketPrice { get; set; }
 
-        [Required]
         public virtual string TickerSymbol { get; set; }
 
-        // TODO: set [Required] attr?
+        // TODO: set [Required] attr? If set, will be part of ModelState validation.
         // Date Position added for asset; used in Revenue editing (back-dating checks)
         public virtual DateTime PositionDate { get; set; }
 
-        [Range(0.01, 30000.00)]
+        [Range(0.00, 30000.00)]
         public virtual decimal Fees { get; set; }
 
-        [Range(0.01, 9000.00)]
+        [Range(0.00, 9000.00)]
         public virtual decimal UnitCost { get; set; }
 
 
