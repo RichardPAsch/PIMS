@@ -410,7 +410,7 @@ namespace PIMS.Web.Api.Controllers
             currentPosition.First().Quantity = editedPosition.Quantity;
             currentPosition.First().UnitCost = editedPosition.UnitCost;
             currentPosition.First().Fees = editedPosition.Fees;
-            currentPosition.First().LastUpdate = DateTime.UtcNow;
+            currentPosition.First().LastUpdate = DateTime.Now;
 
             var isUpdated = await Task.FromResult(_repository.Update(currentPosition.First(), currentPosition.First().PositionId));
             if (!isUpdated)
@@ -628,7 +628,7 @@ namespace PIMS.Web.Api.Controllers
 
             }
         
-            private Position MapVmToPosition(PositionVm sourceData)
+            private static Position MapVmToPosition(PositionVm sourceData)
             {
                 //var acctTypeCtrl = new AccountTypeController(_repositoryAccountType, _repositoryAsset, _identityService, _repositoryInvestor);
                 return new Position
@@ -643,12 +643,13 @@ namespace PIMS.Web.Api.Controllers
                                             ? new Guid(sourceData.PreEditPositionAccount)
                                             : new Guid(sourceData.PostEditPositionAccount),
                            PositionAssetId = sourceData.ReferencedAssetId, 
-                           LastUpdate = DateTime.UtcNow,
+                           LastUpdate = DateTime.Now,
                            TickerSymbol = sourceData.ReferencedTickerSymbol,
                            Account = null, 
                            Url = sourceData.Url,
                            Status = char.Parse(sourceData.Status),
-                           Fees = sourceData.TransactionFees
+                           Fees = sourceData.TransactionFees,
+                           PositionId = sourceData.CreatedPositionId // added 5.31.17
                        };
             }
 
