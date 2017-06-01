@@ -436,7 +436,7 @@ namespace PIMS.Web.Api.Controllers
             editedPosition.AcctTypeId = new Guid(editedPosition.AcctTypeId.ToString());
             editedPosition.PositionAssetId = new Guid(editedPosition.PositionAssetId.ToString());
             editedPosition.PositionId = new Guid(editedPosition.PositionId.ToString());
-            editedPosition.LastUpdate = DateTime.UtcNow;
+            editedPosition.LastUpdate = DateTime.Now;
   
             var currentInvestor = _identityService.CurrentUser ?? "joeblow@yahoo.com";
             
@@ -492,11 +492,11 @@ namespace PIMS.Web.Api.Controllers
 
 
                 // Purchase date ALWAYS reflects date of consolidation.
-                targetPosition.First().PurchaseDate = DateTime.UtcNow;
+                targetPosition.First().PurchaseDate = DateTime.Now;
                 targetPosition.First().Quantity = targetPosition.First().Quantity + sourcePosition.First().Quantity;
                 targetPosition.First().MarketPrice = await GetCurrentMarketPrice(ticker);
                 targetPosition.First().Account = targetPosition.First().Account;
-                targetPosition.First().LastUpdate = DateTime.UtcNow;
+                targetPosition.First().LastUpdate = DateTime.Now;
                 targetPosition.First().Url = newLocation.Trim();
 
                 editedPosition.PostEditPositionAccount = targetPosition.First().Account.AccountTypeDesc;
@@ -630,12 +630,11 @@ namespace PIMS.Web.Api.Controllers
         
             private static Position MapVmToPosition(PositionVm sourceData)
             {
-                //var acctTypeCtrl = new AccountTypeController(_repositoryAccountType, _repositoryAsset, _identityService, _repositoryInvestor);
                 return new Position
                        {
                            // ReSharper disable once PossibleInvalidOperationException
                            PurchaseDate = (DateTime) sourceData.DateOfPurchase,
-                           PositionDate = sourceData.DatePositionAdded != null ? DateTime.Parse(sourceData.DatePositionAdded.ToString()) : DateTime.UtcNow,
+                           PositionDate = sourceData.DatePositionAdded != null ? DateTime.Parse(sourceData.DatePositionAdded.ToString()) : DateTime.Now,
                            Quantity = sourceData.Qty,
                            UnitCost = sourceData.UnitCost,
                            InvestorKey = sourceData.LoggedInInvestor,
@@ -649,7 +648,7 @@ namespace PIMS.Web.Api.Controllers
                            Url = sourceData.Url,
                            Status = char.Parse(sourceData.Status),
                            Fees = sourceData.TransactionFees,
-                           PositionId = sourceData.CreatedPositionId // added 5.31.17
+                           PositionId = sourceData.CreatedPositionId 
                        };
             }
 
