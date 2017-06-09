@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using PIMS.Core.Models;
+using PIMS.Core.Models.ViewModels;
 using PIMS.Core.Security;
 using PIMS.Data.Repositories;
 
@@ -32,6 +33,44 @@ namespace PIMS.Web.Api.Common
         {
             return DateTime.DaysInMonth(year, month);
         }
+
+        public static Transaction MapVmToTransaction(TransactionVm sourceData) {
+            return new Transaction {
+                Action = sourceData.TransactionEvent,
+                TransactionId = sourceData.TransactionId,
+                TransactionPositionId = sourceData.PositionId,
+                Units = sourceData.Units,
+                MktPrice = sourceData.MktPrice,
+                Valuation = sourceData.Valuation,
+                Fees = sourceData.Fees,
+                CostBasis = sourceData.CostBasis,
+                UnitCost = sourceData.UnitCost,
+                Date = DateTime.Now
+            };
+        }
+
+
+        public static Position MapVmToPosition(PositionVm sourceData) {
+
+            return new Position {
+                // ReSharper disable once PossibleInvalidOperationException
+                PurchaseDate = (DateTime)sourceData.DateOfPurchase,
+                PositionDate = sourceData.DatePositionAdded != null ? DateTime.Parse(sourceData.DatePositionAdded.ToString()) : DateTime.Now,
+                Quantity = sourceData.Qty,
+                UnitCost = sourceData.UnitCost,
+                AcctTypeId = sourceData.PostEditPositionAccount == null
+                                    ? new Guid(sourceData.PreEditPositionAccount)
+                                    : new Guid(sourceData.PostEditPositionAccount),
+                PositionAssetId = sourceData.ReferencedAssetId,
+                LastUpdate = DateTime.Now,
+                Status = char.Parse(sourceData.Status),
+                Fees = sourceData.TransactionFees,
+                PositionId = sourceData.CreatedPositionId
+            };
+            
+        }
+
+
     }
 
         
