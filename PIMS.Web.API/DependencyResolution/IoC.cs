@@ -77,6 +77,7 @@ namespace PIMS.Web.Api.DependencyResolution {
                             x.For<IGenericRepository<Asset>>().Use<AssetRepository>();
                             x.For<IGenericRepository<Transaction>>().Use<TransactionRepository>();
                             x.For<ITransactionEditsRepository<Transaction>>().Use<TransactionRepository>();
+                            x.For<PositionTransactionRepository>().Use<PositionTransactionRepository>();
                             //x.For<IGenericRepository<Profile>>().Use<InMemoryProfileRepository>(); [10/24/14: not needed due to unit test configurations]
                             //x.For<IGenericRepository<Position>>().Use<PositionRepository>();
                             //x.For<IGenericRepository<Income>>().Use<IncomeRepository>();
