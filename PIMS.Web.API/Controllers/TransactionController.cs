@@ -161,8 +161,8 @@ namespace PIMS.Web.Api.Controllers
         [HttpPost]
         [Route("")]
         // e.g. http://localhost/Pims.Web.Api/api/PositionTransactions
-        public async Task<IHttpActionResult> CreateNewTransaction([FromBody]TransactionVm transactionData) {
-
+        public async Task<IHttpActionResult> CreateNewTransaction([FromBody]TransactionVm transactionData)
+        {
            if (!ModelState.IsValid) {
                 return ResponseMessage(new HttpResponseMessage {
                     StatusCode = HttpStatusCode.BadRequest,
@@ -175,7 +175,7 @@ namespace PIMS.Web.Api.Controllers
 
             var transactionToCreate = MapVmToTransaction(transactionData);
             var isCreated = await Task.FromResult(_repository.Create(transactionToCreate));
-
+            
 
             if(!isCreated)
                 return BadRequest(string.Format("Error adding transaction for Position: {0} ", transactionData.PositionId));
