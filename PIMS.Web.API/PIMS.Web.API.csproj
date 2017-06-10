@@ -183,6 +183,7 @@
     <Compile Include="Controllers\IncomeController.cs" />
     <Compile Include="Controllers\InvestorController.cs" />
     <Compile Include="Controllers\PositionController.cs" />
+    <Compile Include="Controllers\PositionTransactionController.cs" />
     <Compile Include="Controllers\ProfileController.cs" />
     <Compile Include="Controllers\TransactionController.cs" />
     <Compile Include="DependencyResolution\IoC.cs" />
