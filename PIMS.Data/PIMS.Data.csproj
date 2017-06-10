@@ -64,6 +64,7 @@
     <Compile Include="Repositories\IUserRepository.cs" />
     <Compile Include="Repositories\PositionRepository.cs" />
     <Compile Include="Repositories\ProfileRepsository.cs" />
+    <Compile Include="Repositories\PositionTransactionRepository.cs" />
     <Compile Include="Repositories\TransactionRepository.cs" />
     <Compile Include="YahooFinanceSvc.cs" />
     <Compile Include="YahooParser.cs" />
