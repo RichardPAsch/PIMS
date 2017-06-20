@@ -33,8 +33,8 @@ namespace PIMS.Web.Api.Controllers
         public async Task<IHttpActionResult> CreateUpdatePositionsAndTransactions([FromBody]object[] rolloverInfo) {
 
             /*  Tested expected Json parameter model for rollover persistence ; 
-             *  FYI: rolloverInfo indices: [0]sourceTrxVm/[1]sourcePosVm/[2]targetTrxVm/[3]targetPosVm
-             *  ---------------------------------------------------------------
+             *  'rolloverInfo' indices: [0]sourceTrxVm/[1]sourcePosVm/[2]targetTrxVm/[3]targetPosVm
+             *  -----------------------------------------------------------------------------------
              *  [
                     { // source Trx.
                         PositionId : "64f24181-0fdc-4804-9b37-a741011178de",
