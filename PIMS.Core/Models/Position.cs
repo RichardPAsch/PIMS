@@ -39,6 +39,7 @@ namespace PIMS.Core.Models
         public virtual char Status { get; set; }
         
         //[Required]
+        // Date of purchase for Asset.
         public virtual DateTime PurchaseDate { get; set; }
 
         [Required]
@@ -53,7 +54,7 @@ namespace PIMS.Core.Models
         public virtual string TickerSymbol { get; set; }
 
         // TODO: set [Required] attr? If set, will be part of ModelState validation.
-        // Date Position added for asset; used in Revenue editing (back-dating checks)
+        // Date Position added to asset; used in Revenue editing (back-dating checks)
         public virtual DateTime PositionDate { get; set; }
 
         [Range(0.00, 30000.00)]
