@@ -25,8 +25,8 @@ namespace PIMS.Data.Repositories
 
 
         public bool UpdateTransactionAndPosition(object[] sourceTrxPosData, object[] targetTrxPosData) {
-            // Ex. rollover scenario : IRA (source) -> Roth-IRA (target).
 
+            // Applicable to rollover scenarios : IRA (source) -> Roth-IRA (target).
             if (sourceTrxPosData[0].GetType() != typeof(Transaction) &&
                 sourceTrxPosData[1].GetType() != typeof(Position) &&
                 targetTrxPosData[0].GetType() != typeof(Transaction) &&
@@ -51,31 +51,7 @@ namespace PIMS.Data.Repositories
             return true;
         }
 
-
-
-        //public bool UpdateTransactions(IEnumerable<Transaction> transactions) {
-        //    var trx = _nhSession.BeginTransaction();
-        //    foreach (var transaction in transactions) {
-        //        try {
-        //            _nhSession.SaveOrUpdate(transaction);
-        //            trx.Commit();
-        //        }
-        //        catch (Exception ex) {
-        //            var res = ex.Message;
-        //            return false;
-        //        }
-
-        //        // Receive NHibernate error: "Cannot access a disposed object.\r\nObject name: 'AdoTransaction'."
-        //        // after initial db commit, perhaps due to some exception, or use of 'using' clause ? Therefore, 
-        //        // will have to create a new trx to continue.
-        //        if (!trx.IsActive)
-        //            trx = _nhSession.BeginTransaction();
-        //    }
-
-        //    trx.Dispose();
-        //    return true;
-        //}
-
+        
     }
 }
 
