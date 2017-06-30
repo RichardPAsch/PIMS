@@ -173,6 +173,7 @@ namespace PIMS.Web.Api.Controllers
             if (currentInvestor == null)
                 currentInvestor = "joeblow@yahoo.com";
 
+            // Debug info: Watch for 'SQL not available' errors during testing; check for null values in table.
             var availablePositions = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
                                                                            .SelectMany(p => p.Positions)
                                                                            .Where(p => p.Status != 'I')
