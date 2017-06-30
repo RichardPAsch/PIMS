@@ -65,7 +65,8 @@ namespace PIMS.Web.Api.Common
                 LastUpdate = DateTime.Now,
                 Status = char.Parse(sourceData.Status),
                 Fees = sourceData.TransactionFees,
-                PositionId = sourceData.CreatedPositionId
+                PositionId = sourceData.CreatedPositionId,
+                InvestorKey = sourceData.LoggedInInvestor
             };
             
         }
