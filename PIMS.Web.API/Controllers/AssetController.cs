@@ -3,13 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Security.Cryptography.X509Certificates;
-using System.Security.Policy;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Results;
 using FluentNHibernate.Conventions;
-using NHibernate.Linq;
 using PIMS.Core.Models;
 using PIMS.Core.Models.ViewModels;
 using PIMS.Data.Repositories;
@@ -32,6 +29,8 @@ namespace PIMS.Web.Api.Controllers
         private readonly IGenericRepository<Position> _repositoryPosition;
         private readonly IPositionEditsRepository<Position> _repositoryEdits;
         private readonly IGenericRepository<Income> _repositoryIncome;
+        private readonly IGenericRepository<Transaction> _repositoryTransaction;
+        private readonly ITransactionEditsRepository<Transaction> _repositoryTransactionEdits;
         private const string DefaultDisplayType = "detail";
         private string _currentInvestor;
 
@@ -43,7 +42,9 @@ namespace PIMS.Web.Api.Controllers
                                                                      IGenericRepository<AccountType> repositoryAccountType,
                                                                      IGenericRepository<Position> repositoryPosition,
                                                                      IPositionEditsRepository<Position> repositoryEdits,
-                                                                     IGenericRepository<Income> repositoryIncome )
+                                                                     IGenericRepository<Income> repositoryIncome,
+                                                                     IGenericRepository<Transaction> repositoryTransaction,
+                                                                     ITransactionEditsRepository<Transaction> repositoryTransactionEdits)
         {
             _repository = repository;
             _identityService = identityService;
@@ -54,6 +55,8 @@ namespace PIMS.Web.Api.Controllers
             _repositoryPosition = repositoryPosition;
             _repositoryIncome = repositoryIncome;
             _repositoryEdits = repositoryEdits;
+            _repositoryTransaction = repositoryTransaction;
+            _repositoryTransactionEdits = repositoryTransactionEdits;
         }
 
 
@@ -147,7 +150,6 @@ namespace PIMS.Web.Api.Controllers
         [Route("{displayType?}")]
         public async Task<IHttpActionResult> GetAll([FromUri] string displayType=DefaultDisplayType)
         {
-            //TODO: Fiddler ok 6-15-15
             _repositoryInvestor.UrlAddress = ControllerContext.Request.RequestUri.ToString();
             var urlForProfile = _repositoryInvestor.UrlAddress.Remove(_repositoryInvestor.UrlAddress.IndexOf("/A", 0, System.StringComparison.Ordinal));
             var currentInvestor = _identityService.CurrentUser;
@@ -305,7 +307,7 @@ namespace PIMS.Web.Api.Controllers
 
 
             
-            // * POSITION(S).*
+            // * POSITION(S) - TRANSACTION.*
             var positionCtrl = new PositionController(_identityService, _repository, _repositoryInvestor, _repositoryPosition, _repositoryAccountType, _repositoryEdits);
             for(var pos = 0; pos < submittedAsset.PositionsCreated.Count; pos++)
             {
@@ -353,6 +355,33 @@ namespace PIMS.Web.Api.Controllers
                 }
                 
                 submittedAsset.PositionsCreated.ElementAt(pos).CreatedPositionId = createdPosition.Content.PositionId; 
+
+                // Initialize Transaction component of new Position(s). 7.12.17
+                var transactionCtrl = new TransactionController(_repositoryTransaction, _identityService, _repositoryInvestor, _repository, _repositoryTransactionEdits);
+
+                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.PositionId = createdPosition.Content.PositionId;
+                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.TransactionEvent = "B";
+                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.Fees = submittedAsset.PositionsCreated.ElementAt(pos).TransactionFees;
+                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.Units = submittedAsset.PositionsCreated.ElementAt(pos).Qty;
+                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.MktPrice = submittedAsset.ProfileToCreate.Price;
+                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.Valuation = 
+                                                                            submittedAsset.PositionsCreated.ElementAt(pos).Qty * 
+                                                                            submittedAsset.ProfileToCreate.Price;
+                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.CostBasis =
+                                                                            submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.Valuation +
+                                                                            submittedAsset.PositionsCreated.ElementAt(pos).TransactionFees;
+                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.UnitCost =
+                                                                            submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.CostBasis /
+                                                                            submittedAsset.PositionsCreated.ElementAt(pos).Qty;
+                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.DateCreated = DateTime.Parse(submittedAsset.PositionsCreated.ElementAt(pos).LastUpdate.ToString());
+
+                var createdTransaction = await transactionCtrl.CreateNewTransaction(submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction) as CreatedNegotiatedContentResult<Transaction>;
+                if(createdTransaction == null)
+                    return BadRequest("Position-Transaction creation aborted due to error creating Transaction for Position : "
+                                                                    + submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.Trim().ToUpper());
+
+                // TODO: needed ?
+                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.TransactionId = createdTransaction.Content.TransactionId;
             }
 
 
