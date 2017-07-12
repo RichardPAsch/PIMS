@@ -356,7 +356,7 @@ namespace PIMS.Web.Api.Controllers
                 
                 submittedAsset.PositionsCreated.ElementAt(pos).CreatedPositionId = createdPosition.Content.PositionId; 
 
-                // Initialize Transaction component of new Position(s). 7.12.17
+                // Initialize Transaction component of new Position(s); Position:Transaction = 1:1 for each new Position created. 7.12.17
                 var transactionCtrl = new TransactionController(_repositoryTransaction, _identityService, _repositoryInvestor, _repository, _repositoryTransactionEdits);
 
                 submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.PositionId = createdPosition.Content.PositionId;
