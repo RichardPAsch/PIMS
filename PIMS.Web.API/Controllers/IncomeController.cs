@@ -905,7 +905,8 @@ namespace PIMS.Web.Api.Controllers
 
             // Allow for Fiddler debugging
             if (currentInvestor == null)
-                 currentInvestor = "rpasch2@rpclassics.net";
+                currentInvestor = "joeblow@yahoo.com";
+                 //currentInvestor = "rpasch2@rpclassics.net";
 
             var currentInvestorId = Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim());
 
