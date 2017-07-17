@@ -304,15 +304,13 @@ namespace PIMS.Web.Api.Controllers
 
             var matchingPosition = await Task.FromResult(_repositoryAsset.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == ticker.ToUpper().Trim() &&
                                                                                         a.InvestorId == currentInvestorId)
-                                                                         .SelectMany(a => a.Positions).Where(p => p.AcctTypeId == new Guid(positionData.PostEditPositionAccount))
+                                                                         .SelectMany(a => a.Positions).Where(p => p.AcctTypeId == new Guid(positionData.ReferencedAccount.KeyId.ToString()))
                                                                          .AsQueryable());
 
             if (matchingPosition.Any())
                 return BadRequest(string.Format("No Position created, Position {0} already exists for {1} ",
                                                                                                 positionData.ReferencedAccount.AccountTypeDesc.Trim(),
                                                                                                 ticker.ToUpper()));
-
-            //positionData.ReferencedAccount.Url = Utilities.GetBaseUrl(newLocation) + "AccountType/";
 
             var positionToCreate = MapVmToPosition(positionData);
             var isCreated = await Task.FromResult(_repository.Create(positionToCreate));
@@ -637,19 +635,17 @@ namespace PIMS.Web.Api.Controllers
                            PurchaseDate = (DateTime) sourceData.DateOfPurchase,
                            PositionDate = sourceData.DatePositionAdded != null ? DateTime.Parse(sourceData.DatePositionAdded.ToString()) : DateTime.Now,
                            Quantity = sourceData.Qty,
-                           UnitCost = sourceData.UnitCost,
-                           InvestorKey = sourceData.LoggedInInvestor,
-                           AcctTypeId = sourceData.PostEditPositionAccount == null 
-                                            ? new Guid(sourceData.PreEditPositionAccount)
-                                            : new Guid(sourceData.PostEditPositionAccount),
+                           UnitCost = sourceData.ReferencedTransaction.UnitCost,
+                           InvestorKey = Utilities.GetInvestorId(_repositoryInvestor, sourceData.LoggedInInvestor).ToString(),
+                           AcctTypeId = new Guid(sourceData.ReferencedAccount.KeyId.ToString()),
                            PositionAssetId = sourceData.ReferencedAssetId, 
                            LastUpdate = DateTime.Now,
-                           TickerSymbol = sourceData.ReferencedTickerSymbol,
+                           //TickerSymbol = sourceData.ReferencedTickerSymbol,
                            Account = null, 
                            Url = sourceData.Url,
-                           Status = char.Parse(sourceData.Status),
-                           Fees = sourceData.TransactionFees,
-                           PositionId = sourceData.CreatedPositionId 
+                           Status = Convert.ToChar(sourceData.Status),
+                           Fees = sourceData.ReferencedTransaction.Fees,
+                           PositionId = sourceData.ReferencedTransaction.PositionId
                        };
             }
 
