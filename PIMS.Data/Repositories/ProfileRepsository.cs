@@ -59,9 +59,10 @@ namespace PIMS.Data.Repositories
                     _nhSession.Save(newEntity);
                     trx.Commit();
                 }
-                catch(Exception)
+                catch(Exception ex)
                 {
                     // TODO: Candidate for logging error.
+                    var debug = ex;
                     return false;
                 }
             }
