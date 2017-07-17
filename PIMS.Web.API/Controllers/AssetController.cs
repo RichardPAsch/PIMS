@@ -109,6 +109,7 @@ namespace PIMS.Web.Api.Controllers
         // Ex. http://localhost/Pims.Web.Api/api/Asset/VNR
         public async Task<IHttpActionResult> GetByTicker(string tickerSymbol)
         {
+           
             //TODO: Fiddler ok 6-16-15
             _repositoryInvestor.UrlAddress = ControllerContext.Request.RequestUri.ToString();
             var currentInvestor = _identityService.CurrentUser;
@@ -211,6 +212,14 @@ namespace PIMS.Web.Api.Controllers
         [Route("")]
         public async Task<IHttpActionResult> CreateNewAsset([FromBody] AssetCreationVm submittedAsset)
         {
+            if (!ModelState.IsValid) {
+                return ResponseMessage(new HttpResponseMessage {
+                    StatusCode = HttpStatusCode.BadRequest,
+                    ReasonPhrase = "Invalid model state data for Asset creation."
+                });
+            }
+
+
             _currentInvestor = _identityService.CurrentUser;
 
             if (_currentInvestor == null)
@@ -223,13 +232,7 @@ namespace PIMS.Web.Api.Controllers
             if (!registeredInvestor.Any())
                 return BadRequest("Unable to create new Asset, no registration found for investor : " + _currentInvestor);
 
-            if (!ModelState.IsValid) {
-                return ResponseMessage(new HttpResponseMessage {
-                                            StatusCode = HttpStatusCode.BadRequest,
-                                            ReasonPhrase = "Invalid/Incomplete required 'ModelState' data received for new Asset creation."
-                });
-            }
-
+           
             // Reconfirm required Position data exist.
             if (!submittedAsset.PositionsCreated.Any())
                 return BadRequest("Unable to create new Asset, no Position data found.");
@@ -251,7 +254,7 @@ namespace PIMS.Web.Api.Controllers
                 });
 
             submittedAsset.AssetInvestorId = registeredInvestor.First().InvestorId.ToString();                      // Required entry.
-            submittedAsset.AssetClassificationId = await Task.FromResult(_repositoryAssetClass.Retreive(ac => ac.Description.Trim() == submittedAsset.AssetClassification.Trim())
+            submittedAsset.AssetClassificationId = await Task.FromResult(_repositoryAssetClass.Retreive(ac => ac.Code.Trim() == submittedAsset.AssetClassification.Trim())
                                                                                               .AsQueryable()
                                                                                               .First()
                                                                                               .KeyId.ToString());   // Required entry.
@@ -361,7 +364,7 @@ namespace PIMS.Web.Api.Controllers
 
                 submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.PositionId = createdPosition.Content.PositionId;
                 submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.TransactionEvent = "B";
-                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.Fees = submittedAsset.PositionsCreated.ElementAt(pos).TransactionFees;
+                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.Fees = submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.Fees;
                 submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.Units = submittedAsset.PositionsCreated.ElementAt(pos).Qty;
                 submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.MktPrice = submittedAsset.ProfileToCreate.Price;
                 submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.Valuation = 
@@ -369,7 +372,7 @@ namespace PIMS.Web.Api.Controllers
                                                                             submittedAsset.ProfileToCreate.Price;
                 submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.CostBasis =
                                                                             submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.Valuation +
-                                                                            submittedAsset.PositionsCreated.ElementAt(pos).TransactionFees;
+                                                                            submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.Fees;
                 submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.UnitCost =
                                                                             submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.CostBasis /
                                                                             submittedAsset.PositionsCreated.ElementAt(pos).Qty;
@@ -408,7 +411,7 @@ namespace PIMS.Web.Api.Controllers
 
             return ResponseMessage(new HttpResponseMessage {
                 StatusCode = HttpStatusCode.Created,
-                ReasonPhrase = "Asset created - affiliated Profile, Position(s), and Income recorded."
+                ReasonPhrase = "Asset created, with affiliated Profile, Position(s) - Transaction(s), and Income successfully recorded."
             });
 
         }
