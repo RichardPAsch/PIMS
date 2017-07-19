@@ -21,7 +21,7 @@ namespace PIMS.Infrastructure.NHibernate.Mappings
             Map(x => x.DividendRate).Precision(5).Scale(4);
             Map(x => x.DividendYield).Precision(6).Scale(4);
             Map(x => x.EarningsPerShare).Precision(6);
-            Map(x => x.PE_Ratio,"PERatio").Precision(4);
+            Map(x => x.PE_Ratio,"PERatio").Precision(6).Scale(2);
             Map(x => x.LastUpdate);
             Map(x => x.ExDividendDate);
             Map(x => x.DividendPayDate);
