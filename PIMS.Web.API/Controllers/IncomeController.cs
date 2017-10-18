@@ -221,9 +221,10 @@ namespace PIMS.Web.Api.Controllers
             var currentInvestor = _identityService.CurrentUser;
 
             // Fiddler debugging
-            //currentInvestor = "joeblow@yahoo.com";
+            //currentInvestor = "rpasch@rpclassics.net";
             if (currentInvestor == null)
-                currentInvestor = "maryblow@yahoo.com"; 
+                currentInvestor = "rpasch@rpclassics.net"; 
+                //currentInvestor = "maryblow@yahoo.com"; 
 
 
             var revenueListing = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
@@ -251,7 +252,7 @@ namespace PIMS.Web.Api.Controllers
                                                                         //.OrderBy(r => r.MonthRecvd));
                                                                         //);
 
-            if (revenueListing.IsEmpty())
+            if (revenueListing.IsAny() == false)
                 return BadRequest(string.Format("No Income found for " + DateTime.Now.Year));
 
 
