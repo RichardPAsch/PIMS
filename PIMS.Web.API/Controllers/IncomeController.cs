@@ -89,7 +89,7 @@ namespace PIMS.Web.Api.Controllers
 
         //    // Fiddler debugging
         //    if (currentInvestor == null)
-        //        currentInvestor = "rpasch2@rpclassics.net";
+        //        currentInvestor = "maryblow@yahoo.com";
 
         //    if (string.IsNullOrWhiteSpace(startDate) || string.IsNullOrWhiteSpace(endDate))
         //        return BadRequest(string.Format("Invalid start and/or end date received for Income data retreival."));
@@ -124,7 +124,7 @@ namespace PIMS.Web.Api.Controllers
             var currentInvestor = Utilities.GetInvestor(_identityService);
             // Fiddler debugging
             if (currentInvestor == null)
-                currentInvestor = "rpasch2@rpclassics.net";
+                currentInvestor = "maryblow@yahoo.com";
 
             var incomeRecords = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
                                                                       .SelectMany(a => a.Revenue).Where(r => r.DateRecvd >= DateTime.Parse(fromDate) &&
@@ -223,7 +223,7 @@ namespace PIMS.Web.Api.Controllers
             // Fiddler debugging
             //currentInvestor = "joeblow@yahoo.com";
             if (currentInvestor == null)
-                currentInvestor = "rpasch2@rpclassics.net"; 
+                currentInvestor = "maryblow@yahoo.com"; 
 
 
             var revenueListing = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
@@ -327,7 +327,7 @@ namespace PIMS.Web.Api.Controllers
 
             // Fiddler debugging
             if (currentInvestor == null)
-                currentInvestor = "rpasch2@rpclassics.net";
+                currentInvestor = "maryblow@yahoo.com";
 
             // YTD by default.
             if (!string.IsNullOrWhiteSpace(dateFrom) && !string.IsNullOrWhiteSpace(dateTo)) {
@@ -373,7 +373,7 @@ namespace PIMS.Web.Api.Controllers
 
             // Fiddler debugging
             if (currentInvestor == null)
-                currentInvestor = "rpasch2@rpclassics.net";
+                currentInvestor = "maryblow@yahoo.com";
 
             // YTD by default.
             if (!string.IsNullOrWhiteSpace(dateFrom) && !string.IsNullOrWhiteSpace(dateTo))
@@ -423,7 +423,7 @@ namespace PIMS.Web.Api.Controllers
 
             // Fiddler debugging
             if (currentInvestor == null)
-                currentInvestor = "rpasch2@rpclassics.net";
+                currentInvestor = "maryblow@yahoo.com";
 
             // YTD by default.
             if (!string.IsNullOrWhiteSpace(dateFrom) && !string.IsNullOrWhiteSpace(dateTo)) {
@@ -481,7 +481,7 @@ namespace PIMS.Web.Api.Controllers
 
             // Fiddler debugging
             if (currentInvestor == null)
-                currentInvestor = "rpasch2@rpclassics.net";
+                currentInvestor = "maryblow@yahoo.com";
 
             // YTD by default.
             if (!string.IsNullOrWhiteSpace(dateFrom) && !string.IsNullOrWhiteSpace(dateTo)) {
@@ -529,7 +529,7 @@ namespace PIMS.Web.Api.Controllers
 
             // Fiddler debugging
             if (currentInvestor == null)
-                currentInvestor = "rpasch2@rpclassics.net";
+                currentInvestor = "maryblow@yahoo.com";
 
             // YTD by default.
             if (!string.IsNullOrWhiteSpace(dateFrom) && !string.IsNullOrWhiteSpace(dateTo)) {
@@ -763,7 +763,7 @@ namespace PIMS.Web.Api.Controllers
 
             // Fiddler debugging
             if (currentInvestor == null)
-                currentInvestor = "rpasch2@rpclassics.net";
+                currentInvestor = "maryblow@yahoo.com";
 
             IQueryable<AssetRevenueVm> matchingIncome;
 
@@ -824,7 +824,7 @@ namespace PIMS.Web.Api.Controllers
 
             var currentInvestor = _identityService.CurrentUser;
             if (currentInvestor == null)
-                currentInvestor = "rpasch2@rpclassics.net";
+                currentInvestor = "maryblow@yahoo.com";
             
 
             var matchingIncome = await Task.FromResult(_repositoryAsset.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == ticker &&
@@ -906,7 +906,7 @@ namespace PIMS.Web.Api.Controllers
             // Allow for Fiddler debugging
             if (currentInvestor == null)
                 currentInvestor = "joeblow@yahoo.com";
-                 //currentInvestor = "rpasch2@rpclassics.net";
+                 //currentInvestor = "maryblow@yahoo.com";
 
             var currentInvestorId = Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim());
 
@@ -978,7 +978,7 @@ namespace PIMS.Web.Api.Controllers
 
             // Allow for Fiddler debugging
             if (currentInvestor == null)
-                currentInvestor = "rpasch2@rpclassics.net";
+                currentInvestor = "maryblow@yahoo.com";
             
             var existingIncome = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
                                                                        .AsQueryable()
@@ -1013,7 +1013,7 @@ namespace PIMS.Web.Api.Controllers
 
             // Allow for Fiddler debugging
             if (currentInvestor == null)
-                currentInvestor = "rpasch2@rpclassics.net";
+                currentInvestor = "maryblow@yahoo.com";
 
             var ticker = ParseUrlForTicker(ControllerContext.Request.RequestUri.AbsoluteUri);
             var selectedIncome = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))

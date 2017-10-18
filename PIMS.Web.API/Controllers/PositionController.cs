@@ -136,7 +136,7 @@ namespace PIMS.Web.Api.Controllers
 
             // Allow for Fiddler debugging
             if (currentInvestor == null)
-                currentInvestor = "rpasch2@rpclassics.net";
+                currentInvestor = "maryblow@yahoo.com";
             
             var availablePositions = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
                                                                            .SelectMany(p => p.Positions)
@@ -206,7 +206,7 @@ namespace PIMS.Web.Api.Controllers
 
             // Allow for Fiddler debugging
             if (currentInvestor == null)
-                currentInvestor = "rpasch2@rpclassics.net";
+                currentInvestor = "maryblow@yahoo.com";
 
             var filteredPositions = await Task.FromResult(_repositoryAsset.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == tickerSymbol.ToUpper().Trim()
                                                                                       && a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
@@ -335,7 +335,7 @@ namespace PIMS.Web.Api.Controllers
         //    }
 
         //    // TODO: Remove this check when close to Production.
-        //    var currentInvestor = _identityService.CurrentUser ?? "rpasch2@rpclassics.net";
+        //    var currentInvestor = _identityService.CurrentUser ?? "maryblow@yahoo.com";
 
         //    var updatesOk = false;
         //    var mappedPositionTo = new Position();
@@ -563,7 +563,7 @@ namespace PIMS.Web.Api.Controllers
 
             // Allow for Fiddler debugging
             if (currentInvestor == null)
-                currentInvestor = "rpasch2@rpclassics.net";
+                currentInvestor = "maryblow@yahoo.com";
 
             var currentPosition = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim())) 
                                                                         .SelectMany(a => a.Positions)

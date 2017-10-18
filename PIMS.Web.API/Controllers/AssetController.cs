@@ -70,7 +70,7 @@ namespace PIMS.Web.Api.Controllers
 
             // Allow for Fiddler debugging
             if (currentInvestor == null)
-                currentInvestor = "rpasch2@rpclassics.net";
+                currentInvestor = "maryblow@yahoo.com";
 
             var assetSummary = await Task.FromResult(_repository.RetreiveAll()
                 .Where(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
@@ -116,7 +116,7 @@ namespace PIMS.Web.Api.Controllers
 
             // Allow for Fiddler debugging
             if (currentInvestor == null)
-                currentInvestor = "rpasch2@rpclassics.net";
+                currentInvestor = "maryblow@yahoo.com";
             
             var assetSummary = await Task.FromResult(_repository.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim())
                                                                             && a.Profile.TickerSymbol.Trim() == tickerSymbol.Trim())
