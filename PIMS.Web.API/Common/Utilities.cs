@@ -26,7 +26,7 @@ namespace PIMS.Web.Api.Common
 
         public static string GetInvestor(IPimsIdentityService identityService)
         {
-            return identityService.CurrentUser ?? "rpasch2@rpclassics.net";
+            return identityService.CurrentUser ?? "maryblow@yahoo.com";
         }
 
         public static int GetDaysInMonth(int year, int month)
