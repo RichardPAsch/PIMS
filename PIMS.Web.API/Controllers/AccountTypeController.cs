@@ -83,7 +83,7 @@ namespace PIMS.Web.Api.Controllers
 
             // Allow for Fiddler debugging
             if (currentInvestor == null)
-                currentInvestor = "rpasch2@rpclassics.net";
+                currentInvestor = "maryblow@yahoo.com";
        
              var existingPositionAcctTypes = await Task.FromResult(_repositoryAssets.Retreive(a => a.Profile.TickerSymbol.Trim().ToUpper() == ticker.ToUpper().Trim()
                                                                                                 && a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
@@ -107,7 +107,7 @@ namespace PIMS.Web.Api.Controllers
             var currentInvestor = _identityService.CurrentUser;
             // Allow for Fiddler debugging
             if (currentInvestor == null)
-                currentInvestor = "rpasch2@rpclassics.net";
+                currentInvestor = "maryblow@yahoo.com";
 
 
             IQueryable<Position> matchingPositions;
