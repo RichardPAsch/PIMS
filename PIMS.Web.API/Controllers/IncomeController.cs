@@ -219,12 +219,12 @@ namespace PIMS.Web.Api.Controllers
         {
 
             var currentInvestor = _identityService.CurrentUser;
+            var resultCount = 0;
 
             // Fiddler debugging
             //currentInvestor = "rpasch@rpclassics.net";
             if (currentInvestor == null)
-                currentInvestor = "rpasch@rpclassics.net"; 
-                //currentInvestor = "maryblow@yahoo.com"; 
+                currentInvestor = "maryblow@yahoo.com"; 
 
 
             var revenueListing = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
@@ -251,11 +251,15 @@ namespace PIMS.Web.Api.Controllers
                                                                         //        )
                                                                         //.OrderBy(r => r.MonthRecvd));
                                                                         //);
-
-            if (revenueListing.IsAny() == false)
-                return BadRequest(string.Format("No Income found for " + DateTime.Now.Year));
-
-
+            try
+            {
+                resultCount = revenueListing.Count();
+            }
+            catch (Exception e)
+            {
+                return BadRequest(string.Format(resultCount + " income records found for investor " + currentInvestor + ", during YTD: "+ DateTime.Now.Year));
+            }
+           
             var ytdAveragesListing = CalculateRevenueTotals(revenueListing);
 
             _incomeHistory = new decimal[ytdAveragesListing.Count()];
