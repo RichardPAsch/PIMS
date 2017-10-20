@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using NHibernate.Transform;
 using PIMS.Core.Models;
 using PIMS.Data.Repositories;
 
@@ -14,6 +15,7 @@ namespace PIMS.Web.Api.Controllers
 	public class InvestorController : ApiController
 	{
 		private static IGenericRepository<Investor> _repository;
+
 
 		public InvestorController(IGenericRepository<Investor> repository)
 		{
@@ -73,18 +75,17 @@ namespace PIMS.Web.Api.Controllers
 					ReasonPhrase = "Investor registration already exists."
 				});
 
-			var requestUri = ControllerContext.RequestContext.Url.Request.RequestUri.AbsoluteUri;
-			newInvestor.Url = requestUri + "/" + newInvestor.EMailAddr.Trim();
-
+			// TODO: Re-evaluate need for URL link.
+			// URL - location at which content (Investor info) has been created, will be available via Pims client.
+			newInvestor.Url = "http://localhost/Pims.Client/App/Layout/#/";
+			
 			var isCreated = await Task.FromResult(_repository.Create(newInvestor));
 			if (!isCreated) return BadRequest("Unable to create/register Investor :  " + newInvestor.FirstName.Trim()
 																					   + " " + newInvestor.MiddleInitial 
 																					   + " " + newInvestor.LastName.Trim()
 											 );
-
-
-			var newLocation = Url.Link("CreateNewInvestor", new { });
-			return Created(newLocation, newInvestor);
+			
+			return Created(newInvestor.Url, newInvestor);
 		}
 
 
