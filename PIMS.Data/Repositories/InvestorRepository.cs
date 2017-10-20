@@ -49,8 +49,6 @@ namespace PIMS.Data.Repositories
                     trx.Commit();
                 }
                 catch (Exception ex) {
-                    var len = newEntity.Url.Length;
-                    var debug = ex.Message;
                     return false;
                 }
 
