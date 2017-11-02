@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Results;
 using NUnit.Framework;
+
 using PIMS.Core.Security;
 using PIMS.Data.FakeRepositories;
 using PIMS.Web.Api.Controllers;
@@ -21,6 +22,7 @@ namespace PIMS.UnitTest
         private Mock<InMemoryAccountTypeRepository> _mockRepoAcctType;
         private Mock<InMemoryAssetRepository> _mockRepoAsset;
         private AccountTypeController _ctrl;
+        
 
         //----------- BUSINESS RULES [and menu] : per Investor ------------------------------------------------------------------------------
         // Account Type is investor-specific, as each investor may have their own personalized types, not impacting other investor types.
@@ -83,7 +85,7 @@ namespace PIMS.UnitTest
         public async Task Controller_can_GET_all_entered_account_types_for_an_investor() 
         {
             // Arrange  
-            _ctrl = new AccountTypeController(_mockRepoAcctType.Object, _mockRepoAsset.Object, _mockIdentitySvc.Object) {
+            _ctrl = new AccountTypeController(_mockRepoAcctType.Object, _mockRepoAsset.Object, _mockIdentitySvc.Object, null) {
                 Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/Pims.Web.Api/api/AccountType/none") },
                 Configuration = new HttpConfiguration()
             };
@@ -105,7 +107,7 @@ namespace PIMS.UnitTest
         public async Task Controller_can_GET_all_available_account_types_by_Asset_for_an_investor()
         {
             // Arrange  
-            _ctrl = new AccountTypeController(_mockRepoAcctType.Object, _mockRepoAsset.Object, _mockIdentitySvc.Object) {
+            _ctrl = new AccountTypeController(_mockRepoAcctType.Object, _mockRepoAsset.Object, _mockIdentitySvc.Object, null) {
                 Request = new HttpRequestMessage { RequestUri = new Uri("http://localhost/Pims.Web.Api/api/AccountType/VNR") },
                 Configuration = new HttpConfiguration()
             };

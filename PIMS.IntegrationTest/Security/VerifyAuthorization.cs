@@ -15,6 +15,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using PIMS.Core.Models;
+using PIMS.Core.Models.ViewModels;
 using PIMS.Web.Api;
 using PIMS.Web.Api.Controllers;
 
@@ -396,7 +397,7 @@ namespace PIMS.IntegrationTest.Security
                 //client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                 //var settings = new JsonSerializerSettings();
                 //var serializer = JsonSerializer.Create(settings);
-                //var editedPassword = new ManageUserModel
+                //var editedPassword = new ChangePasswordVm
                 //                            {
                 //                                OldPassword = _login.Password,
                 //                                NewPassword = "pwrd0811c",
@@ -470,7 +471,7 @@ namespace PIMS.IntegrationTest.Security
                 acctCtrl.ControllerContext.RequestContext.Principal = claimsPrincipal;
               
                
-                var userEdits = new ManageUserModel {
+                var userEdits = new ChangePasswordVm {
                                                         OldPassword = _login.Password,
                                                         NewPassword = "pwrd0828g",
                                                         ConfirmPassword = "pwrd0828g"
@@ -479,7 +480,7 @@ namespace PIMS.IntegrationTest.Security
                 
                 // Act
                 // Confirm userEdits & _login passwords are configured correctly.
-                var actionResult = acctCtrl.ManageAsync(userEdits).Result;
+                var actionResult = acctCtrl.ChangePasswordAsync(userEdits).Result;
                 var loggedInUserModified = _userMgr.FindAsync(_login.UserName, userEdits.NewPassword).Result;
                 // Create response message.
                 var responseMsg = actionResult.ExecuteAsync(new CancellationToken(false));
@@ -541,7 +542,7 @@ namespace PIMS.IntegrationTest.Security
                 acctCtrl.ControllerContext.RequestContext.Principal = claimsPrincipal;
 
                 // Change to invalid password.
-                var userEdits = new ManageUserModel {
+                var userEdits = new ChangePasswordVm {
                                                         OldPassword = "abadpassword",
                                                         NewPassword = "pwrd0828h",
                                                         ConfirmPassword = "pwrd0828h"
@@ -550,7 +551,7 @@ namespace PIMS.IntegrationTest.Security
 
                 // Act
 
-                var actionResult =  acctCtrl.ManageAsync(userEdits).Result;
+                var actionResult =  acctCtrl.ChangePasswordAsync(userEdits).Result;
                 // Create response message.
                 var responseMsg = actionResult.ExecuteAsync(new CancellationToken(false));
 
@@ -612,7 +613,7 @@ namespace PIMS.IntegrationTest.Security
                 acctCtrl.ControllerContext.RequestContext.Principal = claimsPrincipal;
 
                 // Change to invalid confirmation passwords.
-                var userEdits = new ManageUserModel
+                var userEdits = new ChangePasswordVm
                                 {
                                     OldPassword = _login.Password,
                                     NewPassword = "pwrd0828i",
@@ -621,7 +622,7 @@ namespace PIMS.IntegrationTest.Security
 
 
                 // Act
-                var actionResult = acctCtrl.ManageAsync(userEdits).Result;
+                var actionResult = acctCtrl.ChangePasswordAsync(userEdits).Result;
                 var loggedInUserUnModified = _userMgr.FindAsync(_login.UserName, userEdits.OldPassword).Result;
                 // Create response message.
                 var responseMsg = actionResult.ExecuteAsync(new CancellationToken(false));

@@ -45,7 +45,7 @@ namespace PIMS.IntegrationTest
         public async void Can_GET_All_Account_Types()
         {
             // Arrange
-            _ctrl = new AccountTypeController(_repository, _repositoryAsset, _identityService) {
+            _ctrl = new AccountTypeController(_repository, _repositoryAsset, _identityService, null) {
                 Request = new HttpRequestMessage { RequestUri = new Uri(UrlBase + "/AccountType") },
                 Configuration = new HttpConfiguration()
             };
