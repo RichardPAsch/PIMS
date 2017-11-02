@@ -12,6 +12,7 @@ namespace PIMS.Web.Api
     public class NHibernateConfiguration
     {
         private const string CurrentSessionKey = "nhibernate.current_session";  // added 3-31-15
+        private static string _currentConnString = string.Empty; // added 10.19.17
 
         
         public static ISessionFactory CreateSessionFactory(string connString = "")
@@ -21,6 +22,7 @@ namespace PIMS.Web.Api
             if (connString == string.Empty)
                 connString = @"Data Source=RICHARD-VAIO\RICHARDDB;Initial Catalog='Lighthouse - PIMS';Integrated Security=True";
 
+            _currentConnString = connString;
             // Use default subclassed Identity model.
             var appUsers = new[] { typeof(ApplicationUser) };
 
@@ -67,6 +69,12 @@ namespace PIMS.Web.Api
             context.Items[CurrentSessionKey] = currentSession;
 
             return currentSession;
+        }
+
+        // added 10.19.17
+        public static string GetConnectionString()
+        {
+            return _currentConnString;
         }
 
 
