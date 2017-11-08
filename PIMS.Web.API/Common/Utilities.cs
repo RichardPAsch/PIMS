@@ -18,21 +18,25 @@ namespace PIMS.Web.Api.Common
             return repositoryInvestor.Retreive(i => i.EMailAddr.Trim() == investorLogin.Trim()).First().InvestorId;
         }
 
+
         public static string GetBaseUrl(string sourceUrl)
         {
             var baseIdx = sourceUrl.LastIndexOf("api/", System.StringComparison.Ordinal);
             return sourceUrl.Substring(0, baseIdx + 4);
         }
 
+
         public static string GetInvestor(IPimsIdentityService identityService)
         {
             return identityService.CurrentUser ?? "maryblow@yahoo.com";
         }
 
+
         public static int GetDaysInMonth(int year, int month)
         {
             return DateTime.DaysInMonth(year, month);
         }
+
 
         public static Transaction MapVmToTransaction(TransactionVm sourceData) {
             return new Transaction {
@@ -71,6 +75,20 @@ namespace PIMS.Web.Api.Common
             
         }
 
+
+        public static decimal CalculateUnitCost(decimal costBasis, int units)
+        {
+            return costBasis / units;
+        }
+
+        public static decimal CalculateValuation(decimal mktPrice, int units) {
+            return mktPrice * units;
+        }
+
+        public static decimal CalculateCostBasis(decimal fees, decimal valuation)
+        {
+            return fees + valuation;
+        }
 
     }
 
