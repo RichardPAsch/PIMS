@@ -268,8 +268,8 @@ namespace PIMS.Web.Api.Controllers
             if(submittedAsset.ProfileToCreate.TickerSymbol.IsEmpty() || 
                submittedAsset.ProfileToCreate.TickerDescription.IsEmpty() ||
                submittedAsset.ProfileToCreate.Price == 0 || 
-               profileLastUpdate == DateTime.MinValue ||  // unassigned
-               submittedAsset.ProfileToCreate.Url.IsEmpty())
+               profileLastUpdate == DateTime.MinValue) // ||  // 11.9.17 - removed URL requirement
+               //submittedAsset.ProfileToCreate.Url.IsEmpty())
                     return BadRequest("Asset creation aborted: minimum Profile data [ticker,tickerDesc,Price,lastUpDate, or Url] is missing or invalid.");
 
             var existingProfile = await Task.FromResult(_repositoryProfile.Retreive(p => p.TickerSymbol.Trim() == submittedAsset.AssetTicker.Trim())
