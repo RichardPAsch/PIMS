@@ -1,11 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Results;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using PIMS.Core.Models;
 using PIMS.Data;
 using PIMS.Data.Repositories;
@@ -28,7 +33,9 @@ namespace PIMS.Web.Api.Controllers
     {
 
         private static IGenericRepository<Profile> _repository;
-        
+        private const string BaseTiingoUrl = "https://api.tiingo.com/tiingo/daily/";
+        private const string TiingoAccountToken = "95cff258ce493ec51fd10798b3e7f0657ee37740";
+
 
         public ProfileController(IGenericRepository<Profile> repository)
         {
@@ -71,84 +78,189 @@ namespace PIMS.Web.Api.Controllers
 
             return BadRequest(string.Format("Error fetching saved Profile data"));
         }
-        
+
+
+
+        /*
+           ** NOTE **
+            11.9.2017 -  GetProfileByTicker() & GetProfiles() are now OBSOLETE due to the shutdown of Yahoo Finance API.
+                         New ticker profile data now supplied via Tiingo.com API.
+            11.10.2017 - Seperate API calls will be necessary for gathering meta & price data, as mandated by Tiingo.
+        */
+        //[HttpGet]
+        //[Route("{tickerForProfile?}")]
+        //// e.g. http://localhost/Pims.Web.Api/api/Profile/IBM
+        //public async Task<IHttpActionResult> GetProfileByTicker(string tickerForProfile)
+        //{
+        //    Profile updatedOrNewProfile;
+        //    var existingProfile = await Task.FromResult(_repository.Retreive(p => p.TickerSymbol.Trim() == tickerForProfile.Trim()).AsQueryable());
+
+        //    // Yahoo url sample:  http://finance.yahoo.com/d/quotes.csv?s=VNR&f=nsb2dyreqr1
+        //    if (existingProfile.Any())
+        //    {
+        //        // Update Profile table only IF existing Profile was last updated > 24hrs ago; return updated Profile.
+        //        if (Convert.ToDateTime(existingProfile.First().LastUpdate) < DateTime.UtcNow.AddHours(-24))
+        //        {
+        //            updatedOrNewProfile = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfile(tickerForProfile.Trim(), existingProfile.First()));
+        //            if (updatedOrNewProfile != null)
+        //                return Ok(updatedOrNewProfile);
+        //        }
+        //        else
+        //        {
+        //            // Return existing table Profile
+        //            return Ok(existingProfile.First());
+        //        }
+        //    }
+        //    else
+        //    {
+        //        // Return new Profile.
+        //        updatedOrNewProfile = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfile(tickerForProfile.Trim(), new Profile()));
+        //        if (updatedOrNewProfile != null)
+        //            return Ok(updatedOrNewProfile);
+        //    }
+
+        //    return BadRequest(string.Format("Error creating or updating Profile for {0}, check ticker symbol.", tickerForProfile));
+
+        //}
+
+
+        //[HttpGet]
+        //[Route("~/api/Profiles/{t1}/{t2?}/{t3?}/{t4?}/{t5?}")]
+        //// e.g. http://localhost/Pims.Web.Api/api/Profiles/{t1}/{t2?}/{t3?}/{t4?}/{t5?}/ 
+        //// t = ticker symbol
+        //public async Task<IHttpActionResult> GetProfiles(string t1, string t2 = "", string t3 = "", string t4 = "", string t5 = "") {
+
+        //    if (string.IsNullOrEmpty(t1))
+        //        return BadRequest(string.Format("Error fetching Profile, minimum of 1 ticker symbol required."));
+
+        //    var tickersTemp = string.Empty;
+        //    tickersTemp += t1;
+        //    if (!string.IsNullOrEmpty(t2)) tickersTemp += "," + t2;
+        //    if (!string.IsNullOrEmpty(t3)) tickersTemp += "," + t3;
+        //    if (!string.IsNullOrEmpty(t4)) tickersTemp += "," + t4;
+        //    if (!string.IsNullOrEmpty(t5)) tickersTemp += "," + t5;
+
+        //    var tickers = tickersTemp.Split(',');
+            
+
+        //    // Yahoo url sample:  http://finance.yahoo.com/d/quotes.csv?s=<tickers>&f=sodyrr1
+        //    //if (existingProfile.Any()) {
+        //    //    // Update existing Profile only IF Profile last updated > 24hrs ago.
+        //    //    if (Convert.ToDateTime(existingProfile.First().LastUpdate) > DateTime.UtcNow.AddHours(-24))
+        //    //        return Ok(existingProfile.First());
+
+        //    //    updatedOrNewProfile = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfile(tickerForProfile.Trim(), existingProfile.First()));
+        //    //    if (updatedOrNewProfile != null)
+        //    //        return Ok(MapProfileToVm(updatedOrNewProfile));
+
+        //    //    return BadRequest("Error updating Profile for ticker: " + tickerForProfile);
+        //    //}
+
+        //    var initializedProfiles = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfiles(tickers));
+        //    if (initializedProfiles != null)
+        //        return Ok(initializedProfiles);
+
+        //    return BadRequest(string.Format("Error obtaining Profile data due to connectivity, invalid submitted ticker symbols, or no data available. \nCheck ticker accuracy."));
+        //}
+
 
         [HttpGet]
         [Route("{tickerForProfile?}")]
         // e.g. http://localhost/Pims.Web.Api/api/Profile/IBM
         public async Task<IHttpActionResult> GetProfileByTicker(string tickerForProfile)
         {
-            Profile updatedOrNewProfile;
+            var updatedOrNewProfile = new Profile();
             var existingProfile = await Task.FromResult(_repository.Retreive(p => p.TickerSymbol.Trim() == tickerForProfile.Trim()).AsQueryable());
 
-            // Yahoo url sample:  http://finance.yahoo.com/d/quotes.csv?s=VNR&f=nsb2dyreqr1
-            if (existingProfile.Any())
+            using (var client = new HttpClient())
             {
-                // Update Profile table only IF existing Profile was last updated > 24hrs ago; return updated Profile.
-                if (Convert.ToDateTime(existingProfile.First().LastUpdate) < DateTime.UtcNow.AddHours(-24))
+                client.BaseAddress = new Uri(BaseTiingoUrl + tickerForProfile); // https://api.tiingo.com/tiingo/daily/<ticker>
+                client.DefaultRequestHeaders.Accept.Clear();
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                client.DefaultRequestHeaders.Add("Authorization", "Bearer " + TiingoAccountToken);
+
+                HttpResponseMessage response;
+                JArray jsonTickerPriceData;
+                Task<string> responsePriceData;
+
+                if (existingProfile.Any())
                 {
-                    updatedOrNewProfile = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfile(tickerForProfile.Trim(), existingProfile.First()));
-                    if (updatedOrNewProfile != null)
-                        return Ok(updatedOrNewProfile);
+                    // Update Profile table only IF existing Profile was last updated > 48hrs ago.
+                    if (Convert.ToDateTime(existingProfile.First().LastUpdate) < DateTime.Now.AddHours(-48)) {
+                        // Only 'divCash" (aka div rate) needed at this time via: https://api.tiingo.com/tiingo/daily/<ticker>/prices
+                        response = await client.GetAsync(client.BaseAddress + "/prices?token=" + TiingoAccountToken);
+                        if (response == null)
+                            return BadRequest("Unable to update Profile price data for: " + tickerForProfile);
+
+                        responsePriceData = response.Content.ReadAsStringAsync();
+                        jsonTickerPriceData = JArray.Parse(responsePriceData.Result);
+
+                        foreach (var objChild in jsonTickerPriceData.Children<JObject>()) {
+                            foreach (var property in objChild.Properties()) {
+                                if(property.Name == "divCash")
+                                    updatedOrNewProfile.DividendRate = decimal.Parse(property.Value.ToString());
+                            }
+                        }
+                    } else {
+                        return Ok(existingProfile);
+                    }
                 }
                 else
                 {
-                    // Return existing table Profile
-                    return Ok(existingProfile.First());
+                    // 11.14.17 - tested Ok.
+                    // 11.13.17 - New Profile required; both 'meta' & 'price' data fetches are mandated as seperate API calls at this time.
+                    response = await client.GetAsync(client.BaseAddress + "?token=" + TiingoAccountToken);
+                    if (response == null)
+                        return BadRequest("Unable to create Profile meta data for: " + tickerForProfile);
+
+                    var responseMetaData = response.Content.ReadAsStringAsync();        // Json string returned
+                    var jsonTickerMetaData = JObject.Parse(await responseMetaData);
+                    updatedOrNewProfile.TickerDescription = jsonTickerMetaData["name"].ToString().Trim();
+                    updatedOrNewProfile.TickerSymbol = jsonTickerMetaData["ticker"].ToString().Trim();
+                    response.Dispose();
+
+                    response = await client.GetAsync(client.BaseAddress + "/prices?token=" + TiingoAccountToken);
+                    if (response == null)
+                        return BadRequest("Unable to update Profile price data for: " + tickerForProfile);
+
+                    responsePriceData = response.Content.ReadAsStringAsync();
+                    jsonTickerPriceData = JArray.Parse(responsePriceData.Result);
+
+                    foreach (var objChild in jsonTickerPriceData.Children<JObject>()) {
+                        foreach (var property in objChild.Properties())
+                        {
+                            switch (property.Name)
+                            {
+                                case "divCash":
+                                    updatedOrNewProfile.DividendRate = decimal.Parse(property.Value.ToString());
+                                    break;
+                                case "date":
+                                    var dateInfo = (DateTime) property.Value;
+                                    updatedOrNewProfile.ExDividendDate = new DateTime(dateInfo.Year, dateInfo.Month, dateInfo.Day);
+                                    break;
+                                case "close":
+                                    updatedOrNewProfile.Price = decimal.Parse(property.Value.ToString());
+                                    break;
+                            }
+                        }
+                    }
+
+                    updatedOrNewProfile.ProfileId = Guid.NewGuid();
+                    updatedOrNewProfile.AssetId = Guid.NewGuid();
+                    updatedOrNewProfile.DividendYield = 0; // TODO: to be calculated ?
+                    updatedOrNewProfile.EarningsPerShare = 0;
+                    updatedOrNewProfile.PE_Ratio = 0;
+                    updatedOrNewProfile.DividendPayDate = null;
+
                 }
-            }
-            else
-            {
-                // Return new Profile.
-                updatedOrNewProfile = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfile(tickerForProfile.Trim(), new Profile()));
-                if (updatedOrNewProfile != null)
-                    return Ok(updatedOrNewProfile);
-            }
 
-            return BadRequest(string.Format("Error creating or updating Profile for {0}, check ticker symbol.", tickerForProfile));
-
+                updatedOrNewProfile.LastUpdate = DateTime.Now;
+                return Ok(updatedOrNewProfile);
+            }
         }
 
 
-        [HttpGet]
-        [Route("~/api/Profiles/{t1}/{t2?}/{t3?}/{t4?}/{t5?}")]
-        // e.g. http://localhost/Pims.Web.Api/api/Profiles/{t1}/{t2?}/{t3?}/{t4?}/{t5?}/ 
-        // t = ticker symbol
-        public async Task<IHttpActionResult> GetProfiles(string t1, string t2 = "", string t3 = "", string t4 = "", string t5 = "") {
 
-            if (string.IsNullOrEmpty(t1))
-                return BadRequest(string.Format("Error fetching Profile, minimum of 1 ticker symbol required."));
-
-            var tickersTemp = string.Empty;
-            tickersTemp += t1;
-            if (!string.IsNullOrEmpty(t2)) tickersTemp += "," + t2;
-            if (!string.IsNullOrEmpty(t3)) tickersTemp += "," + t3;
-            if (!string.IsNullOrEmpty(t4)) tickersTemp += "," + t4;
-            if (!string.IsNullOrEmpty(t5)) tickersTemp += "," + t5;
-
-            var tickers = tickersTemp.Split(',');
-            
-
-            // Yahoo url sample:  http://finance.yahoo.com/d/quotes.csv?s=<tickers>&f=sodyrr1
-            //if (existingProfile.Any()) {
-            //    // Update existing Profile only IF Profile last updated > 24hrs ago.
-            //    if (Convert.ToDateTime(existingProfile.First().LastUpdate) > DateTime.UtcNow.AddHours(-24))
-            //        return Ok(existingProfile.First());
-
-            //    updatedOrNewProfile = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfile(tickerForProfile.Trim(), existingProfile.First()));
-            //    if (updatedOrNewProfile != null)
-            //        return Ok(MapProfileToVm(updatedOrNewProfile));
-
-            //    return BadRequest("Error updating Profile for ticker: " + tickerForProfile);
-            //}
-
-            var initializedProfiles = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfiles(tickers));
-            if (initializedProfiles != null)
-                return Ok(initializedProfiles);
-
-            return BadRequest(string.Format("Error obtaining Profile data due to connectivity, invalid submitted ticker symbols, or no data available. \nCheck ticker accuracy."));
-        }
-        
 
         [HttpPost]
         [Route("", Name = "CreateNewProfile")]
@@ -205,6 +317,8 @@ namespace PIMS.Web.Api.Controllers
 
 
         #region Helpers
+
+           
 
             private static Profile MapVmToProfile(ProfileVm sourceData)
             {
