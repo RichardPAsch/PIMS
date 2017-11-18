@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq;
 using PIMS.Core.Models;
 using PIMS.Core.Models.ViewModels;
@@ -90,6 +91,11 @@ namespace PIMS.Web.Api.Common
             return fees + valuation;
         }
 
+        public static decimal CalculateDividendYield(decimal divRate, decimal unitPrice)
+        {
+            var yield = divRate * 12 / unitPrice * 100;
+            return decimal.Round(decimal.Parse(yield.ToString(CultureInfo.InvariantCulture)), 2);
+        }
     }
 
         
