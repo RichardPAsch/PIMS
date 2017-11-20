@@ -214,8 +214,12 @@ namespace PIMS.Web.Api.Controllers
 
                             if (cashValue <= 0) break;
                             existingProfile.First().DividendRate = decimal.Parse(property.Value.ToString());
+                            existingProfile.First().DividendPayDate = DateTime.Parse(objChild.Properties().ElementAt(0).Value.ToString());
+                            existingProfile.First().Price = decimal.Parse(objChild.Properties().ElementAt(1).Value.ToString());
+                            existingProfile.First().DividendYield = Utilities.CalculateDividendYield(existingProfile.First().DividendRate, existingProfile.First().Price);
                             existingProfile.First().LastUpdate = DateTime.Now;
-                            return Ok(existingProfile);
+                            updatedOrNewProfile = existingProfile.First();
+                            return Ok(updatedOrNewProfile);
                         }
                         continue;
                     }
