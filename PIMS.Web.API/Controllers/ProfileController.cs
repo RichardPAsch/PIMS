@@ -205,7 +205,7 @@ namespace PIMS.Web.Api.Controllers
                     {
                         // Profile update IF last updated > 72hrs ago.
                         if (Convert.ToDateTime(existingProfile.First().LastUpdate) > profileLastUpdateStartDateInHours)
-                            return Ok(existingProfile);
+                            return Ok(existingProfile.First());
 
                         // 11.17.2017 - Due to Tiingo API limitations, update just dividend rate.
                         foreach (var property in objChild.Properties()) {
