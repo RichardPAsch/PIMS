@@ -38,6 +38,8 @@ namespace PIMS.Web.Api.Controllers
         private static string _currentInvestor;
         private static IGenericRepository<Profile> _repositoryProfile;
         private static IGenericRepository<Asset> _repositoryAsset;
+        private static string _assetNotAddedListing = string.Empty;
+        private static int _assetCountToSave = 0;
 
 
         public ImportFileController(ImportFileRepository fileRepository,
@@ -62,184 +64,111 @@ namespace PIMS.Web.Api.Controllers
             {
                 //return BadRequest("Import aborted; Investor login required."); 
 
-                // un-comment for Fiddler testing
+                // un-comment during Fiddler testing
                 _currentInvestor = "rpasch@rpclassics.net";
                 //importFileUrl = @"C:\Downloads\FidelityXLS\2017SEP_RevenueTemplateTEST.xlsx";      // REVENUE data 
-                importFileUrl = @"C:\Downloads\FidelityXLS\Portfolio_PositionsTEST_Fidelity.xlsx"; // PORTFOLIO data
+                importFileUrl = @"C:\Downloads\FidelityXLS\Portfolio_PositionsTEST_Fidelity.xlsx";   // PORTFOLIO data
             }
 
-            ParsePortfolioSpreadsheet(importFileUrl);
+            var portfolioListingoBeInserted = ParsePortfolioSpreadsheet(importFileUrl);
+            _assetCountToSave = portfolioListingoBeInserted.Count();
 
-
-
-
-
-            // TODO: 10.26.17 - Will need to run ParseFile() to extract PositionsCreated[0].LoggedInInvestor; defer following lines:
-            //var existingInvestor = await Task.FromResult(_repositoryInvestor.Retreive(i => i.EMailAddr.Trim() == dataFile.EMailAddr.Trim()));
-            //if (!existingInvestor.Any())
-            //    return ResponseMessage(new HttpResponseMessage {
-            //        StatusCode = HttpStatusCode.Conflict,
-            //        ReasonPhrase = "Invalid or unregistered investor found."
-            //    });
-
-
-
-            //// TODO: Re-evaluate need for URL link.
-            //// URL - location at which content (Investor info) has been created, will be available via Pims client.
-            //dataFile.Url = "http://localhost/Pims.Client/App/Layout/#/";
-
-            //var isCreated = await Task.FromResult(_repository.Create(dataFile));
-            //if (!isCreated) return BadRequest("Unable to create/register Investor :  " + dataFile.FirstName.Trim()
-            //                                  + " " + dataFile.MiddleInitial
-            //                                  + " " + dataFile.LastName.Trim()
-            //);
-
-            //return Created(dataFile.Url, dataFile);
 
             return null;
         }
 
 
 
-        private static void ParsePortfolioSpreadsheet(string filePath)
+        private static IEnumerable<AssetCreationVm> ParsePortfolioSpreadsheet(string filePath)
         {
-            var positionsListing = new List<Position>();
-            //var profileCtrl = new ProfileController(_repositoryProfile);
-            //var investorCtrl = new InvestorController(_repositoryInvestor);
-            List<Asset> aasetsToUpdate;
-            List<AssetCreationVm> assetsToCreate;
+            var assetsToCreate = new List<AssetCreationVm>();
             var assetCtrl = new AssetController(_repositoryAsset, _identityService, _repositoryInvestor);
-            List<Position> newPositions;
-            List<Income> newRevenue;
 
             try
             {
                 var lastTickerProcessed = string.Empty;
                 var importFile = new FileInfo(filePath);
+
                 using (var package = new ExcelPackage(importFile))
                 {
                     var workSheet = package.Workbook.Worksheets[1];
                     var totalRows = workSheet.Dimension.End.Row;
                     var totalColumns = workSheet.Dimension.End.Column;
+                    var newAsset = new AssetCreationVm();
 
-                    // Ignore row 1 (column headings).
+                    // Iterate XLS/CSV, ignoring column headings (row 1).
                     for (var rowNum = 2; rowNum <= totalRows; rowNum++)
                     {
                         // Args: Cells[fromRow, fromCol, toRow, toCol]
                         var row = workSheet.Cells[rowNum, 1, rowNum, totalColumns].Select(c => c.Value == null ? string.Empty : c.Value.ToString());
                         var enumerableCells = row as string[] ?? row.ToArray();
-
-                        // Asset update or creation ?
                         var responseAsset = assetCtrl.GetByTicker(enumerableCells.ElementAt(1).Trim());
+
                         //var responseAsset = assetCtrl.GetByTicker("CSQ"); TESTING
+
+                        // New asset creation expected for "BadRequest" response, due to no existing asset found for logged in investor.
                         if (responseAsset.Result.ToString().IndexOf("Bad", StringComparison.Ordinal) > 0)
                         {
-                            // Create due to expected "BadRequest" - no asset found for logged in investor.
-                            var newAsset = new AssetCreationVm();
-                            newAsset.AssetTicker = enumerableCells.ElementAt(1);
-                            newAsset.AssetDescription = enumerableCells.ElementAt(2);
-                            newAsset.ProfileToCreate = InitializeProfile(newAsset.AssetTicker.Trim());
-                            if (lastTickerProcessed.Trim() != enumerableCells.ElementAt(1))
+                            if (lastTickerProcessed != enumerableCells.ElementAt(1).Trim())
+                            {
+                                newAsset = new AssetCreationVm();
+                                newAsset.AssetTicker = enumerableCells.ElementAt(1);
+                                newAsset.AssetDescription = enumerableCells.ElementAt(2).Length >= 49
+                                    ? enumerableCells.ElementAt(2).Substring(0, 49)
+                                    : enumerableCells.ElementAt(2);
+                                newAsset.ProfileToCreate = InitializeProfile(newAsset.AssetTicker.Trim());
                                 newAsset.PositionsCreated = InitializePositions(new List<PositionVm>(), enumerableCells);
+                            }
                             else
+                                // Asset header initialization bypassed; processing same ticker, different account.
                                 newAsset.PositionsCreated = InitializePositions(newAsset.PositionsCreated, enumerableCells);
-
-                            
-                            // TODO: test via Fiddler on 11.24.17
-
-
-                            //var newAsset = new Asset {AssetId = Guid.NewGuid()};
-                            //// No way of knowing Asset classification during initialization, therefore stamp with default 'common stock'.
-                            //// TODO: Allow user to modify Asset classification!
-                            //newAsset.AssetClassId = new Guid("6215631d-5788-4718-a1d0-a2fc00a5b1a7");
-                            //var loggedInInvestor = new Investor
-                            //                       {
-                            //                           InvestorId =
-                            //                               Utilities.GetInvestorId(_repositoryInvestor,
-                            //                                   _currentInvestor)
-                            //                       };
-                            //loggedInInvestor.AspNetUsersId = Guid.Parse(Utilities
-                            //    .GetAspNetUserId(_repositoryInvestor, loggedInInvestor.InvestorId).ToString());
-
-
                         }
                         else
                         {
-                            // Update
-                            var y = 3;
+                            // Capture attempted duplicate asset insertion.
+                            _assetNotAddedListing += enumerableCells.ElementAt(1).Trim() + " ,";
+                            lastTickerProcessed = enumerableCells.ElementAt(1).Trim();
+                            responseAsset.Dispose();
+                            continue;
                         }
 
-
-
-                        // Bypass Profile & new asset/ticker initialization if processing the same ticker, but held in a different account.
-                        if (lastTickerProcessed.Trim() != enumerableCells.ElementAt(1))
-                        {
-                            positionsListing = new List<Position>();
-                            //assetModel = new Asset
-                            //             {
-                            //                 AssetTicker = enumerableCells.ElementAt(1)
-                            //                 AssetDescription = enumerableCells.ElementAt(2),
-                            //                 AssetClassification = "TBD",    // e.g., PFD
-                            //                 ProfileToCreate = profileCtrl.GetProfileByTicker(enumerableCells.ElementAt(1).ToString())
-                            //             };
-                        }
-
-                        //var positionVm = new PositionVm();
-                        //positionVm.PreEditPositionAccount = enumerableCells.ElementAt(0);
-                        //positionVm.PostEditPositionAccount = enumerableCells.ElementAt(0);
-                        //positionVm.Status = "A";
-                        //positionVm.Qty = int.Parse(enumerableCells.ElementAt(3));
-                        //positionVm.DateOfPurchase = null;
-                        //positionVm.DatePositionAdded = null;
-                        //positionVm.LastUpdate = DateTime.Now;
-                        //positionVm.LoggedInInvestor = _currentInvestor.Trim();
-
-                        //var acctTypeVm = new AccountTypeVm();
-                        //acctTypeVm.AccountTypeDesc = enumerableCells.ElementAt(0);
-                        //acctTypeVm.Url = string.Empty;
-                        //positionVm.ReferencedAccount = acctTypeVm;
-
-                        //var trxVm = new TransactionVm();
-                        //trxVm.PositionId = Guid.NewGuid();
-                        //trxVm.TransactionId = Guid.NewGuid();
-                        //trxVm.TransactionEvent = "C"; // Create
-                        //trxVm.Units = int.Parse(enumerableCells.ElementAt(3));
-                        //trxVm.MktPrice = decimal.Parse(enumerableCells.ElementAt(4));
-                        //trxVm.Fees = 0;
-                        //trxVm.Valuation = Utilities.CalculateValuation(decimal.Parse(enumerableCells.ElementAt(4)), int.Parse(enumerableCells.ElementAt(3)));
-                        //trxVm.CostBasis = Utilities.CalculateCostBasis(0, trxVm.Valuation);
-                        //trxVm.UnitCost = Utilities.CalculateUnitCost(trxVm.CostBasis, int.Parse(enumerableCells.ElementAt(3)));
-                        //trxVm.DateCreated = DateTime.Now;
-                        //positionVm.ReferencedTransaction = trxVm;
-
-                        //positionsListing.Add(positionVm);
-                        //assetModel.PositionsCreated = positionsListing;
-
-                        //lastTickerProcessed = assetModel.AssetTicker;
-                        //positionVm = null;
+                        lastTickerProcessed = enumerableCells.ElementAt(1).Trim();
+                        assetsToCreate.Add(newAsset);
+                        responseAsset.Dispose();
                     }
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Console.WriteLine(string.Format("Portfolio population aborted, due to {0}", e.Message));
             }
 
-
-
-
-
+            return assetsToCreate;
         }
+
 
 
         private static ProfileVm InitializeProfile(string ticker)
         {
             // TODO: no hard-coded localhost
-            var client = new HttpClient { BaseAddress = new Uri("http://localhost/")};
-            var response = client.GetAsync("Pims.Web.Api/api/Profile/" + ticker).Result;
+            using (var client = new HttpClient {BaseAddress = new Uri("http://localhost/")})
+            {
+                try
+                {
+                    var response = client.GetAsync("Pims.Web.Api/api/Profile/" + ticker).Result;
+                    return !response.IsSuccessStatusCode ? null : response.Content.ReadAsAsync<ProfileVm>().Result;
+                }
+                catch (Exception e)
+                {
+                    //var debug = 1;
+                    if (e.InnerException != null) Console.WriteLine(e.InnerException.Message);
+                }
+            }
 
-            return !response.IsSuccessStatusCode ? null : response.Content.ReadAsAsync<ProfileVm>().Result;
+            return null;
+
         }
+
 
 
         private static List<PositionVm> InitializePositions(List<PositionVm> existingPositions, string[] currentRow)
