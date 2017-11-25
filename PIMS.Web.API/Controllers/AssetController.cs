@@ -35,6 +35,14 @@ namespace PIMS.Web.Api.Controllers
         private string _currentInvestor;
 
 
+        public AssetController(IGenericRepository<Asset> repository, IPimsIdentityService identityService, IGenericRepository<Investor> repositoryInvestor)
+        {
+            _repository = repository;
+            _identityService = identityService;
+            _repositoryInvestor = repositoryInvestor;
+        }
+
+
         public AssetController(IGenericRepository<Asset> repository, IPimsIdentityService identityService,
                                                                      IGenericRepository<Investor> repositoryInvestor,
                                                                      IGenericRepository<AssetClass> repositoryAssetClass,
@@ -111,12 +119,13 @@ namespace PIMS.Web.Api.Controllers
         {
            
             //TODO: Fiddler ok 6-16-15
-            _repositoryInvestor.UrlAddress = ControllerContext.Request.RequestUri.ToString();
+            //_repositoryInvestor.UrlAddress = ControllerContext.Request.RequestUri.ToString();
             var currentInvestor = _identityService.CurrentUser;
 
             // Allow for Fiddler debugging
             if (currentInvestor == null)
-                currentInvestor = "maryblow@yahoo.com";
+                currentInvestor = "rpasch@rpclassics.net";  // temp login for Fiddler TESTING
+                //currentInvestor = "maryblow@yahoo.com";
             
             var assetSummary = await Task.FromResult(_repository.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim())
                                                                             && a.Profile.TickerSymbol.Trim() == tickerSymbol.Trim())
@@ -223,7 +232,8 @@ namespace PIMS.Web.Api.Controllers
             _currentInvestor = _identityService.CurrentUser;
 
             if (_currentInvestor == null)
-                _currentInvestor = "joeblow@yahoo.com";
+                _currentInvestor = "rpasch@rpclassics.net"; // for portfolio initialization TESTING via Fiddler.
+                //_currentInvestor = "joeblow@yahoo.com";
 
             _repositoryInvestor.UrlAddress = ControllerContext.Request.RequestUri.ToString();
 
