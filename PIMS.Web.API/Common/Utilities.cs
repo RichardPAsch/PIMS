@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.Linq;
+using System.Web.Http.Results;
 using PIMS.Core.Models;
 using PIMS.Core.Models.ViewModels;
 using PIMS.Core.Security;
@@ -17,6 +18,12 @@ namespace PIMS.Web.Api.Common
 
         public static Guid GetInvestorId(IGenericRepository<Investor> repositoryInvestor, string investorLogin) {
             return repositoryInvestor.Retreive(i => i.EMailAddr.Trim() == investorLogin.Trim()).First().InvestorId;
+        }
+
+       
+        public static IQueryable<Guid> GetAspNetUserId(IGenericRepository<Investor> repositoryInvestor, Guid investorId)
+        {
+            return repositoryInvestor.Retreive(x => x.InvestorId == investorId).Select(i => i.AspNetUsersId);
         }
 
 
@@ -82,19 +89,29 @@ namespace PIMS.Web.Api.Common
             return costBasis / units;
         }
 
+
         public static decimal CalculateValuation(decimal mktPrice, int units) {
             return mktPrice * units;
         }
+
 
         public static decimal CalculateCostBasis(decimal fees, decimal valuation)
         {
             return fees + valuation;
         }
 
+
         public static decimal CalculateDividendYield(decimal divRate, decimal unitPrice)
         {
             var yield = divRate * 12 / unitPrice * 100;
             return decimal.Round(decimal.Parse(yield.ToString(CultureInfo.InvariantCulture)), 2);
+        }
+
+
+        public static string GetWebServerBaseUri(string uriPath)
+        {
+            var idx1 = uriPath.IndexOf("PIMS", StringComparison.Ordinal);
+            return uriPath.Substring(0,idx1);
         }
     }
 
