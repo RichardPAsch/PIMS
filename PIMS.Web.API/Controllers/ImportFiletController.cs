@@ -10,8 +10,10 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 //using Microsoft.Office.Interop.Excel;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Results;
 using FluentNHibernate.Conventions;
 using FluentNHibernate.Utils;
@@ -40,6 +42,7 @@ namespace PIMS.Web.Api.Controllers
         private static IGenericRepository<Asset> _repositoryAsset;
         private static string _assetNotAddedListing = string.Empty;
         private static int _assetCountToSave = 0;
+        private static string _serverBaseUri = string.Empty;
 
 
         public ImportFileController(ImportFileRepository fileRepository,
@@ -58,6 +61,9 @@ namespace PIMS.Web.Api.Controllers
         [Route("")]
         public async Task<IHttpActionResult> ProcessImportFile([FromBody] string importFileUrl)
         {
+            var requestUri = Request.RequestUri.AbsoluteUri;
+            _serverBaseUri = Utilities.GetWebServerBaseUri(requestUri);
+            
             // Verify investor login via email addr.
             _currentInvestor = _identityService.CurrentUser;
             if (_currentInvestor == null)
@@ -67,12 +73,13 @@ namespace PIMS.Web.Api.Controllers
                 // un-comment during Fiddler testing
                 _currentInvestor = "rpasch@rpclassics.net";
                 //importFileUrl = @"C:\Downloads\FidelityXLS\2017SEP_RevenueTemplateTEST.xlsx";      // REVENUE data 
-                importFileUrl = @"C:\Downloads\FidelityXLS\Portfolio_PositionsTEST_Fidelity.xlsx";   // PORTFOLIO data
+                importFileUrl = @"C:\Downloads\FidelityXLS\Portfolio_PositionsTEST_1_Fidelity.xlsx";   // PORTFOLIO data
             }
 
-            var portfolioListingoBeInserted = ParsePortfolioSpreadsheet(importFileUrl);
-            _assetCountToSave = portfolioListingoBeInserted.Count();
-
+            var portfolioListingoToBeInserted = ParsePortfolioSpreadsheet(importFileUrl);
+            var listingoToBeInserted = portfolioListingoToBeInserted as AssetCreationVm[] ?? portfolioListingoToBeInserted.ToArray();
+            _assetCountToSave = listingoToBeInserted.Count();
+            var persistResults = PersistPortfolioData(listingoToBeInserted, _assetCountToSave);
 
             return null;
         }
@@ -116,6 +123,9 @@ namespace PIMS.Web.Api.Controllers
                                 newAsset.AssetDescription = enumerableCells.ElementAt(2).Length >= 49
                                     ? enumerableCells.ElementAt(2).Substring(0, 49)
                                     : enumerableCells.ElementAt(2);
+                                // TODO: Allow investor to assign asset classification.
+                                // Investor to assign classification, e.g. CS [common stock] via UI.
+                                newAsset.AssetClassification = "TBA"; // aka - to be assigned
                                 newAsset.ProfileToCreate = InitializeProfile(newAsset.AssetTicker.Trim());
                                 newAsset.PositionsCreated = InitializePositions(new List<PositionVm>(), enumerableCells);
                             }
@@ -150,8 +160,7 @@ namespace PIMS.Web.Api.Controllers
 
         private static ProfileVm InitializeProfile(string ticker)
         {
-            // TODO: no hard-coded localhost
-            using (var client = new HttpClient {BaseAddress = new Uri("http://localhost/")})
+            using (var client = new HttpClient {BaseAddress = new Uri(_serverBaseUri)})
             {
                 try
                 {
@@ -166,7 +175,6 @@ namespace PIMS.Web.Api.Controllers
             }
 
             return null;
-
         }
 
 
@@ -190,7 +198,9 @@ namespace PIMS.Web.Api.Controllers
                 Status = "A",
                 Qty = int.Parse(currentRow.ElementAt(3)),
                 UnitCost = costBasis,
-                DateOfPurchase = null,
+                // TODO: Allow user to assign date position added.
+                // Unlikely position add date assigned, as this will be a clear sign for investor correction via UI.
+                DateOfPurchase = new DateTime(1950,1,1),
                 DatePositionAdded = null,
                 LastUpdate = DateTime.Now,
                 Url = "",
@@ -206,12 +216,39 @@ namespace PIMS.Web.Api.Controllers
                                             UnitCost = unitCost,
                                             CostBasis = costBasis,
                                             Valuation = valuation,
-                                            DateCreated = DateTime.Now
+                                            DateCreated = DateTime.Now,
+                                            DatePositionCreated = null
                                         }
             };
             
             newPositions.Add(newPosition);
             return newPositions;
+        }
+
+
+
+        private static string PersistPortfolioData(IEnumerable<AssetCreationVm> portfolioToSave, int assetCount)
+        {
+            if (portfolioToSave == null) throw new ArgumentNullException("portfolioToSave");
+            var statusMsg = string.Format("Sucessfully added {0} assets as part of PIMS initialization.", assetCount);
+
+            using (var client = new HttpClient { BaseAddress = new Uri(_serverBaseUri) })
+            {
+                var assetCreationVms = portfolioToSave as AssetCreationVm[] ?? portfolioToSave.ToArray();
+                foreach (var asset in assetCreationVms)
+                {
+                    try
+                    {
+                        var httpResponseMessage = client.PostAsJsonAsync("PIMS.Web.Api/api/Asset", asset).Result;
+                    }
+                    catch (Exception e) {
+                        if (e.InnerException != null)
+                            statusMsg = "Error saving asset for " + assetCreationVms.First().AssetTicker.Trim();
+                    } 
+                }
+             }
+
+            return statusMsg;
         }
 
 
