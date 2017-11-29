@@ -280,7 +280,7 @@ namespace PIMS.Web.Api.Controllers
                submittedAsset.ProfileToCreate.Price == 0 || 
                profileLastUpdate == DateTime.MinValue) // ||  // 11.9.17 - removed URL requirement
                //submittedAsset.ProfileToCreate.Url.IsEmpty())
-                    return BadRequest("Asset creation aborted: minimum Profile data [ticker,tickerDesc,Price,lastUpDate, or Url] is missing or invalid.");
+                    return BadRequest("Asset creation aborted: minimum Profile data [ticker,tickerDesc,Price,or lastUpDate] is missing or invalid.");
 
             var existingProfile = await Task.FromResult(_repositoryProfile.Retreive(p => p.TickerSymbol.Trim() == submittedAsset.AssetTicker.Trim())
                                                                           .AsQueryable());
@@ -288,15 +288,13 @@ namespace PIMS.Web.Api.Controllers
             var profileCtrl = new ProfileController(_repositoryProfile);
             if (existingProfile.Any())
             {
-                if (existingProfile.First().LastUpdate <= DateTime.Now.AddHours(-24))
-                    submittedAsset.ProfileToCreate.ProfileId = existingProfile.First().ProfileId;
-                else
+                if (existingProfile.First().LastUpdate <= DateTime.Now.AddHours(-72))
                 {
                     var updatedResponse = await profileCtrl.UpdateProfile(submittedAsset.ProfileToCreate) as OkNegotiatedContentResult<string>;
                     // We'll cancel Asset creation here, as out-of-date Profile data would render inaccurate income projections, should the user
                     // choose to use these projections real-time.
                     if (updatedResponse == null || !updatedResponse.Content.Contains("successfully"))
-                        return BadRequest("Asset creation aborted: unable to update Profile data.");
+                        return BadRequest("Asset creation aborted: unable to update Profile data.");  
                 }
             }
             else
@@ -334,19 +332,19 @@ namespace PIMS.Web.Api.Controllers
 
                 if (!positionAcctTypeId.Any())
                 {
-                    // Rollback Asset creation (via NH Cascade).
+                    // Rollback Asset creation (via NH Cascade) if problem with account type.
                     var deleteResponse = await DeleteAsset(submittedAsset.AssetTicker.Trim()) as OkNegotiatedContentResult<string>;
                     if(deleteResponse == null || deleteResponse.Content.Contains("Error"))
-                        return BadRequest("Asset-Position creation aborted due to Asset rollback error for bad AccountType: " 
+                        return BadRequest("Asset-Position creation aborted due to Asset rollback error for bad or missing AccountType: " 
                                                                     + submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.Trim().ToUpper()); 
 
                     return BadRequest("Asset-Position creation aborted due to error retreiving AccountType for: " 
                                                                     + submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.Trim().ToUpper()); 
                 }
-                    
 
-                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedAccount.KeyId = positionAcctTypeId.First();                // Required entry.
-                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedAssetId = new Guid(submittedAsset.AssetIdentification);    // Required entry.
+                submittedAsset.PositionsCreated.ElementAt(pos).LoggedInInvestor = _currentInvestor;
+                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedAccount.KeyId = new Guid(positionAcctTypeId.First().ToString());   // Required entry.
+                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedAssetId = new Guid(submittedAsset.AssetIdentification);            // Required entry.
                 submittedAsset.PositionsCreated.ElementAt(pos).Url = Utilities.GetBaseUrl(_repositoryInvestor.UrlAddress)
                                                                      + "Asset/"
                                                                      + submittedAsset.AssetTicker.Trim()
@@ -388,12 +386,12 @@ namespace PIMS.Web.Api.Controllers
                                                                             submittedAsset.PositionsCreated.ElementAt(pos).Qty;
                 submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.DateCreated = DateTime.Parse(submittedAsset.PositionsCreated.ElementAt(pos).LastUpdate.ToString());
 
+
                 var createdTransaction = await transactionCtrl.CreateNewTransaction(submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction) as CreatedNegotiatedContentResult<Transaction>;
                 if(createdTransaction == null)
                     return BadRequest("Position-Transaction creation aborted due to error creating Transaction for Position : "
                                                                     + submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.Trim().ToUpper());
 
-                // TODO: needed ?
                 submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.TransactionId = createdTransaction.Content.TransactionId;
             }
 
@@ -403,7 +401,7 @@ namespace PIMS.Web.Api.Controllers
             if (submittedAsset.RevenueCreated == null) 
                 return ResponseMessage(new HttpResponseMessage {
                                               StatusCode = HttpStatusCode.Created,
-                                              ReasonPhrase = "Asset created w/o submitted Income - affiliated Profile, and Position(s) recorded."
+                                              ReasonPhrase = "Asset(s) created w/o submitted Income - affiliated Profile, Position(s), and Transaction(s) sucessfully recorded."
             });
 
             var incomeCtrl = new IncomeController(_identityService, _repository, _repositoryInvestor, _repositoryIncome);
@@ -485,26 +483,47 @@ namespace PIMS.Web.Api.Controllers
 
             private static Asset MapVmToAsset(AssetCreationVm sourceVm)
             {
-                return new Asset {
-                    InvestorId = new Guid(sourceVm.AssetInvestorId),
-                    AssetClassId = new Guid(sourceVm.AssetClassificationId),
-                    ProfileId = sourceVm.ProfileToCreate.ProfileId,
-                    AssetId = sourceVm.AssetIdentification == null ? Guid.NewGuid() : new Guid(sourceVm.AssetIdentification),
-                    LastUpdate = DateTime.Now
-                };
+                try
+                {
+                    return new Asset {
+                                         InvestorId = new Guid(sourceVm.AssetInvestorId),
+                                         AssetClassId = new Guid(sourceVm.AssetClassificationId),
+                                         ProfileId = sourceVm.ProfileToCreate.ProfileId,
+                                         AssetId = sourceVm.AssetIdentification == null ? Guid.NewGuid() : new Guid(sourceVm.AssetIdentification),
+                                         LastUpdate = DateTime.Now
+                                     };
+                }
+                catch (Exception e)
+                {
+                    if (e.InnerException != null)
+                    {
+                        var errMsg = e.InnerException.Message;
+                    }
+                }
+                return null;
             }
 
        
             private async Task<IHttpActionResult> SaveAssetAndGetId(AssetCreationVm assetToSave)
             {
+                var isCreated = false;
                 var createdAsset = MapVmToAsset(assetToSave);
-                var isCreated = await Task.FromResult(_repository.Create(createdAsset));
-             
-                if (!isCreated) return BadRequest("Unable to create new Asset for :  " + assetToSave.AssetTicker.Trim());
 
+                try
+                {
+                    isCreated = await Task.FromResult(_repository.Create(createdAsset));
+                }
+                catch (Exception e)
+                {
+                    var errMsg = e.InnerException;
+                    if (!isCreated)
+                        return BadRequest("Unable to create new Asset for :  " + assetToSave.AssetTicker.Trim() + " due to: " + errMsg);
+                }
+                
                 //TODO: Use routeData for URL.
                return Created("http://localhost/Pims.Web.Api/api/Asset/", createdAsset);
             }
+
 
 
             private static IQueryable<AssetSummaryQueryVm> CheckForDuplicateTickers(IEnumerable<AssetSummaryQueryVm> sourceCollection)
