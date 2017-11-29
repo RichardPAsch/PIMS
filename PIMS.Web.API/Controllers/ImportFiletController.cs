@@ -72,16 +72,16 @@ namespace PIMS.Web.Api.Controllers
 
                 // un-comment during Fiddler testing
                 _currentInvestor = "rpasch@rpclassics.net";
-                //importFileUrl = @"C:\Downloads\FidelityXLS\2017SEP_RevenueTemplateTEST.xlsx";      // REVENUE data 
-                importFileUrl = @"C:\Downloads\FidelityXLS\Portfolio_PositionsTEST_1_Fidelity.xlsx";   // PORTFOLIO data
+                //importFileUrl = @"C:\Downloads\FidelityXLS\2017SEP_RevenueTemplateTEST.xlsx";        // REVENUE data 
+                importFileUrl = @"C:\Downloads\FidelityXLS\Portfolio_PositionsTEST_7_Fidelity.xlsx";   // PORTFOLIO data
             }
 
             var portfolioListingoToBeInserted = ParsePortfolioSpreadsheet(importFileUrl);
             var listingoToBeInserted = portfolioListingoToBeInserted as AssetCreationVm[] ?? portfolioListingoToBeInserted.ToArray();
-            _assetCountToSave = listingoToBeInserted.Count();
-            var persistResults = PersistPortfolioData(listingoToBeInserted, _assetCountToSave);
+            _assetCountToSave = listingoToBeInserted.Length;
+            var statusResults = PersistPortfolioData(listingoToBeInserted);
 
-            return null;
+            return Ok(statusResults);
         }
 
 
@@ -100,6 +100,7 @@ namespace PIMS.Web.Api.Controllers
                 {
                     var workSheet = package.Workbook.Worksheets[1];
                     var totalRows = workSheet.Dimension.End.Row;
+                    _assetCountToSave = totalRows;
                     var totalColumns = workSheet.Dimension.End.Column;
                     var newAsset = new AssetCreationVm();
 
@@ -124,8 +125,11 @@ namespace PIMS.Web.Api.Controllers
                                     ? enumerableCells.ElementAt(2).Substring(0, 49)
                                     : enumerableCells.ElementAt(2);
                                 // TODO: Allow investor to assign asset classification.
-                                // Investor to assign classification, e.g. CS [common stock] via UI.
+                                // Investor to assign/update classification as needed, e.g. CS [common stock], via UI.
                                 newAsset.AssetClassification = "TBA"; // aka - to be assigned
+                                newAsset.AssetClassificationId = "1b42ade9-27b9-45c7-b63f-7ef97d6cad8b";
+                                // InvestorId to be initialized during asset creation.
+                                newAsset.AssetInvestorId = string.Empty;
                                 newAsset.ProfileToCreate = InitializeProfile(newAsset.AssetTicker.Trim());
                                 newAsset.PositionsCreated = InitializePositions(new List<PositionVm>(), enumerableCells);
                             }
@@ -199,12 +203,19 @@ namespace PIMS.Web.Api.Controllers
                 Qty = int.Parse(currentRow.ElementAt(3)),
                 UnitCost = costBasis,
                 // TODO: Allow user to assign date position added.
-                // Unlikely position add date assigned, as this will be a clear sign for investor correction via UI.
+                // Unlikely that position add date has been assigned, therefore allow for investor update via UI.
                 DateOfPurchase = new DateTime(1950,1,1),
                 DatePositionAdded = null,
                 LastUpdate = DateTime.Now,
                 Url = "",
                 LoggedInInvestor = _identityService.CurrentUser,
+                ReferencedAssetId = Guid.NewGuid(),            // initialized during Asset creation
+                ReferencedAccount = new AccountTypeVm
+                                    {
+                                        AccountTypeDesc = currentRow.ElementAt(0),
+                                        KeyId = Guid.NewGuid(), // Guid for AccountType, initialized during Asset creation
+                                        Url = ""
+                                    },
                 ReferencedTransaction = new TransactionVm
                                         {
                                             PositionId = Guid.NewGuid(),
@@ -227,11 +238,14 @@ namespace PIMS.Web.Api.Controllers
 
 
 
-        private static string PersistPortfolioData(IEnumerable<AssetCreationVm> portfolioToSave, int assetCount)
+        private static string PersistPortfolioData(IEnumerable<AssetCreationVm> portfolioToSave)
         {
-            if (portfolioToSave == null) throw new ArgumentNullException("portfolioToSave");
-            var statusMsg = string.Format("Sucessfully added {0} assets as part of PIMS initialization.", assetCount);
+            var assetCountSaved = 0;
+            var statusMsg = string.Empty;
+            var errorList = string.Empty;
 
+            if (portfolioToSave == null) throw new ArgumentNullException("portfolioToSave");
+            
             using (var client = new HttpClient { BaseAddress = new Uri(_serverBaseUri) })
             {
                 var assetCreationVms = portfolioToSave as AssetCreationVm[] ?? portfolioToSave.ToArray();
@@ -240,14 +254,19 @@ namespace PIMS.Web.Api.Controllers
                     try
                     {
                         var httpResponseMessage = client.PostAsJsonAsync("PIMS.Web.Api/api/Asset", asset).Result;
+                        assetCountSaved += 1;
+                        statusMsg = string.Format("Sucessfully added {0}/{1} asset(s) as part of PIMS portfolio initialization.", assetCountSaved, _assetCountToSave);
                     }
                     catch (Exception e) {
                         if (e.InnerException != null)
-                            statusMsg = "Error saving asset for " + assetCreationVms.First().AssetTicker.Trim();
+                        {
+                            errorList += assetCreationVms.First().AssetTicker.Trim() + ", ";
+                            statusMsg = "Error saving asset(s) for " + errorList;
+                        }
                     } 
                 }
              }
-
+            
             return statusMsg;
         }
 
