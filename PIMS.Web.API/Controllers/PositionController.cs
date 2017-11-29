@@ -282,22 +282,17 @@ namespace PIMS.Web.Api.Controllers
                 });
             }
 
-            if (string.IsNullOrWhiteSpace(positionData.LoggedInInvestor))
-                positionData.LoggedInInvestor = _identityService.CurrentUser.Trim();
-
-            
-
             // Allow for Fiddler debugging
-            var currentInvestor = _identityService.CurrentUser;
+            var currentInvestor = positionData.LoggedInInvestor;
             if (currentInvestor == null)
-                currentInvestor = "joeblow@yahoo.com";
+                currentInvestor = "rpasch@rpclassics.net"; // TEMP only
 
 
             var currentInvestorId = Utilities.GetInvestorId(_repositoryInvestor, currentInvestor);
 
             // Account for RPC from another controller.
-            if (ControllerContext.Request != null)
-                positionData.Url = ControllerContext.Request.RequestUri.ToString();
+            //if (ControllerContext.Request != null)
+            //    positionData.Url = ControllerContext.Request.RequestUri.ToString();
 
             var ticker = ParseUrlForTicker(positionData.Url);
             var newLocation = positionData.Url;
