@@ -79,12 +79,12 @@ namespace PIMS.Web.Api.Controllers
 
 
 
-        /*
-           ** NOTE **
+        /*  ** NOTE **
             11.9.2017 -  GetProfileByTicker() & GetProfiles() are now OBSOLETE due to the shutdown of Yahoo Finance API.
                          New ticker profile data now supplied via Tiingo.com API.
             11.10.2017 - Seperate API calls will be necessary for gathering meta & price data, as mandated by Tiingo.
         */
+
         //[HttpGet]
         //[Route("{tickerForProfile?}")]
         //// e.g. http://localhost/Pims.Web.Api/api/Profile/IBM
@@ -300,20 +300,21 @@ namespace PIMS.Web.Api.Controllers
 
             var existingProfile = await Task.FromResult(_repository.Retreive(p => p.TickerSymbol.Trim() == submittedProfile.TickerSymbol.Trim()));
 
-            //TODO: Use configurable hours for: DateTime.Now.AddHours(-24)
-            if (existingProfile.Any() && Convert.ToDateTime(existingProfile.First().LastUpdate) > DateTime.Now.AddHours(-24))
+            //TODO: Use configurable hours for: DateTime.Now.AddHours(-72)
+            if (existingProfile.Any() && Convert.ToDateTime(existingProfile.First().LastUpdate) > DateTime.Now.AddHours(-72))
                 return ResponseMessage(new HttpResponseMessage {
                                                 StatusCode = HttpStatusCode.NotModified, // Status:304
-                                                ReasonPhrase = "No Profile created, existing data is less than 24 hours old."
+                                                ReasonPhrase = "No Profile created, existing data is less than 72 hours old."
                                      });
 
             var profileToCreate = MapVmToProfile(submittedProfile);
             var isCreated = await Task.FromResult(_repository.Create(profileToCreate));
-            if (!isCreated) return BadRequest("Unable to create new Profile for :  " + submittedProfile.TickerSymbol.Trim());
+            if (!isCreated)
+                return BadRequest("Unable to create new Profile for :  " + submittedProfile.TickerSymbol.Trim());
 
-            //TODO: Should use RouteData for determining newLocation Url. 7-8-15: Reeval, RouteData avail via RPC?
-           // return Created("http://localhost/Pims.Web.Api/api/Asset/", profileToCreate);
-            return Created(submittedProfile.Url + "/" + profileToCreate.ProfileId, profileToCreate);
+            // TODO: This fx should be accessed via a HttpClient web call, so that we can fetch Request.RequestUrl for base server address.
+            return Created("http://localhost/Pims.Web.Api/api/Profile/", profileToCreate);
+           //return Created(submittedProfile.Url + "/" + profileToCreate.ProfileId, profileToCreate);
         }
 
 
@@ -346,20 +347,21 @@ namespace PIMS.Web.Api.Controllers
         
             private static Profile MapVmToProfile(ProfileVm sourceData)
             {
+                // TODO: Allow investor to change ex-dividend date & frequency.
                 return new Profile
                        {
                            TickerSymbol = sourceData.TickerSymbol.ToUpper().Trim(),
                            TickerDescription = sourceData.TickerDescription.Trim(),
                            DividendRate = sourceData.DividendRate,
                            DividendYield = sourceData.DividendYield,
-                           DividendFreq = sourceData.DividendFreq,
+                           DividendFreq = sourceData.DividendFreq ?? "",
                            EarningsPerShare = sourceData.EarningsPerShare,
                            PE_Ratio = sourceData.PE_Ratio,
                            LastUpdate = DateTime.Now,
-                           ExDividendDate = sourceData.ExDividendDate,
+                           ExDividendDate = sourceData.ExDividendDate ?? new DateTime(2017, 1, 2),
                            DividendPayDate = sourceData.DividendPayDate,
                            Price = sourceData.Price,
-                           Url = sourceData.Url.Trim()
+                           Url = sourceData.Url == null ? "" : sourceData.Url.Trim()
                        };
             }
         
