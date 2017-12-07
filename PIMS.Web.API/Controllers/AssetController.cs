@@ -320,63 +320,71 @@ namespace PIMS.Web.Api.Controllers
             
             // * POSITION(S) - TRANSACTION.*
             var positionCtrl = new PositionController(_identityService, _repository, _repositoryInvestor, _repositoryPosition, _repositoryAccountType, _repositoryEdits);
-            for(var pos = 0; pos < submittedAsset.PositionsCreated.Count; pos++)
+
+            // BUG: 11.30.17 - reverify loop iteration for position count > 1
+            for (var pos = 0; pos < submittedAsset.PositionsCreated.Count; pos++)
             {
+                var currentPositionTest = pos;
                 // ReSharper disable once AccessToModifiedClosure
+                // Validate correct account type & id.
                 var positionAcctTypeId = existingAcctTypes.Content.Where(at => at.AccountTypeDesc.Trim().ToUpper() == submittedAsset.PositionsCreated.ElementAt(pos)
-                                                                                                                          .PreEditPositionAccount
-                                                                                                                          .ToUpper()
-                                                                                                                          .Trim())
-                                                                                                                          .AsQueryable()
-                                                                                                                          .Select(at => at.KeyId);
+                                                                  .PreEditPositionAccount
+                                                                  .ToUpper()
+                                                                  .Trim())
+                                                                  .AsQueryable()
+                                                                  .Select(at => at.KeyId);
 
                 if (!positionAcctTypeId.Any())
                 {
                     // Rollback Asset creation (via NH Cascade) if problem with account type.
                     var deleteResponse = await DeleteAsset(submittedAsset.AssetTicker.Trim()) as OkNegotiatedContentResult<string>;
-                    if(deleteResponse == null || deleteResponse.Content.Contains("Error"))
-                        return BadRequest("Asset-Position creation aborted due to Asset rollback error for bad or missing AccountType: " 
-                                                                    + submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.Trim().ToUpper()); 
+                    if (deleteResponse == null || deleteResponse.Content.Contains("Error"))
+                        return BadRequest("Asset-Position creation aborted due to Asset rollback error for bad or missing AccountType: "
+                            + submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.Trim().ToUpper());
 
-                    return BadRequest("Asset-Position creation aborted due to error retreiving AccountType for: " 
-                                                                    + submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.Trim().ToUpper()); 
+                    return BadRequest("Asset-Position creation aborted due to error retreiving AccountType for: "
+                                      + submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.Trim()
+                                          .ToUpper());
                 }
 
                 submittedAsset.PositionsCreated.ElementAt(pos).LoggedInInvestor = _currentInvestor;
-                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedAccount.KeyId = new Guid(positionAcctTypeId.First().ToString());   // Required entry.
-                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedAssetId = new Guid(submittedAsset.AssetIdentification);            // Required entry.
-                submittedAsset.PositionsCreated.ElementAt(pos).Url = Utilities.GetBaseUrl(_repositoryInvestor.UrlAddress)
-                                                                     + "Asset/"
-                                                                     + submittedAsset.AssetTicker.Trim()
-                                                                     + "/Position/"
-                                                                     + submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.Trim();
+                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedAccount.KeyId = new Guid(positionAcctTypeId.First().ToString()); // Required entry.
+                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedAssetId = new Guid(submittedAsset.AssetIdentification); // Required entry.
+                submittedAsset.PositionsCreated.ElementAt(pos).Url =
+                    Utilities.GetBaseUrl(_repositoryInvestor.UrlAddress)
+                    + "Asset/"
+                    + submittedAsset.AssetTicker.Trim()
+                    + "/Position/"
+                    + submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.Trim();
 
+                // BUG: verify SECOND position is actually saved
                 var createdPosition = await positionCtrl.CreateNewPosition(submittedAsset.PositionsCreated.ElementAt(pos)) as CreatedNegotiatedContentResult<Position>;
                 if (createdPosition == null)
                 {
                     // Rollback Asset creation.
                     var deleteResponse = await DeleteAsset(submittedAsset.AssetTicker.Trim()) as OkNegotiatedContentResult<string>;
                     if (deleteResponse == null || deleteResponse.Content.Contains("Error"))
-                        return BadRequest("Asset-Position creation aborted due to Asset rollback error for Position: " 
-                                                                    + submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.Trim().ToUpper());
+                        return BadRequest("Asset-Position creation aborted due to Asset rollback error for Position: "
+                                          + submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.Trim()
+                                              .ToUpper());
 
-                    return BadRequest("Asset-Position creation aborted due to error creating Position for : " 
-                                                                    + submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.Trim().ToUpper());
-
+                    return BadRequest("Asset-Position creation aborted due to error creating Position for : "
+                                      + submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.Trim()
+                                          .ToUpper());
                 }
-                
-                submittedAsset.PositionsCreated.ElementAt(pos).CreatedPositionId = createdPosition.Content.PositionId; 
 
+                submittedAsset.PositionsCreated.ElementAt(pos).CreatedPositionId = createdPosition.Content.PositionId;
+            
                 // Initialize Transaction component of new Position(s); Position:Transaction = 1:1 for each new Position created. 7.12.17
-                var transactionCtrl = new TransactionController(_repositoryTransaction, _identityService, _repositoryInvestor, _repository, _repositoryTransactionEdits);
 
+                var transactionCtrl = new TransactionController(_repositoryTransaction, _identityService, _repositoryInvestor, _repository, _repositoryTransactionEdits);
                 submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.PositionId = createdPosition.Content.PositionId;
                 submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.TransactionEvent = "B";
                 submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.Fees = submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.Fees;
                 submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.Units = submittedAsset.PositionsCreated.ElementAt(pos).Qty;
                 submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.MktPrice = submittedAsset.ProfileToCreate.Price;
-                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.Valuation = 
-                                                                            submittedAsset.PositionsCreated.ElementAt(pos).Qty * 
+                submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.Valuation =
+                                                                            submittedAsset.PositionsCreated.ElementAt(pos).Qty *
                                                                             submittedAsset.ProfileToCreate.Price;
                 submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.CostBasis =
                                                                             submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.Valuation +
@@ -388,12 +396,12 @@ namespace PIMS.Web.Api.Controllers
 
 
                 var createdTransaction = await transactionCtrl.CreateNewTransaction(submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction) as CreatedNegotiatedContentResult<Transaction>;
-                if(createdTransaction == null)
+                if (createdTransaction == null)
                     return BadRequest("Position-Transaction creation aborted due to error creating Transaction for Position : "
                                                                     + submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.Trim().ToUpper());
 
                 submittedAsset.PositionsCreated.ElementAt(pos).ReferencedTransaction.TransactionId = createdTransaction.Content.TransactionId;
-            }
+            }  
 
 
 
