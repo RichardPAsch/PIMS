@@ -11,7 +11,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
-//using Microsoft.Office.Interop.Excel;
+using Microsoft.Office.Interop.Excel;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Results;
@@ -56,11 +56,13 @@ namespace PIMS.Web.Api.Controllers
             _repositoryAsset = repositoryAsset;
         }
 
-
+        //  public async Task<IHttpActionResult> ProcessImportFile([FromBody] string importFileUrl)
         [HttpPost]
         [Route("")]
-        public async Task<IHttpActionResult> ProcessImportFile([FromBody] string importFileUrl)
+        public async Task<IHttpActionResult> ProcessImportFile([FromBody] ImportFileVm importFile)
         {
+            var statusResults = string.Empty;
+            var importFileUrl = importFile.ImportFilePath;
             var requestUri = Request.RequestUri.AbsoluteUri;
             _serverBaseUri = Utilities.GetWebServerBaseUri(requestUri);
             
@@ -73,17 +75,30 @@ namespace PIMS.Web.Api.Controllers
                 // un-comment during Fiddler testing
                 _currentInvestor = "rpasch@rpclassics.net";
                 //importFileUrl = @"C:\Downloads\FidelityXLS\2017SEP_RevenueTemplateTEST.xlsx";        // REVENUE data 
-                importFileUrl = @"C:\Downloads\FidelityXLS\Portfolio_PositionsTEST_7_Fidelity.xlsx";   // PORTFOLIO data
+                //importFileUrl = @"C:\Downloads\FidelityXLS\Portfolio_PositionsTEST_7_Fidelity.xlsx";   // PORTFOLIO data
             }
 
-            var portfolioListingoToBeInserted = ParsePortfolioSpreadsheet(importFileUrl);
-            var listingoToBeInserted = portfolioListingoToBeInserted as AssetCreationVm[] ?? portfolioListingoToBeInserted.ToArray();
-            _assetCountToSave = listingoToBeInserted.Length;
-            var statusResults = PersistPortfolioData(listingoToBeInserted);
+            if (importFile.IsRevenueData)
+            {
+                var portFolioRevenueToBeInserted = ParseRevenueSpreadsheet(importFileUrl);
+            }
+            else
+            {
+                var portfolioListingoToBeInserted = ParsePortfolioSpreadsheet(importFileUrl);
+                var listingoToBeInserted = portfolioListingoToBeInserted as AssetCreationVm[] ?? portfolioListingoToBeInserted.ToArray();
+                _assetCountToSave = listingoToBeInserted.Length;
+                statusResults = PersistPortfolioData(listingoToBeInserted);
+            }
 
             return Ok(statusResults);
         }
 
+
+        private static IEnumerable<IncomeVm> ParseRevenueSpreadsheet(string filePath)
+        {
+            // TODO:: 12.6.17 - Implementation WIP
+            return null;
+        }
 
 
         private static IEnumerable<AssetCreationVm> ParsePortfolioSpreadsheet(string filePath)
@@ -132,9 +147,12 @@ namespace PIMS.Web.Api.Controllers
                                 newAsset.AssetInvestorId = string.Empty;
                                 newAsset.ProfileToCreate = InitializeProfile(newAsset.AssetTicker.Trim());
                                 newAsset.PositionsCreated = InitializePositions(new List<PositionVm>(), enumerableCells);
+                                lastTickerProcessed = enumerableCells.ElementAt(1).Trim();
+                                assetsToCreate.Add(newAsset);
                             }
                             else
-                                // Asset header initialization bypassed; processing same ticker, different account.
+                                // Asset header initialization bypassed; processing same ticker, different account(s). Created
+                                // position(s) collection passed for new position addition.
                                 newAsset.PositionsCreated = InitializePositions(newAsset.PositionsCreated, enumerableCells);
                         }
                         else
@@ -146,8 +164,9 @@ namespace PIMS.Web.Api.Controllers
                             continue;
                         }
 
-                        lastTickerProcessed = enumerableCells.ElementAt(1).Trim();
-                        assetsToCreate.Add(newAsset);
+                        //lastTickerProcessed = enumerableCells.ElementAt(1).Trim();
+                        // DON'T re-Add asset if ticker is the same BUG here
+                        //assetsToCreate.Add(newAsset);
                         responseAsset.Dispose();
                     }
                 }
