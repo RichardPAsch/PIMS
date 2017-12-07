@@ -15,7 +15,7 @@ namespace PIMS.Core.Models.ViewModels
         public  decimal CostBasis { get; set; }
         public decimal Valuation { get; set; }
         public DateTime DateCreated { get; set; }
-        public DateTime DatePositionCreated { get; set; }
+        public DateTime? DatePositionCreated { get; set; }
         public string TickerSymbol { get; set; }
     }
 
