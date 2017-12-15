@@ -68,6 +68,7 @@
     <Compile Include="Models\Transaction.cs" />
     <Compile Include="Models\ViewModels\AccountTypeVm.cs" />
     <Compile Include="Models\ViewModels\AssetCreationVm.cs" />
+    <Compile Include="Models\ViewModels\AssetIncomeVm.cs" />
     <Compile Include="Models\ViewModels\ChangePasswordVm.cs" />
     <Compile Include="Models\ViewModels\ImportFileVm.cs" />
     <Compile Include="Models\ViewModels\PositionAccountTypesVm.cs" />
