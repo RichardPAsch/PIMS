@@ -42,6 +42,22 @@ namespace PIMS.Web.Api.Controllers
 
 
         [HttpGet]
+        [Route("persisted/{tickerSymbol}")]
+        public async Task<IHttpActionResult> GetPersistedProfileByTicker(string tickerSymbol) {
+
+            var savedProfile = await Task.FromResult(_repository.RetreiveAll()
+                                                                 .Where(p => p.TickerSymbol == tickerSymbol)
+                                                                 .AsQueryable());
+
+            if(savedProfile == null)
+                return BadRequest("No saved Profile found, or unable to retreive data for ticker: " + tickerSymbol);
+ 
+            return Ok(savedProfile);
+        }
+
+
+
+        [HttpGet]
         [Route("")]
         public async Task<IHttpActionResult> GetAllPersistedProfiles()
         {
