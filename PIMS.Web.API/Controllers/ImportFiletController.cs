@@ -18,6 +18,7 @@ using System.Web.Http.Results;
 using FluentNHibernate.Conventions;
 using FluentNHibernate.Utils;
 using Microsoft.AspNet.Identity;
+using NHibernate.Criterion;
 using NHibernate.Linq;
 using NHibernate.Mapping;
 using NHibernate.Util;
@@ -43,6 +44,7 @@ namespace PIMS.Web.Api.Controllers
         private static string _assetNotAddedListing = string.Empty;
         private static int _assetCountToSave = 0;
         private static string _serverBaseUri = string.Empty;
+        private static OkNegotiatedContentResult<List<AssetIncomeVm>> _existingInvestorAssets;
 
 
         public ImportFileController(ImportFileRepository fileRepository,
@@ -64,6 +66,8 @@ namespace PIMS.Web.Api.Controllers
             var statusResults = string.Empty;
             var importFileUrl = importFile.ImportFilePath;
             var requestUri = Request.RequestUri.AbsoluteUri;
+
+
             _serverBaseUri = Utilities.GetWebServerBaseUri(requestUri);
             
             // Verify investor login via email addr.
@@ -74,13 +78,25 @@ namespace PIMS.Web.Api.Controllers
 
                 // un-comment during Fiddler testing
                 _currentInvestor = "rpasch@rpclassics.net";
-                //importFileUrl = @"C:\Downloads\FidelityXLS\2017SEP_RevenueTemplateTEST.xlsx";        // REVENUE data 
+                //importFileUrl = @"C:\Downloads\FidelityXLS\2017SEP_RevenueTemplateTEST.xlsx";          // REVENUE data 
                 //importFileUrl = @"C:\Downloads\FidelityXLS\Portfolio_PositionsTEST_7_Fidelity.xlsx";   // PORTFOLIO data
             }
 
             if (importFile.IsRevenueData)
             {
-                var portFolioRevenueToBeInserted = ParseRevenueSpreadsheet(importFileUrl);
+                var assetCtrl = new AssetController(_repositoryAsset,_identityService,_repositoryInvestor);
+                var investorId = Utilities.GetInvestorId(_repositoryInvestor, _currentInvestor);
+                _existingInvestorAssets = await assetCtrl.GetByInvestorAllAssets(investorId) as OkNegotiatedContentResult<List<AssetIncomeVm>>;
+
+                // 12.14.17 - Ok ! use following as template example
+                if (_existingInvestorAssets != null)
+                {
+                    var res = _existingInvestorAssets.Content.Find(a => a.RevenueTickerSymbol == "ABBV" );
+                    var x = res.RevenueAccount; // IRA
+                }
+
+
+                var portfolioRevenueToBeInserted = ParseRevenueSpreadsheet(importFileUrl);
             }
             else
             {
@@ -96,7 +112,86 @@ namespace PIMS.Web.Api.Controllers
 
         private static IEnumerable<IncomeVm> ParseRevenueSpreadsheet(string filePath)
         {
-            // TODO:: 12.6.17 - Implementation WIP
+            var lastTickerProcessed = string.Empty;
+            var lastDateRecvdProcessed = string.Empty;
+            var lastAccountProcessed = string.Empty;
+            var newIncomeListing = new List<Income>();
+
+            try
+            {
+                var importFile = new FileInfo(filePath);
+
+                using (var package = new ExcelPackage(importFile))
+                {
+                    var workSheet = package.Workbook.Worksheets[1];
+                    var totalRows = workSheet.Dimension.End.Row;
+                    _assetCountToSave = totalRows;
+                    var totalColumns = workSheet.Dimension.End.Column;
+
+                    // Iterate XLS/CSV, ignoring column headings (row 1).
+                    for (var rowNum = 2; rowNum <= totalRows; rowNum++)
+                    {
+                        // Args: Cells[fromRow, fromCol, toRow, toCol]
+                        var row = workSheet.Cells[rowNum, 1, rowNum, totalColumns].Select(c => c.Value == null ? string.Empty : c.Value.ToString());
+                        var enumerableCells = row as string[] ?? row.ToArray();
+
+                        var newIncome = new Income();
+                        newIncome.IncomeId = Guid.NewGuid();
+                        //var x = _existingInvestorAssets.
+                        //newIncome.AssetId = _
+                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                
+            }
+
+        
+
+            //            var responseAsset = assetCtrl.GetByTicker(enumerableCells.ElementAt(1).Trim());
+
+
+           //            // New asset creation expected for "BadRequest" response, due to no existing asset found for logged in investor.
+           //            if (responseAsset.Result.ToString().IndexOf("Bad", StringComparison.Ordinal) > 0) {
+           //                if (lastTickerProcessed != enumerableCells.ElementAt(1).Trim()) {
+           //                    newAsset = new AssetCreationVm();
+           //                    newAsset.AssetTicker = enumerableCells.ElementAt(1);
+           //                    newAsset.AssetDescription = enumerableCells.ElementAt(2).Length >= 49
+           //                        ? enumerableCells.ElementAt(2).Substring(0, 49)
+           //                        : enumerableCells.ElementAt(2);
+           //                    // TODO: Allow investor to assign asset classification.
+           //                    // Investor to assign/update classification as needed, e.g. CS [common stock], via UI.
+           //                    newAsset.AssetClassification = "TBA"; // aka - to be assigned
+           //                    newAsset.AssetClassificationId = "1b42ade9-27b9-45c7-b63f-7ef97d6cad8b";
+           //                    // InvestorId to be initialized during asset creation.
+           //                    newAsset.AssetInvestorId = string.Empty;
+           //                    newAsset.ProfileToCreate = InitializeProfile(newAsset.AssetTicker.Trim());
+           //                    newAsset.PositionsCreated = InitializePositions(new List<PositionVm>(), enumerableCells);
+           //                    lastTickerProcessed = enumerableCells.ElementAt(1).Trim();
+           //                    assetsToCreate.Add(newAsset);
+           //                } else
+           //                    // Asset header initialization bypassed; processing same ticker, different account(s). Created
+           //                    // position(s) collection passed for new position addition.
+           //                    newAsset.PositionsCreated = InitializePositions(newAsset.PositionsCreated, enumerableCells);
+           //            } else {
+           //                // Capture attempted duplicate asset insertion.
+           //                _assetNotAddedListing += enumerableCells.ElementAt(1).Trim() + " ,";
+           //                lastTickerProcessed = enumerableCells.ElementAt(1).Trim();
+           //                responseAsset.Dispose();
+           //                continue;
+           //            }
+
+           //            //lastTickerProcessed = enumerableCells.ElementAt(1).Trim();
+           //            // DON'T re-Add asset if ticker is the same BUG here
+           //            //assetsToCreate.Add(newAsset);
+           //            responseAsset.Dispose();
+           //        }
+           //    }
+           //}
+           //catch (Exception e) {
+           //    Console.WriteLine(string.Format("Portfolio population aborted, due to {0}", e.Message));
+           //}
             return null;
         }
 
@@ -290,5 +385,16 @@ namespace PIMS.Web.Api.Controllers
         }
 
 
+        private static List<object> FetchAssetProfilesForInvestor(Guid investorId)
+        {
+            var profileCtrl = new ProfileController(_repositoryProfile);
+            var assetCtrl = new AssetController(_repositoryAsset,_identityService, _repositoryInvestor);
+
+            var allProfiles = profileCtrl.GetAllPersistedProfiles();
+            //var allAssets = assetCtrl.
+
+            return null;
+        }
+        
     }
 }
