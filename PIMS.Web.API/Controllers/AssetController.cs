@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Results;
@@ -110,6 +111,37 @@ namespace PIMS.Web.Api.Controllers
             return Ok(assetSummary);                         
         }
 
+
+        [HttpGet]
+        [Route("~/api/AllAssets/{investorId}")]
+        public async Task<IHttpActionResult> GetByInvestorAllAssets(Guid investorId)
+        {
+            IQueryable<Asset> existingInvestorAssets;
+            try
+            {
+                existingInvestorAssets = await Task.FromResult(_repository.Retreive(a => a.InvestorId == investorId));
+            }
+            catch (Exception ex) {
+                return BadRequest("Error retreiving assets for investor due to: " + ex.Message);
+            }
+
+            if (existingInvestorAssets == null || !existingInvestorAssets.Any())
+                return BadRequest("Error retreiving assets for investor.");
+
+            var cachedInvestorAssets = new List<AssetIncomeVm>();
+            foreach (var asset in existingInvestorAssets)
+            {
+                var investorAsset = new AssetIncomeVm();
+                investorAsset.RevenueTickerSymbol = asset.Profile.TickerSymbol;
+                investorAsset.RevenueAssetId = asset.AssetId;
+                investorAsset.RevenuePositionId = asset.Positions.First().PositionId;
+                investorAsset.RevenueAccount = asset.Positions.First().Account.AccountTypeDesc;
+
+                cachedInvestorAssets.Add(investorAsset);
+            }
+
+            return Ok(cachedInvestorAssets);
+        }
 
 
         [HttpGet]
