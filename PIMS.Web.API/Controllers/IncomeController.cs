@@ -75,6 +75,8 @@ namespace PIMS.Web.Api.Controllers
 
 
 
+
+
         #region Non-Asset specific general portfolio Income query 'GET' actions:
 
         // TODO: Obsolete
@@ -755,7 +757,23 @@ namespace PIMS.Web.Api.Controllers
         #endregion
 
 
+        [HttpGet]
+        [Route("")]
+        public async Task<IHttpActionResult> FindIncomeDuplicates(string[] criteria)
+        {
+            // Required 'criteria' indices:  [0]-PositionId, [1]-DateReceived, [2]-Amt.Received
+            var currentInvestor = _identityService.CurrentUser;
 
+            // Fiddler debugging
+            if (currentInvestor == null)
+                currentInvestor = "rpasch@rpclassics.net";
+
+            IQueryable<Income> duplicateIncomes;
+
+            // TODO: 12.18.17 - to be continued; use GetIncomeByAsset() as a template. We wil call this fx before persisting new income records.
+
+            return null;
+        }
 
 
 
