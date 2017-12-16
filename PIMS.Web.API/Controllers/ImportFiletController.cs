@@ -87,16 +87,9 @@ namespace PIMS.Web.Api.Controllers
                 var assetCtrl = new AssetController(_repositoryAsset,_identityService,_repositoryInvestor);
                 var investorId = Utilities.GetInvestorId(_repositoryInvestor, _currentInvestor);
                 _existingInvestorAssets = await assetCtrl.GetByInvestorAllAssets(investorId) as OkNegotiatedContentResult<List<AssetIncomeVm>>;
-
-                // 12.14.17 - Ok ! use following as template example
-                if (_existingInvestorAssets != null)
-                {
-                    var res = _existingInvestorAssets.Content.Find(a => a.RevenueTickerSymbol == "ABBV" );
-                    var x = res.RevenueAccount; // IRA
-                }
-
-
                 var portfolioRevenueToBeInserted = ParseRevenueSpreadsheet(importFileUrl);
+                if (portfolioRevenueToBeInserted == null)
+                    return BadRequest("Error(s) recording income.");
             }
             else
             {
@@ -110,7 +103,8 @@ namespace PIMS.Web.Api.Controllers
         }
 
 
-        private static IEnumerable<IncomeVm> ParseRevenueSpreadsheet(string filePath)
+
+        private static IEnumerable<Income> ParseRevenueSpreadsheet(string filePath)
         {
             var lastTickerProcessed = string.Empty;
             var lastDateRecvdProcessed = string.Empty;
@@ -128,71 +122,36 @@ namespace PIMS.Web.Api.Controllers
                     _assetCountToSave = totalRows;
                     var totalColumns = workSheet.Dimension.End.Column;
 
-                    // Iterate XLS/CSV, ignoring column headings (row 1).
                     for (var rowNum = 2; rowNum <= totalRows; rowNum++)
                     {
-                        // Args: Cells[fromRow, fromCol, toRow, toCol]
                         var row = workSheet.Cells[rowNum, 1, rowNum, totalColumns].Select(c => c.Value == null ? string.Empty : c.Value.ToString());
                         var enumerableCells = row as string[] ?? row.ToArray();
+                        var xlsTicker = enumerableCells.ElementAt(3).Trim();
+                        var xlsAccount = Utilities.ParseAccountTypeFromDescription(enumerableCells.ElementAt(1).Trim());
+                        var currentXlsAsset = _existingInvestorAssets.Content.Find(a => a.RevenueTickerSymbol == xlsTicker && a.RevenueAccount == xlsAccount);
+
+                        // Ignore if no Position yet established for this account.
+                        if (currentXlsAsset == null) continue;
 
                         var newIncome = new Income();
                         newIncome.IncomeId = Guid.NewGuid();
-                        //var x = _existingInvestorAssets.
-                        //newIncome.AssetId = _
+                        newIncome.AssetId = currentXlsAsset.RevenueAssetId;
+                        newIncome.IncomePositionId = currentXlsAsset.RevenuePositionId;
+                        newIncome.DateRecvd = DateTime.Parse(enumerableCells.ElementAt(0));
+                        newIncome.Actual = decimal.Parse(enumerableCells.ElementAt(4));
+                        newIncome.LastUpdate = DateTime.Now;
+
+                        newIncomeListing.Add(newIncome);
                     }
                 }
             }
             catch(Exception ex)
             {
-                
+                return null;
             }
 
         
-
-            //            var responseAsset = assetCtrl.GetByTicker(enumerableCells.ElementAt(1).Trim());
-
-
-           //            // New asset creation expected for "BadRequest" response, due to no existing asset found for logged in investor.
-           //            if (responseAsset.Result.ToString().IndexOf("Bad", StringComparison.Ordinal) > 0) {
-           //                if (lastTickerProcessed != enumerableCells.ElementAt(1).Trim()) {
-           //                    newAsset = new AssetCreationVm();
-           //                    newAsset.AssetTicker = enumerableCells.ElementAt(1);
-           //                    newAsset.AssetDescription = enumerableCells.ElementAt(2).Length >= 49
-           //                        ? enumerableCells.ElementAt(2).Substring(0, 49)
-           //                        : enumerableCells.ElementAt(2);
-           //                    // TODO: Allow investor to assign asset classification.
-           //                    // Investor to assign/update classification as needed, e.g. CS [common stock], via UI.
-           //                    newAsset.AssetClassification = "TBA"; // aka - to be assigned
-           //                    newAsset.AssetClassificationId = "1b42ade9-27b9-45c7-b63f-7ef97d6cad8b";
-           //                    // InvestorId to be initialized during asset creation.
-           //                    newAsset.AssetInvestorId = string.Empty;
-           //                    newAsset.ProfileToCreate = InitializeProfile(newAsset.AssetTicker.Trim());
-           //                    newAsset.PositionsCreated = InitializePositions(new List<PositionVm>(), enumerableCells);
-           //                    lastTickerProcessed = enumerableCells.ElementAt(1).Trim();
-           //                    assetsToCreate.Add(newAsset);
-           //                } else
-           //                    // Asset header initialization bypassed; processing same ticker, different account(s). Created
-           //                    // position(s) collection passed for new position addition.
-           //                    newAsset.PositionsCreated = InitializePositions(newAsset.PositionsCreated, enumerableCells);
-           //            } else {
-           //                // Capture attempted duplicate asset insertion.
-           //                _assetNotAddedListing += enumerableCells.ElementAt(1).Trim() + " ,";
-           //                lastTickerProcessed = enumerableCells.ElementAt(1).Trim();
-           //                responseAsset.Dispose();
-           //                continue;
-           //            }
-
-           //            //lastTickerProcessed = enumerableCells.ElementAt(1).Trim();
-           //            // DON'T re-Add asset if ticker is the same BUG here
-           //            //assetsToCreate.Add(newAsset);
-           //            responseAsset.Dispose();
-           //        }
-           //    }
-           //}
-           //catch (Exception e) {
-           //    Console.WriteLine(string.Format("Portfolio population aborted, due to {0}", e.Message));
-           //}
-            return null;
+            return newIncomeListing;
         }
 
 
