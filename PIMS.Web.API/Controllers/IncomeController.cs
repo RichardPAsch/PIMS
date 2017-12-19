@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Web.Http;
 using FluentNHibernate.Conventions;
@@ -758,21 +759,24 @@ namespace PIMS.Web.Api.Controllers
 
 
         [HttpGet]
-        [Route("")]
-        public async Task<IHttpActionResult> FindIncomeDuplicates(string[] criteria)
+        [Route("~/api/Income/Duplicates/{positionId}/{dateRecvd}/{amountRecvd}/")]
+        public async Task<IHttpActionResult> FindIncomeDuplicates(string positionId, string dateRecvd, string amountRecvd)
         {
-            // Required 'criteria' indices:  [0]-PositionId, [1]-DateReceived, [2]-Amt.Received
-            var currentInvestor = _identityService.CurrentUser;
-
             // Fiddler debugging
-            if (currentInvestor == null)
-                currentInvestor = "rpasch@rpclassics.net";
+            var currentInvestor = _identityService.CurrentUser ?? "maryblow@yahoo.com";
+            
+            var duplicateIncomes = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
+                                                                         .SelectMany(r => r.Revenue)
+                                                                         .AsQueryable()
+                                                                         .Where(r => r.IncomePositionId == Guid.Parse(positionId.Trim())
+                                                                                  && r.DateRecvd == DateTime.Parse(dateRecvd.Trim())
+                                                                                  && r.Actual == decimal.Parse(amountRecvd.Trim()))
+            );
 
-            IQueryable<Income> duplicateIncomes;
+            if (duplicateIncomes.Any())
+                return BadRequest("Duplicate income data found.");
 
-            // TODO: 12.18.17 - to be continued; use GetIncomeByAsset() as a template. We wil call this fx before persisting new income records.
-
-            return null;
+            return Ok("No duplicate income found.");
         }
 
 
