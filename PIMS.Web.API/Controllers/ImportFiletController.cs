@@ -41,6 +41,7 @@ namespace PIMS.Web.Api.Controllers
         private static string _currentInvestor;
         private static IGenericRepository<Profile> _repositoryProfile;
         private static IGenericRepository<Asset> _repositoryAsset;
+        private static IGenericRepository<Income> _repositoryIncome;
         private static string _assetNotAddedListing = string.Empty;
         private static int _assetCountToSave = 0;
         private static string _serverBaseUri = string.Empty;
@@ -49,13 +50,15 @@ namespace PIMS.Web.Api.Controllers
 
         public ImportFileController(ImportFileRepository fileRepository,
             IGenericRepository<Investor> repositoryInvestor, IPimsIdentityService identityService,
-            IGenericRepository<Profile> repositoryProfile, IGenericRepository<Asset> repositoryAsset)
+            IGenericRepository<Profile> repositoryProfile, IGenericRepository<Asset> repositoryAsset,
+            IGenericRepository<Income> repositoryIncome)
         {
             _fileRepository = fileRepository;
             _repositoryInvestor = repositoryInvestor;
             _identityService = identityService;
             _repositoryProfile = repositoryProfile;
             _repositoryAsset = repositoryAsset;
+            _repositoryIncome = repositoryIncome;
         }
 
         //  public async Task<IHttpActionResult> ProcessImportFile([FromBody] string importFileUrl)
@@ -130,9 +133,14 @@ namespace PIMS.Web.Api.Controllers
                         var xlsAccount = Utilities.ParseAccountTypeFromDescription(enumerableCells.ElementAt(1).Trim());
                         var currentXlsAsset = _existingInvestorAssets.Content.Find(a => a.RevenueTickerSymbol == xlsTicker && a.RevenueAccount == xlsAccount);
 
-                        // Ignore if no Position yet established for this account.
+                        // Ignore if this Position is not affiliated with this account.
                         if (currentXlsAsset == null) continue;
 
+                        // TODO: Swap 1 or 2 Income records to use rpasch@rpclassics.net as the investor in order to test XLS records for duplicates.
+                        var incomeCtrl = new IncomeController(_identityService,_repositoryAsset,_repositoryInvestor,_repositoryIncome);
+                        var dupIncomeCheck = incomeCtrl.FindIncomeDuplicates(currentXlsAsset.RevenuePositionId.ToString(), enumerableCells.ElementAt(0), enumerableCells.ElementAt(4));
+
+                        if (dupIncomeCheck.Status != (TaskStatus) 200) continue;
                         var newIncome = new Income();
                         newIncome.IncomeId = Guid.NewGuid();
                         newIncome.AssetId = currentXlsAsset.RevenueAssetId;
