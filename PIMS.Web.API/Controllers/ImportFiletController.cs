@@ -21,6 +21,7 @@ using Microsoft.AspNet.Identity;
 using NHibernate.Criterion;
 using NHibernate.Linq;
 using NHibernate.Mapping;
+using NHibernate.Type;
 using NHibernate.Util;
 using OfficeOpenXml;
 using PIMS.Core.Models;
@@ -46,6 +47,10 @@ namespace PIMS.Web.Api.Controllers
         private static int _assetCountToSave = 0;
         private static string _serverBaseUri = string.Empty;
         private static OkNegotiatedContentResult<List<AssetIncomeVm>> _existingInvestorAssets;
+        private static bool _isDuplicateIncomeData;
+        private static int _totalXlsIncomeRecordsToSave = 0;
+        private static int _totalXlsIncomeRecordsSaved = 0;
+        private static string _xlsIncomeRecordsOmitted = string.Empty;
 
 
         public ImportFileController(ImportFileRepository fileRepository,
@@ -53,15 +58,16 @@ namespace PIMS.Web.Api.Controllers
             IGenericRepository<Profile> repositoryProfile, IGenericRepository<Asset> repositoryAsset,
             IGenericRepository<Income> repositoryIncome)
         {
-            _fileRepository = fileRepository;
-            _repositoryInvestor = repositoryInvestor;
-            _identityService = identityService;
-            _repositoryProfile = repositoryProfile;
-            _repositoryAsset = repositoryAsset;
-            _repositoryIncome = repositoryIncome;
+                                    _fileRepository = fileRepository;
+                                    _repositoryInvestor = repositoryInvestor;
+                                    _identityService = identityService;
+                                    _repositoryProfile = repositoryProfile;
+                                    _repositoryAsset = repositoryAsset;
+                                    _repositoryIncome = repositoryIncome;
         }
 
-        //  public async Task<IHttpActionResult> ProcessImportFile([FromBody] string importFileUrl)
+
+  
         [HttpPost]
         [Route("")]
         public async Task<IHttpActionResult> ProcessImportFile([FromBody] ImportFileVm importFile)
@@ -93,6 +99,8 @@ namespace PIMS.Web.Api.Controllers
                 var portfolioRevenueToBeInserted = ParseRevenueSpreadsheet(importFileUrl);
                 if (portfolioRevenueToBeInserted == null)
                     return BadRequest("Error(s) recording income.");
+
+                // TODO: 12.20 - implement PersistIncomeData().
             }
             else
             {
@@ -109,10 +117,7 @@ namespace PIMS.Web.Api.Controllers
 
         private static IEnumerable<Income> ParseRevenueSpreadsheet(string filePath)
         {
-            var lastTickerProcessed = string.Empty;
-            var lastDateRecvdProcessed = string.Empty;
-            var lastAccountProcessed = string.Empty;
-            var newIncomeListing = new List<Income>();
+           var newIncomeListing = new List<Income>();
 
             try
             {
@@ -136,11 +141,19 @@ namespace PIMS.Web.Api.Controllers
                         // Ignore if this Position is not affiliated with this account.
                         if (currentXlsAsset == null) continue;
 
-                        // TODO: Swap 1 or 2 Income records to use rpasch@rpclassics.net as the investor in order to test XLS records for duplicates.
                         var incomeCtrl = new IncomeController(_identityService,_repositoryAsset,_repositoryInvestor,_repositoryIncome);
-                        var dupIncomeCheck = incomeCtrl.FindIncomeDuplicates(currentXlsAsset.RevenuePositionId.ToString(), enumerableCells.ElementAt(0), enumerableCells.ElementAt(4));
+                        _isDuplicateIncomeData = incomeCtrl.FindIncomeDuplicates(currentXlsAsset.RevenuePositionId.ToString(), enumerableCells.ElementAt(0), enumerableCells.ElementAt(4)) 
+                                                           .Result;
 
-                        if (dupIncomeCheck.Status != (TaskStatus) 200) continue;
+                        if (_isDuplicateIncomeData)
+                        {
+                            if(_xlsIncomeRecordsOmitted == string.Empty)
+                                _xlsIncomeRecordsOmitted +=  xlsTicker;
+                            else
+                                _xlsIncomeRecordsOmitted += ", " + xlsTicker;
+                           
+                            continue;
+                        }
                         var newIncome = new Income();
                         newIncome.IncomeId = Guid.NewGuid();
                         newIncome.AssetId = currentXlsAsset.RevenueAssetId;
@@ -150,14 +163,15 @@ namespace PIMS.Web.Api.Controllers
                         newIncome.LastUpdate = DateTime.Now;
 
                         newIncomeListing.Add(newIncome);
+                        _totalXlsIncomeRecordsToSave += 1;
+                        incomeCtrl.Dispose();
                     }
                 }
             }
-            catch(Exception ex)
+            catch(Exception)
             {
                 return null;
             }
-
         
             return newIncomeListing;
         }
