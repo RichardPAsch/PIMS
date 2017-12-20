@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Results;
 using FluentNHibernate.Conventions;
 //using NHibernate.Exceptions;
 using PIMS.Core.Models;
@@ -30,8 +31,6 @@ namespace PIMS.Web.Api.Controllers
         private int _counter = 1;
         private decimal _runningYtdTotal;
         private decimal[] _incomeHistory;
-
-        //const string Culture = "CultureInfo.InvariantCulture";
 
 
         #region Development Notes:
@@ -760,10 +759,10 @@ namespace PIMS.Web.Api.Controllers
 
         [HttpGet]
         [Route("~/api/Income/Duplicates/{positionId}/{dateRecvd}/{amountRecvd}/")]
-        public async Task<IHttpActionResult> FindIncomeDuplicates(string positionId, string dateRecvd, string amountRecvd)
+        public async Task<bool> FindIncomeDuplicates(string positionId, string dateRecvd, string amountRecvd)
         {
             // Fiddler debugging
-            var currentInvestor = _identityService.CurrentUser ?? "maryblow@yahoo.com";
+            var currentInvestor = _identityService.CurrentUser ?? "rpasch@rpclassics.net";
             
             var duplicateIncomes = await Task.FromResult(_repositoryAsset.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
                                                                          .SelectMany(r => r.Revenue)
@@ -773,10 +772,7 @@ namespace PIMS.Web.Api.Controllers
                                                                                   && r.Actual == decimal.Parse(amountRecvd.Trim()))
             );
 
-            if (duplicateIncomes.Any())
-                return BadRequest("Duplicate income data found.");
-
-            return Ok("No duplicate income found.");
+            return duplicateIncomes.Any();
         }
 
 
