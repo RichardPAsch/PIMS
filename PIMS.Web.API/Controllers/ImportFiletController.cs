@@ -72,7 +72,7 @@ namespace PIMS.Web.Api.Controllers
         [Route("")]
         public async Task<IHttpActionResult> ProcessImportFile([FromBody] ImportFileVm importFile)
         {
-            var statusResults = string.Empty;
+            string dataPersistenceResults;
             var importFileUrl = importFile.ImportFilePath;
             var requestUri = Request.RequestUri.AbsoluteUri;
 
@@ -98,19 +98,19 @@ namespace PIMS.Web.Api.Controllers
                 _existingInvestorAssets = await assetCtrl.GetByInvestorAllAssets(investorId) as OkNegotiatedContentResult<List<AssetIncomeVm>>;
                 var portfolioRevenueToBeInserted = ParseRevenueSpreadsheet(importFileUrl);
                 if (portfolioRevenueToBeInserted == null)
-                    return BadRequest("Error(s) recording income.");
+                    return BadRequest("Error obtaining income data to be saved.");
 
-                // TODO: 12.20 - implement PersistIncomeData().
+                dataPersistenceResults = PersistIncomeData(portfolioRevenueToBeInserted);
             }
             else
             {
                 var portfolioListingoToBeInserted = ParsePortfolioSpreadsheet(importFileUrl);
                 var listingoToBeInserted = portfolioListingoToBeInserted as AssetCreationVm[] ?? portfolioListingoToBeInserted.ToArray();
                 _assetCountToSave = listingoToBeInserted.Length;
-                statusResults = PersistPortfolioData(listingoToBeInserted);
+                dataPersistenceResults = PersistPortfolioData(listingoToBeInserted);
             }
 
-            return Ok(statusResults);
+            return Ok(dataPersistenceResults);
         }
 
 
@@ -366,16 +366,52 @@ namespace PIMS.Web.Api.Controllers
         }
 
 
-        private static List<object> FetchAssetProfilesForInvestor(Guid investorId)
+
+        private static string PersistIncomeData(IEnumerable<Income> incomeToSave)
         {
-            var profileCtrl = new ProfileController(_repositoryProfile);
-            var assetCtrl = new AssetController(_repositoryAsset,_identityService, _repositoryInvestor);
+            var savedIncomeRecordCount = 0;
+            var statusMsg = string.Empty;
+            var errorList = string.Empty;
 
-            var allProfiles = profileCtrl.GetAllPersistedProfiles();
-            //var allAssets = assetCtrl.
+            if (incomeToSave == null) throw new ArgumentNullException("incomeToSave");
 
-            return null;
+            using (var client = new HttpClient { BaseAddress = new Uri(_serverBaseUri) }) {
+                var revenueCollection = incomeToSave as Income[] ?? incomeToSave.ToArray();
+
+                foreach (var incomeRecord in revenueCollection)
+                {
+                    try{
+                        var x = client.PostAsJsonAsync("PIMS.Web.Api/api/Spreadsheet/Income", incomeRecord).Result;
+                        savedIncomeRecordCount += 1;
+                        statusMsg = string.Format("Income successfully recorded for {0} record(s) among submitted total of {1}.",
+                                                   savedIncomeRecordCount, revenueCollection.Length);
+                    }
+                    catch (Exception e) {
+                        if (e.InnerException == null) continue;
+                        if(errorList.IsEmpty())
+                            errorList += incomeRecord.IncomeAsset.Profile.TickerSymbol;
+                        else
+                            errorList += ", " + incomeRecord.IncomeAsset.Profile.TickerSymbol;
+
+                        statusMsg = "Error saving incomeRecord(s) for " + errorList;
+                    }
+                }
+            }
+
+            return statusMsg;
         }
+
+
+        //private static List<object> FetchAssetProfilesForInvestor(Guid investorId)
+        //{
+        //    var profileCtrl = new ProfileController(_repositoryProfile);
+        //    var assetCtrl = new AssetController(_repositoryAsset,_identityService, _repositoryInvestor);
+
+        //    var allProfiles = profileCtrl.GetAllPersistedProfiles();
+        //    //var allAssets = assetCtrl.
+
+        //    return null;
+        //}
         
     }
 }
