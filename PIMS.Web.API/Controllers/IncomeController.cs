@@ -910,6 +910,36 @@ namespace PIMS.Web.Api.Controllers
             return BadRequest(string.Format("No Income found matching Asset: {0}, Account: {1}, with income for dates: {2} to {3} ", ticker, accountType, startDate, endDate));
 
         }
+
+
+        [HttpPost]
+        [Route("~/api/Spreadsheet/Income")]
+        public async Task<IHttpActionResult> RecordIncomeFromSpreadsheet([FromBody] Income xlsIncomeRecord)
+        {
+            // Record multiple income records as a result of monthly XLS submittal of data.
+            if (!ModelState.IsValid) {
+                return ResponseMessage(new HttpResponseMessage {
+                                                                   StatusCode = HttpStatusCode.BadRequest,
+                                                                   ReasonPhrase = "Invalid income data received for monthly income recording. " + ModelState.Keys.First()
+                                                               });
+            }
+            
+            var currentInvestor = _identityService.CurrentUser;
+
+            // Allow for Fiddler debugging.
+            // TODO: For production, if no user is logged in, then exit.
+            if (currentInvestor == null)
+                currentInvestor = "rpasch@rpclassics.net";
+
+            if (ControllerContext.Request != null)
+                xlsIncomeRecord.Url = ControllerContext.Request.RequestUri.AbsoluteUri;
+
+            var isRecorded = await Task.FromResult(_repository.Create(xlsIncomeRecord));
+            if (!isRecorded)
+                return BadRequest("Unable to record income.");
+
+            return Created(xlsIncomeRecord.Url + "/" + xlsIncomeRecord.IncomeId, xlsIncomeRecord);  
+        }
         
 
 
@@ -917,6 +947,7 @@ namespace PIMS.Web.Api.Controllers
         [Route("")]
         public async Task<IHttpActionResult> CreateNewIncome2([FromBody]IncomeVm incomeData)
         {
+            // Record new single income as a result of investor creation via UI.
             if (!ModelState.IsValid) {
                 return ResponseMessage(new HttpResponseMessage {
                     StatusCode = HttpStatusCode.BadRequest,
@@ -928,7 +959,7 @@ namespace PIMS.Web.Api.Controllers
 
             // Allow for Fiddler debugging
             if (currentInvestor == null)
-                currentInvestor = "joeblow@yahoo.com";
+                currentInvestor = "rpasch@rpclassics.net";
                  //currentInvestor = "maryblow@yahoo.com";
 
             var currentInvestorId = Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim());
@@ -958,18 +989,19 @@ namespace PIMS.Web.Api.Controllers
             if (matchingPosition.First().PositionIncomes.Any())
             {
                 var existingIncome = matchingPosition.First().PositionIncomes.AsQueryable();
-                if (existingIncome.Any()) {
+                if (existingIncome.Any())
+                {
                     // Ignore any possible timestamps while looping thru existing income.
                     if (Enumerable.Any(existingIncome, record => record.DateRecvd.Month == DateTime.Parse(incomeData.DateReceived.ToString()).Month &&
                                                                  record.DateRecvd.Day == DateTime.Parse(incomeData.DateReceived.ToString()).Day &&
                                                                  record.DateRecvd.Year == DateTime.Parse(incomeData.DateReceived.ToString()).Year)) {
                         return ResponseMessage(new HttpResponseMessage {
-                            StatusCode = HttpStatusCode.Conflict,
-                            ReasonPhrase = "Duplicate income found for AssetId: "
-                                                + incomeData.AssetId
-                                                + " recorded on "
-                                                + string.Format("{0:M/dd/yyyy}", incomeData.DateReceived)
-                        });
+                                                                            StatusCode = HttpStatusCode.Conflict,
+                                                                            ReasonPhrase = "Duplicate income found for AssetId: "
+                                                                                                + incomeData.AssetId
+                                                                                                + " recorded on "
+                                                                                                + string.Format("{0:M/dd/yyyy}", incomeData.DateReceived)
+                                                                        });
                     }
                 }
             }
