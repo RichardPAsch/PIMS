@@ -1,28 +1,28 @@
 ﻿using System;
-using System.Collections;
+//using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
+//using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Text;
+//using System.Reflection;
+//using System.Runtime.CompilerServices;
+//using System.Text;
 using System.Threading.Tasks;
-using System.Web;
-using Microsoft.Office.Interop.Excel;
+//using System.Web;
+//using Microsoft.Office.Interop.Excel;
 using System.Web.Http;
-using System.Web.Http.Controllers;
+//using System.Web.Http.Controllers;
 using System.Web.Http.Results;
 using FluentNHibernate.Conventions;
-using FluentNHibernate.Utils;
-using Microsoft.AspNet.Identity;
-using NHibernate.Criterion;
-using NHibernate.Linq;
-using NHibernate.Mapping;
-using NHibernate.Type;
-using NHibernate.Util;
+//using FluentNHibernate.Utils;
+//using Microsoft.AspNet.Identity;
+//using NHibernate.Criterion;
+//using NHibernate.Linq;
+//using NHibernate.Mapping;
+//using NHibernate.Type;
+//using NHibernate.Util;
 using OfficeOpenXml;
 using PIMS.Core.Models;
 using PIMS.Core.Models.ViewModels;
@@ -73,6 +73,9 @@ namespace PIMS.Web.Api.Controllers
         public async Task<IHttpActionResult> ProcessImportFile([FromBody] ImportFileVm importFile)
         {
             string dataPersistenceResults;
+
+            //importFileUrl = @"C:\Downloads\FidelityXLS\2017SEP_RevenueTemplateTEST.xlsx";          // REVENUE data 
+            //importFileUrl = @"C:\Downloads\FidelityXLS\Portfolio_PositionsTEST_7_Fidelity.xlsx";   // PORTFOLIO data
             var importFileUrl = importFile.ImportFilePath;
             var requestUri = Request.RequestUri.AbsoluteUri;
 
@@ -84,11 +87,9 @@ namespace PIMS.Web.Api.Controllers
             if (_currentInvestor == null)
             {
                 //return BadRequest("Import aborted; Investor login required."); 
-
                 // un-comment during Fiddler testing
+                // TODO: in Production, exit if not logged in.
                 _currentInvestor = "rpasch@rpclassics.net";
-                //importFileUrl = @"C:\Downloads\FidelityXLS\2017SEP_RevenueTemplateTEST.xlsx";          // REVENUE data 
-                //importFileUrl = @"C:\Downloads\FidelityXLS\Portfolio_PositionsTEST_7_Fidelity.xlsx";   // PORTFOLIO data
             }
 
             if (importFile.IsRevenueData)
@@ -335,7 +336,7 @@ namespace PIMS.Web.Api.Controllers
 
         private static string PersistPortfolioData(IEnumerable<AssetCreationVm> portfolioToSave)
         {
-            var assetCountSaved = 0;
+            var savedAssetCount = 0;
             var statusMsg = string.Empty;
             var errorList = string.Empty;
 
@@ -349,15 +350,17 @@ namespace PIMS.Web.Api.Controllers
                     try
                     {
                         var httpResponseMessage = client.PostAsJsonAsync("PIMS.Web.Api/api/Asset", asset).Result;
-                        assetCountSaved += 1;
-                        statusMsg = string.Format("Sucessfully added {0}/{1} asset(s) as part of PIMS portfolio initialization.", assetCountSaved, _assetCountToSave);
+                        savedAssetCount += 1;
+                        statusMsg = string.Format("Sucessfully added {0}/{1} asset(s) as part of PIMS portfolio initialization.", savedAssetCount, _assetCountToSave);
                     }
                     catch (Exception e) {
-                        if (e.InnerException != null)
-                        {
-                            errorList += assetCreationVms.First().AssetTicker.Trim() + ", ";
-                            statusMsg = "Error saving asset(s) for " + errorList;
-                        }
+                        if (e.InnerException == null) continue;
+                        if (errorList.IsEmpty())
+                            errorList += assetCreationVms.First().AssetTicker.Trim();
+                        else
+                            errorList += ", " + assetCreationVms.First().AssetTicker.Trim();
+                        
+                        statusMsg = "Error saving asset(s) for " + errorList;
                     } 
                 }
              }
@@ -400,6 +403,8 @@ namespace PIMS.Web.Api.Controllers
 
             return statusMsg;
         }
+
+
 
 
         //private static List<object> FetchAssetProfilesForInvestor(Guid investorId)
