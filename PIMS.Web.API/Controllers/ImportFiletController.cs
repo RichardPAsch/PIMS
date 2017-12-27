@@ -97,10 +97,11 @@ namespace PIMS.Web.Api.Controllers
                 var investorId = Utilities.GetInvestorId(_repositoryInvestor, _currentInvestor);
                 _existingInvestorAssets = await assetCtrl.GetByInvestorAllAssets(investorId) as OkNegotiatedContentResult<List<AssetIncomeVm>>;
                 var portfolioRevenueToBeInserted = ParseRevenueSpreadsheet(importFileUrl);
-                if (portfolioRevenueToBeInserted == null)
-                    return BadRequest("Error obtaining income data to be saved.");
+                var revenueToBeInserted = portfolioRevenueToBeInserted as Income[] ?? portfolioRevenueToBeInserted.ToArray();
+                if (!revenueToBeInserted.Any() )
+                    return BadRequest("No income data saved; please check ticker symbol(s), amount(s), and/or account(s) for validity.");
 
-                dataPersistenceResults = PersistIncomeData(portfolioRevenueToBeInserted);
+                dataPersistenceResults = PersistIncomeData(revenueToBeInserted);
             }
             else
             {
@@ -128,6 +129,7 @@ namespace PIMS.Web.Api.Controllers
                     var totalRows = workSheet.Dimension.End.Row;
                     _assetsToSaveCount = totalRows;
                     var totalColumns = workSheet.Dimension.End.Column;
+                    _xlsIncomeRecordsOmitted = string.Empty;
 
                     for (var rowNum = 2; rowNum <= totalRows; rowNum++)
                     {
@@ -137,8 +139,16 @@ namespace PIMS.Web.Api.Controllers
                         var xlsAccount = Utilities.ParseAccountTypeFromDescription(enumerableCells.ElementAt(1).Trim());
                         var currentXlsAsset = _existingInvestorAssets.Content.Find(a => a.RevenueTickerSymbol == xlsTicker && a.RevenueAccount == xlsAccount);
 
-                        // Ignore if this Position is not affiliated with an account.
-                        if (currentXlsAsset == null) continue;
+                        // Ignore: either a bad ticker symbol, or no account was found to be affiliated with this position/asset.
+                        if (currentXlsAsset == null)
+                        {
+                            if (_xlsIncomeRecordsOmitted == string.Empty)
+                                _xlsIncomeRecordsOmitted += xlsTicker;
+                            else
+                                _xlsIncomeRecordsOmitted += ", " + xlsTicker;
+
+                            continue;
+                        }
 
                         var incomeCtrl = new IncomeController(_identityService,_repositoryAsset,_repositoryInvestor,_repositoryIncome);
                         _isDuplicateIncomeData = incomeCtrl.FindIncomeDuplicates(currentXlsAsset.RevenuePositionId.ToString(), enumerableCells.ElementAt(0), enumerableCells.ElementAt(4)) 
@@ -398,8 +408,8 @@ namespace PIMS.Web.Api.Controllers
                     try{
                         var x = client.PostAsJsonAsync("PIMS.Web.Api/api/Spreadsheet/Income", incomeRecord).Result;
                         savedIncomeRecordCount += 1;
-                        statusMsg = string.Format("Income successfully recorded for {0} record(s) among submitted total of {1}.",
-                                                   savedIncomeRecordCount, revenueCollection.Length);
+                        statusMsg = string.Format("Income successfully recorded for {0}/{1} record(s).", savedIncomeRecordCount, revenueCollection.Length);
+                        x.Dispose();
                     }
                     catch (Exception e) {
                         if (e.InnerException == null) continue;
@@ -408,9 +418,24 @@ namespace PIMS.Web.Api.Controllers
                         else
                             errorList += ", " + incomeRecord.IncomeAsset.Profile.TickerSymbol;
 
-                        statusMsg = "Error saving incomeRecord(s) for " + errorList;
+                        //statusMsg = "Error saving incomeRecord(s) for " + errorList;
                     }
                 }
+
+                // Return status to handle :
+                //   1. err text associated with either a bad ticker or no associated account, or
+                //   2. err text associated with error saving ticker data into db.
+                if (errorList.IsNotEmpty() && _xlsIncomeRecordsOmitted.Any())
+                    statusMsg = "Error(s) saving/recording income for: " + errorList 
+                                                                         + " and unable to process income for ticker(s): " 
+                                                                         + _xlsIncomeRecordsOmitted 
+                                                                         + ". Check account, amount, and/or ticker validity.";
+                else if (errorList.IsEmpty() && _xlsIncomeRecordsOmitted.Any())
+                    statusMsg = "Unable to process income for ticker(s): " + _xlsIncomeRecordsOmitted 
+                                                                           + ". Check account, amount, and/or ticker validity.";
+                if (errorList.IsNotEmpty() && _xlsIncomeRecordsOmitted.IsNotAny())
+                    statusMsg = "Error(s) saving/recording income for: " + errorList;
+                
             }
 
             return statusMsg;
@@ -418,17 +443,5 @@ namespace PIMS.Web.Api.Controllers
 
 
 
-
-        //private static List<object> FetchAssetProfilesForInvestor(Guid investorId)
-        //{
-        //    var profileCtrl = new ProfileController(_repositoryProfile);
-        //    var assetCtrl = new AssetController(_repositoryAsset,_identityService, _repositoryInvestor);
-
-        //    var allProfiles = profileCtrl.GetAllPersistedProfiles();
-        //    //var allAssets = assetCtrl.
-
-        //    return null;
-        //}
-        
     }
 }
