@@ -1,6 +1,7 @@
 ﻿using System;
 //using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 //using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -67,17 +68,14 @@ namespace PIMS.Web.Api.Controllers
         }
         
   
+
         [HttpPost]
         [Route("")]
         public async Task<IHttpActionResult> ProcessImportFile([FromBody] ImportFileVm importFile)
         {
             string dataPersistenceResults;
-
-            //importFileUrl = @"C:\Downloads\FidelityXLS\2017SEP_RevenueTemplateTEST.xlsx";          // REVENUE data 
-            //importFileUrl = @"C:\Downloads\FidelityXLS\Portfolio_PositionsTEST_7_Fidelity.xlsx";   // PORTFOLIO data
             var importFileUrl = importFile.ImportFilePath;
             var requestUri = Request.RequestUri.AbsoluteUri;
-
 
             _serverBaseUri = Utilities.GetWebServerBaseUri(requestUri);
             
@@ -110,7 +108,8 @@ namespace PIMS.Web.Api.Controllers
                 dataPersistenceResults = PersistPortfolioData(listingToBeInserted); 
             }
 
-            return Ok(dataPersistenceResults);
+            var responseVm = new HttpResponseVm{ ResponseMsg = dataPersistenceResults };
+            return Ok(responseVm);
         }
 
 
@@ -397,6 +396,7 @@ namespace PIMS.Web.Api.Controllers
             var savedIncomeRecordCount = 0;
             var statusMsg = string.Empty;
             var errorList = string.Empty;
+            var savedIncomeRecordTotal = 0.0;
 
             if (incomeToSave == null) throw new ArgumentNullException("incomeToSave");
 
@@ -408,7 +408,9 @@ namespace PIMS.Web.Api.Controllers
                     try{
                         var x = client.PostAsJsonAsync("PIMS.Web.Api/api/Spreadsheet/Income", incomeRecord).Result;
                         savedIncomeRecordCount += 1;
-                        statusMsg = string.Format("Income successfully recorded for {0}/{1} record(s).", savedIncomeRecordCount, revenueCollection.Length);
+                        savedIncomeRecordTotal += double.Parse(incomeRecord.Actual.ToString(CultureInfo.InvariantCulture));
+                        statusMsg = string.Format("Income successfully recorded for {0}/{1} record(s), totaling: ${2}", 
+                                                                       savedIncomeRecordCount, revenueCollection.Length, savedIncomeRecordTotal);
                         x.Dispose();
                     }
                     catch (Exception e) {
@@ -417,10 +419,9 @@ namespace PIMS.Web.Api.Controllers
                             errorList += incomeRecord.IncomeAsset.Profile.TickerSymbol;
                         else
                             errorList += ", " + incomeRecord.IncomeAsset.Profile.TickerSymbol;
-
-                        //statusMsg = "Error saving incomeRecord(s) for " + errorList;
                     }
                 }
+
 
                 // Return status to handle :
                 //   1. err text associated with either a bad ticker or no associated account, or
@@ -442,6 +443,6 @@ namespace PIMS.Web.Api.Controllers
         }
 
 
-
     }
+
 }
