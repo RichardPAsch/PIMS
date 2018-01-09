@@ -1,29 +1,13 @@
 ﻿using System;
-//using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
-//using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
-//using System.Reflection;
-//using System.Runtime.CompilerServices;
-//using System.Text;
 using System.Threading.Tasks;
-//using System.Web;
-//using Microsoft.Office.Interop.Excel;
 using System.Web.Http;
-//using System.Web.Http.Controllers;
 using System.Web.Http.Results;
 using FluentNHibernate.Conventions;
-//using FluentNHibernate.Utils;
-//using Microsoft.AspNet.Identity;
-//using NHibernate.Criterion;
-//using NHibernate.Linq;
-//using NHibernate.Mapping;
-//using NHibernate.Type;
-//using NHibernate.Util;
 using OfficeOpenXml;
 using PIMS.Core.Models;
 using PIMS.Core.Models.ViewModels;
@@ -50,7 +34,6 @@ namespace PIMS.Web.Api.Controllers
         private static OkNegotiatedContentResult<List<AssetIncomeVm>> _existingInvestorAssets;
         private static bool _isDuplicateIncomeData;
         private static int _totalXlsIncomeRecordsToSave = 0;
-        //private static int _totalXlsIncomeRecordsSaved = 0;
         private static string _xlsIncomeRecordsOmitted = string.Empty;
 
 
@@ -95,6 +78,9 @@ namespace PIMS.Web.Api.Controllers
                 var investorId = Utilities.GetInvestorId(_repositoryInvestor, _currentInvestor);
                 _existingInvestorAssets = await assetCtrl.GetByInvestorAllAssets(investorId) as OkNegotiatedContentResult<List<AssetIncomeVm>>;
                 var portfolioRevenueToBeInserted = ParseRevenueSpreadsheet(importFileUrl);
+                if(portfolioRevenueToBeInserted == null)
+                    return BadRequest("Invalid XLS data submitted.");
+
                 var revenueToBeInserted = portfolioRevenueToBeInserted as Income[] ?? portfolioRevenueToBeInserted.ToArray();
                 if (!revenueToBeInserted.Any() )
                     return BadRequest("No income data saved; please check ticker symbol(s), amount(s), and/or account(s) for validity.");
@@ -103,9 +89,12 @@ namespace PIMS.Web.Api.Controllers
             }
             else
             {
-                var portfolioListingToBeInserted = ParsePortfolioSpreadsheet(importFileUrl);
-                var listingToBeInserted = portfolioListingToBeInserted as AssetCreationVm[] ?? portfolioListingToBeInserted.ToArray();
-                dataPersistenceResults = PersistPortfolioData(listingToBeInserted); 
+                var portfolioListing = ParsePortfolioSpreadsheet(importFileUrl);
+                var portfolioAssetsToBeInserted = portfolioListing as AssetCreationVm[] ?? portfolioListing.ToArray();
+                if (!portfolioAssetsToBeInserted.Any() )
+                    return BadRequest("No portfolio data saved; please check XLSX spreadsheet for valid data.");
+
+                dataPersistenceResults = PersistPortfolioData(portfolioAssetsToBeInserted); 
             }
 
             var responseVm = new HttpResponseVm{ ResponseMsg = dataPersistenceResults };
@@ -132,6 +121,11 @@ namespace PIMS.Web.Api.Controllers
 
                     for (var rowNum = 2; rowNum <= totalRows; rowNum++)
                     {
+                        // Validate XLS
+                        var headerRow = workSheet.Cells[1, 1, rowNum, totalColumns].Select(c => c.Value == null ? string.Empty : c.Value.ToString());
+                        if (!IsCorrectSpreadsheetType(true, headerRow))
+                            return null;
+
                         var row = workSheet.Cells[rowNum, 1, rowNum, totalColumns].Select(c => c.Value == null ? string.Empty : c.Value.ToString());
                         var enumerableCells = row as string[] ?? row.ToArray();
                         var xlsTicker = enumerableCells.ElementAt(3).Trim();
@@ -185,6 +179,7 @@ namespace PIMS.Web.Api.Controllers
         }
 
 
+
         private static IEnumerable<AssetCreationVm> ParsePortfolioSpreadsheet(string filePath)
         {
             var assetsToCreate = new List<AssetCreationVm>();
@@ -206,6 +201,11 @@ namespace PIMS.Web.Api.Controllers
                     // Iterate XLS/CSV, ignoring column headings (row 1).
                     for (var rowNum = 2; rowNum <= totalRows; rowNum++)
                     {
+                        // Validate XLS
+                        var headerRow = workSheet.Cells[1, 1, rowNum, totalColumns].Select(c => c.Value == null ? string.Empty : c.Value.ToString());
+                        if (!IsCorrectSpreadsheetType(false, headerRow))
+                            return null;
+
                         // Args: Cells[fromRow, fromCol, toRow, toCol]
                         var row = workSheet.Cells[rowNum, 1, rowNum, totalColumns].Select(c => c.Value == null ? string.Empty : c.Value.ToString());
                         var enumerableCells = row as string[] ?? row.ToArray();
@@ -228,7 +228,6 @@ namespace PIMS.Web.Api.Controllers
                                     continue;
                                 }
 
-                                // InvestorId to be initialized during asset creation.
                                 newAsset = new AssetCreationVm
                                            {
                                                AssetTicker = enumerableCells.ElementAt(1),
@@ -237,6 +236,7 @@ namespace PIMS.Web.Api.Controllers
                                                        : enumerableCells.ElementAt(2),
                                                AssetClassification = "TBA",
                                                AssetClassificationId = "1b42ade9-27b9-45c7-b63f-7ef97d6cad8b",
+                                               // InvestorId to be initialized during asset creation.
                                                AssetInvestorId = string.Empty,
                                                ProfileToCreate = assetProfile,
                                                PositionsCreated = InitializePositions(new List<PositionVm>(), enumerableCells)
@@ -440,6 +440,27 @@ namespace PIMS.Web.Api.Controllers
             }
 
             return statusMsg;
+        }
+
+
+
+        private static bool IsCorrectSpreadsheetType(bool containsRevenueData, IEnumerable<string> xlsRow)
+        {
+            if (xlsRow == null) return false;
+            var enumerable = xlsRow as string[] ?? xlsRow.ToArray();
+            if (containsRevenueData)
+                return enumerable.ElementAt(0).Trim() == "Recvd Date" &&
+                       enumerable.ElementAt(1).Trim() == "Account" &&
+                       enumerable.ElementAt(2).Trim() == "Description"  &&
+                       enumerable.ElementAt(3).Trim() == "Symbol"  &&
+                       enumerable.ElementAt(4).Trim() == "Amount";
+
+
+            return enumerable.ElementAt(0).Trim() == "Account Name" &&
+                   enumerable.ElementAt(1).Trim() == "Symbol" &&
+                   enumerable.ElementAt(2).Trim() == "Description" &&
+                   enumerable.ElementAt(3).Trim() == "Quantity" &&
+                   enumerable.ElementAt(4).Trim() == "Last Price";
         }
 
 
