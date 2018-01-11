@@ -371,7 +371,7 @@ namespace PIMS.Web.Api.Controllers
                         if(savedAssetCount == _assetsToSaveCount)
                             statusMsg = string.Format("Sucessfully added {0}/{1} asset(s) as part of PIMS portfolio initialization.", savedAssetCount, _assetsToSaveCount);
                         else
-                            statusMsg = string.Format("Added {0}/{1} asset(s) as part of PIMS portfolio initialization; asset(s) omitted (ticker-Profile?): {2} ",
+                            statusMsg = string.Format("Added {0}/{1} asset(s) as part of PIMS portfolio initialization; asset(s) omitted: \n (ticker-Profile?): {2} ",
                                                                                             savedAssetCount, _assetsToSaveCount, _assetNotAddedListing);
                     }
                     catch (Exception e) {
@@ -381,7 +381,7 @@ namespace PIMS.Web.Api.Controllers
                         else
                             errorList += ", " + assetCreationVms.First().AssetTicker.Trim();
                         
-                        statusMsg = "Error saving asset(s) for " + errorList;
+                        statusMsg = "Error saving asset(s) for \n" + errorList;
                     } 
                 }
              }
@@ -427,15 +427,15 @@ namespace PIMS.Web.Api.Controllers
                 //   1. err text associated with either a bad ticker or no associated account, or
                 //   2. err text associated with error saving ticker data into db.
                 if (errorList.IsNotEmpty() && _xlsIncomeRecordsOmitted.Any())
-                    statusMsg = "Error(s) saving/recording income for: " + errorList 
-                                                                         + " and unable to process income for ticker(s): " 
+                    statusMsg = "Error(s) saving/recording income for: \n" + errorList 
+                                                                         + "\n and unable to process income for ticker(s): \n" 
                                                                          + _xlsIncomeRecordsOmitted 
-                                                                         + ". Check account, amount, and/or ticker validity.";
+                                                                         + ".\nCheck account, amount, and/or ticker validity.";
                 else if (errorList.IsEmpty() && _xlsIncomeRecordsOmitted.Any())
-                    statusMsg = "Unable to process income for ticker(s): " + _xlsIncomeRecordsOmitted 
-                                                                           + ". Check account, amount, and/or ticker validity.";
+                    statusMsg = "Unable to process income for ticker(s): \n" + _xlsIncomeRecordsOmitted 
+                                                                           + ".\n Check account, amount, and/or ticker validity.";
                 if (errorList.IsNotEmpty() && _xlsIncomeRecordsOmitted.IsNotAny())
-                    statusMsg = "Error(s) saving/recording income for: " + errorList;
+                    statusMsg = "Error(s) saving/recording income for: \n" + errorList;
                 
             }
 
