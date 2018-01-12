@@ -28,7 +28,6 @@ namespace PIMS.Web.Api.Controllers
         private static IGenericRepository<Profile> _repositoryProfile;
         private static IGenericRepository<Asset> _repositoryAsset;
         private static IGenericRepository<Income> _repositoryIncome;
-        private static string _assetNotAddedListing = string.Empty;
         private static int _assetsToSaveCount;
         private static string _serverBaseUri = string.Empty;
         private static OkNegotiatedContentResult<List<AssetIncomeVm>> _existingInvestorAssets;
@@ -184,6 +183,7 @@ namespace PIMS.Web.Api.Controllers
         {
             var assetsToCreate = new List<AssetCreationVm>();
             var assetCtrl = new AssetController(_repositoryAsset, _identityService, _repositoryInvestor);
+            var assetNotAddedListing = string.Empty;
 
             try
             {
@@ -220,10 +220,10 @@ namespace PIMS.Web.Api.Controllers
                                 // Bypass saving asset if no Profile fetched.
                                 if (assetProfile == null)
                                 {
-                                    if (_assetNotAddedListing == string.Empty)
-                                        _assetNotAddedListing = enumerableCells.ElementAt(1).Trim();
+                                    if (assetNotAddedListing == string.Empty)
+                                        assetNotAddedListing = enumerableCells.ElementAt(1).Trim();
                                     else
-                                        _assetNotAddedListing += ", " + enumerableCells.ElementAt(1).Trim();
+                                        assetNotAddedListing += ", " + enumerableCells.ElementAt(1).Trim();
 
                                     continue;
                                 }
@@ -255,7 +255,7 @@ namespace PIMS.Web.Api.Controllers
                         else
                         {
                             // Capture attempted duplicate asset insertion.
-                            _assetNotAddedListing += enumerableCells.ElementAt(1).Trim() + " ,";
+                            assetNotAddedListing += enumerableCells.ElementAt(1).Trim() + " ,";
                             lastTickerProcessed = enumerableCells.ElementAt(1).Trim();
                             responseAsset.Dispose();
                             continue;
@@ -356,6 +356,7 @@ namespace PIMS.Web.Api.Controllers
             var savedAssetCount = 0;
             var statusMsg = string.Empty;
             var errorList = string.Empty;
+            var assetNotAddedListing = string.Empty;
 
             if (portfolioToSave == null) throw new ArgumentNullException("portfolioToSave");
             
@@ -372,7 +373,7 @@ namespace PIMS.Web.Api.Controllers
                             statusMsg = string.Format("Sucessfully added {0}/{1} asset(s) as part of PIMS portfolio initialization.", savedAssetCount, _assetsToSaveCount);
                         else
                             statusMsg = string.Format("Added {0}/{1} asset(s) as part of PIMS portfolio initialization; asset(s) omitted: \n (ticker-Profile?): {2} ",
-                                                                                            savedAssetCount, _assetsToSaveCount, _assetNotAddedListing);
+                                                                                            savedAssetCount, _assetsToSaveCount, assetNotAddedListing);
                     }
                     catch (Exception e) {
                         if (e.InnerException == null) continue;
