@@ -84,13 +84,13 @@ namespace PIMS.Web.Api.Common
         }
 
 
-        public static decimal CalculateUnitCost(decimal costBasis, int units)
+        public static decimal CalculateUnitCost(decimal costBasis, decimal units)
         {
             return costBasis / units;
         }
 
 
-        public static decimal CalculateValuation(decimal mktPrice, int units) {
+        public static decimal CalculateValuation(decimal mktPrice, decimal units) {
             return mktPrice * units;
         }
 
