@@ -44,7 +44,7 @@ namespace PIMS.Core.Models
 
         [Required]
         [Range(0,10000)]
-        public virtual int Quantity { get; set; }
+        public virtual decimal Quantity { get; set; }
         
         [Required]
         public virtual DateTime LastUpdate { get; set; }

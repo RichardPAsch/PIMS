@@ -17,7 +17,7 @@ namespace PIMS.Core.Models
         
         public virtual string Action { get; set; }
 
-        public virtual int Units { get; set; }
+        public virtual decimal Units { get; set; }
 
         public virtual decimal MktPrice { get; set; }
 
