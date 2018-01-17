@@ -7,7 +7,7 @@ namespace PIMS.Core.Models.ViewModels
 
         public string PositionSummaryAccountType { get; set; }
 
-        public int PositionSummaryQty { get; set; }
+        public decimal PositionSummaryQty { get; set; }
 
         public decimal PositionSummaryGainLoss { get; set; }
 

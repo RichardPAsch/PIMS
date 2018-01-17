@@ -19,7 +19,7 @@ namespace PIMS.Core.Models.ViewModels
         //Position table.
         public string AccountTypePostEdit { get; set; }
         public string AccountTypePreEdit { get; set; }
-        public int Quantity { get; set; }
+        public decimal Quantity { get; set; }
         public decimal UnitPrice { get; set; }
 
         // Income table.

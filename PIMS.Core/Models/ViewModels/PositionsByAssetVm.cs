@@ -11,7 +11,7 @@ namespace PIMS.Core.Models.ViewModels
         public string PreEditPositionAccount { get; set; }
 
         [Required]
-        public int Qty { get; set; }
+        public decimal Qty { get; set; }
 
         [Required]
         public decimal UnitCost { get; set; }

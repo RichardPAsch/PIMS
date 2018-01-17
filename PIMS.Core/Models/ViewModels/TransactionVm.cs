@@ -8,7 +8,7 @@ namespace PIMS.Core.Models.ViewModels
         public Guid PositionId { get; set; }
         public Guid TransactionId { get; set; }
         public string TransactionEvent { get; set; } // e.g. 'B','S'
-        public int Units { get; set; }
+        public decimal Units { get; set; }
         public decimal MktPrice { get; set; }
         public decimal Fees { get; set; }
         public decimal UnitCost { get; set; }
