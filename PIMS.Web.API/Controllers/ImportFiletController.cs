@@ -28,12 +28,16 @@ namespace PIMS.Web.Api.Controllers
         private static IGenericRepository<Profile> _repositoryProfile;
         private static IGenericRepository<Asset> _repositoryAsset;
         private static IGenericRepository<Income> _repositoryIncome;
-        private static int _assetsToSaveCount;
+        private static int _recordsToSaveCount;
         private static string _serverBaseUri = string.Empty;
         private static OkNegotiatedContentResult<List<AssetIncomeVm>> _existingInvestorAssets;
         private static bool _isDuplicateIncomeData;
         private static int _totalXlsIncomeRecordsToSave = 0;
         private static string _xlsIncomeRecordsOmitted = string.Empty;
+        private static int _assetsWithAProfileCount = 0;
+        private static string _assetsNotAddedListing = string.Empty;
+        // Asset-Positions belonging to more than 1 account. 
+        private static int _multiplePositionCount = 0;
 
 
         public ImportFileController(ImportFileRepository fileRepository,
@@ -89,6 +93,9 @@ namespace PIMS.Web.Api.Controllers
             else
             {
                 var portfolioListing = ParsePortfolioSpreadsheet(importFileUrl);
+                if (portfolioListing == null)
+                    return BadRequest("Error processing Position(s) in one or more accounts.");
+
                 var portfolioAssetsToBeInserted = portfolioListing as AssetCreationVm[] ?? portfolioListing.ToArray();
                 if (!portfolioAssetsToBeInserted.Any() )
                     return BadRequest("No portfolio data saved; please check XLSX spreadsheet for valid data.");
@@ -114,7 +121,7 @@ namespace PIMS.Web.Api.Controllers
                 {
                     var workSheet = package.Workbook.Worksheets[1];
                     var totalRows = workSheet.Dimension.End.Row;
-                    _assetsToSaveCount = totalRows;
+                    _recordsToSaveCount = totalRows;
                     var totalColumns = workSheet.Dimension.End.Column;
                     _xlsIncomeRecordsOmitted = string.Empty;
 
@@ -181,9 +188,9 @@ namespace PIMS.Web.Api.Controllers
 
         private static IEnumerable<AssetCreationVm> ParsePortfolioSpreadsheet(string filePath)
         {
-            var assetsToCreate = new List<AssetCreationVm>();
+            var assetsToCreateList = new List<AssetCreationVm>();
             var assetCtrl = new AssetController(_repositoryAsset, _identityService, _repositoryInvestor);
-            var assetNotAddedListing = string.Empty;
+            _assetsWithAProfileCount = 0;
 
             try
             {
@@ -194,7 +201,7 @@ namespace PIMS.Web.Api.Controllers
                 {
                     var workSheet = package.Workbook.Worksheets[1];
                     var totalRows = workSheet.Dimension.End.Row;
-                    _assetsToSaveCount = totalRows -1;
+                    _recordsToSaveCount = totalRows -1;
                     var totalColumns = workSheet.Dimension.End.Column;
                     var newAsset = new AssetCreationVm();
 
@@ -211,58 +218,68 @@ namespace PIMS.Web.Api.Controllers
                         var enumerableCells = row as string[] ?? row.ToArray();
                         var responseAsset = assetCtrl.GetByTicker(enumerableCells.ElementAt(1).Trim());
 
-                        // New asset creation expected for "BadRequest" response; no existing asset should be found for logged in investor.
+                        // Allow new asset creation for "BadRequest" response, as no existing asset should be found for logged in investor.
                         if (responseAsset.Result.ToString().IndexOf("Bad", StringComparison.Ordinal) > 0)
                         {
-                            if (lastTickerProcessed != enumerableCells.ElementAt(1).Trim())
-                            {
+                            if (lastTickerProcessed != enumerableCells.ElementAt(1).Trim()) {
                                 var assetProfile = InitializeProfile(enumerableCells.ElementAt(1).Trim());
-                                // Bypass saving asset if no Profile fetched.
-                                if (assetProfile == null)
-                                {
-                                    if (assetNotAddedListing == string.Empty)
-                                        assetNotAddedListing = enumerableCells.ElementAt(1).Trim();
+                                
+                                // Bypass saving asset if no Profile fetched, e.g., due to invalid ticker symbol.
+                                if (assetProfile == null) {
+                                    if (_assetsNotAddedListing == string.Empty)
+                                        _assetsNotAddedListing = enumerableCells.ElementAt(1).Trim();
                                     else
-                                        assetNotAddedListing += ", " + enumerableCells.ElementAt(1).Trim();
+                                        _assetsNotAddedListing += ", " + enumerableCells.ElementAt(1).Trim();
 
                                     continue;
                                 }
 
-                                newAsset = new AssetCreationVm
-                                           {
-                                               AssetTicker = enumerableCells.ElementAt(1),
-                                               AssetDescription = enumerableCells.ElementAt(2).Length >= 49
-                                                       ? enumerableCells.ElementAt(2).Substring(0, 49)
-                                                       : enumerableCells.ElementAt(2),
-                                               AssetClassification = "TBA",
-                                               AssetClassificationId = "1b42ade9-27b9-45c7-b63f-7ef97d6cad8b",
-                                               // InvestorId to be initialized during asset creation.
-                                               AssetInvestorId = string.Empty,
-                                               ProfileToCreate = assetProfile,
-                                               PositionsCreated = InitializePositions(new List<PositionVm>(), enumerableCells)
-                                           };
+                                var newPositionsToBeSaved = InitializePositions(new List<PositionVm>(), enumerableCells);
+                                if (newPositionsToBeSaved == null)
+                                    return null;
+
+                                newAsset = new AssetCreationVm {
+                                    AssetTicker = enumerableCells.ElementAt(1),
+                                    AssetDescription = enumerableCells.ElementAt(2).Length >= 49
+                                                                        ? enumerableCells.ElementAt(2).Substring(0, 49)
+                                                                        : enumerableCells.ElementAt(2),
+                                    AssetClassification = "TBA",
+                                    AssetClassificationId = "1b42ade9-27b9-45c7-b63f-7ef97d6cad8b",
+                                    // InvestorId to be initialized during asset creation.
+                                    AssetInvestorId = string.Empty,
+                                    ProfileToCreate = assetProfile,
+                                    PositionsCreated = newPositionsToBeSaved
+                                };
                                 // TODO: Allow investor to assign asset classification.
                                 // Investor to assign/update classification as needed, e.g. CS [common stock], via UI. ;"TBA" (aka - to be assigned)
-                               
                                 lastTickerProcessed = enumerableCells.ElementAt(1).Trim();
-                                assetsToCreate.Add(newAsset);
+                                // if same position is next but with diff account, we don't want to save the new asset yet.
+                                assetsToCreateList.Add(newAsset);
                             }
                             else
-                                // Asset header initialization bypassed; processing same ticker, different account(s). Created
+                            {
+                                // Asset header initialization bypassed; processing same position, different account. Created
                                 // position(s) collection passed for new position addition.
-                                newAsset.PositionsCreated = InitializePositions(newAsset.PositionsCreated, enumerableCells);
+                                _multiplePositionCount += 1;
+                                //assetsToCreateList.Last().PositionsCreated.Add() 
+                                //newAsset.PositionsCreated = InitializePositions(newAsset.PositionsCreated, enumerableCells);
+                                assetsToCreateList.Last().PositionsCreated = InitializePositions(newAsset.PositionsCreated, enumerableCells);
+                                var debugTest = 2;
+                            }
+                            _assetsWithAProfileCount += 1;   
                         }
                         else
                         {
                             // Capture attempted duplicate asset insertion.
-                            assetNotAddedListing += enumerableCells.ElementAt(1).Trim() + " ,";
+                            _assetsNotAddedListing += enumerableCells.ElementAt(1).Trim() + " ,";
                             lastTickerProcessed = enumerableCells.ElementAt(1).Trim();
                             responseAsset.Dispose();
                             continue;
                         }
 
                         responseAsset.Dispose();
-                    }
+                    } // end of XLS row looping
+
                 }
             }
             catch (Exception e)
@@ -270,42 +287,21 @@ namespace PIMS.Web.Api.Controllers
                 Console.WriteLine(string.Format("Portfolio population aborted, due to {0}", e.Message));
             }
 
-            return assetsToCreate;
+            return assetsToCreateList;
         }
 
-
-
-        private static ProfileVm InitializeProfile(string ticker)
-        {
-            using (var client = new HttpClient {BaseAddress = new Uri(_serverBaseUri)})
-            {
-                try
-                {
-                    var response = client.GetAsync("Pims.Web.Api/api/Profile/" + ticker).Result;
-                    return !response.IsSuccessStatusCode ? null : response.Content.ReadAsAsync<ProfileVm>().Result;
-                }
-                catch (Exception e)
-                {
-                    //var debug = 1;
-                    if (e.InnerException != null) Console.WriteLine(e.InnerException.Message);
-                }
-            }
-
-            return null;
-        }
-
-
+        
 
         private static List<PositionVm> InitializePositions(List<PositionVm> existingPositions, string[] currentRow)
         {
-            if (existingPositions == null) throw new ArgumentNullException("existingPositions");
+            if (existingPositions == null) return null; // || existingPositions.Count == 0) return null;
             if (currentRow == null) throw new ArgumentNullException("currentRow");
 
             var mktPrice = decimal.Parse(currentRow.ElementAt(4));
-            var valuation = Utilities.CalculateValuation(decimal.Parse(currentRow.ElementAt(4)), int.Parse(currentRow.ElementAt(3)));
-            var fees = 0;
+            var valuation = Utilities.CalculateValuation(decimal.Parse(currentRow.ElementAt(4)), decimal.Parse(currentRow.ElementAt(3)));
+            decimal fees = 0;
             var costBasis = Utilities.CalculateCostBasis(fees, valuation);
-            var unitCost = Utilities.CalculateUnitCost(costBasis, int.Parse(currentRow.ElementAt(3)));
+            var unitCost = Utilities.CalculateUnitCost(costBasis, decimal.Parse(currentRow.ElementAt(3)));
 
             var newPositions = existingPositions;
 
@@ -313,10 +309,10 @@ namespace PIMS.Web.Api.Controllers
                 PreEditPositionAccount = currentRow.ElementAt(0),
                 PostEditPositionAccount = currentRow.ElementAt(0),
                 Status = "A",
-                Qty = int.Parse(currentRow.ElementAt(3)),
+                Qty = decimal.Parse(currentRow.ElementAt(3)),
                 UnitCost = costBasis,
                 // TODO: Allow user to assign date position added.
-                // Unlikely that position add date has been assigned, therefore allow for investor update via UI.
+                // Unlikely that position add date has been assigned, therefore assign an unlikely date & allow for investor update via UI.
                 DateOfPurchase = new DateTime(1950,1,1),
                 DatePositionAdded = null,
                 LastUpdate = DateTime.Now,
@@ -333,7 +329,7 @@ namespace PIMS.Web.Api.Controllers
                                         {
                                             PositionId = Guid.NewGuid(),
                                             TransactionId = Guid.NewGuid(),
-                                            Units = int.Parse(currentRow.ElementAt(3)),
+                                            Units = decimal.Parse(currentRow.ElementAt(3)),
                                             TransactionEvent = "C",
                                             MktPrice = mktPrice,
                                             Fees = fees,
@@ -351,12 +347,46 @@ namespace PIMS.Web.Api.Controllers
 
 
 
+        private static ProfileVm InitializeProfile(string ticker)
+        {
+            using (var client = new HttpClient {BaseAddress = new Uri(_serverBaseUri)})
+            {
+                try
+                {
+                    var response = client.GetAsync("Pims.Web.Api/api/Profile/" + ticker).Result;
+                    // Enforce the 50 char limitation on the description.
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var profile = response.Content.ReadAsAsync<ProfileVm>().Result;
+                        profile.TickerDescription = profile.TickerDescription.Substring(0, 50);
+                        return profile;
+                    }
+                }
+                catch (Exception e)
+                {
+                    //var debug = 1;
+                    if (e.InnerException != null) Console.WriteLine(e.InnerException.Message);
+                }
+            }
+
+            return null;
+        }
+
+
+
         private static string PersistPortfolioData(IEnumerable<AssetCreationVm> portfolioToSave)
         {
-            var savedAssetCount = 0;
+            /*
+                Note: Received 'portfolioToSave' collection contains all UNIQUE valid assets to be saved; valid in the sense 
+                      that each submitted asset has an associated Profile--either preexisting, or newly fetched. Collection will
+                      only contain unique ticker symbols, such that a ticker/asset/position may be affiliated with multiple
+                      accounts, e.g., CHW : (CMA & Roth-IRA). Positions are persisted accordingly.
+            */
+           
+            var savedRecordCount = 0;
             var statusMsg = string.Empty;
             var errorList = string.Empty;
-            var assetNotAddedListing = string.Empty;
+
 
             if (portfolioToSave == null) throw new ArgumentNullException("portfolioToSave");
             
@@ -368,12 +398,8 @@ namespace PIMS.Web.Api.Controllers
                     try
                     {
                         var httpResponseMessage = client.PostAsJsonAsync("PIMS.Web.Api/api/Asset", asset).Result;
-                        savedAssetCount += 1;
-                        if(savedAssetCount == _assetsToSaveCount)
-                            statusMsg = string.Format("Sucessfully added {0}/{1} asset(s) as part of PIMS portfolio initialization.", savedAssetCount, _assetsToSaveCount);
-                        else
-                            statusMsg = string.Format("Added {0}/{1} asset(s) as part of PIMS portfolio initialization; asset(s) omitted: \n (ticker-Profile?): {2} ",
-                                                                                            savedAssetCount, _assetsToSaveCount, assetNotAddedListing);
+                        if (httpResponseMessage.IsSuccessStatusCode)
+                            savedRecordCount += 1;
                     }
                     catch (Exception e) {
                         if (e.InnerException == null) continue;
@@ -382,9 +408,17 @@ namespace PIMS.Web.Api.Controllers
                         else
                             errorList += ", " + assetCreationVms.First().AssetTicker.Trim();
                         
-                        statusMsg = "Error saving asset(s) for \n" + errorList;
+                        return "Error saving asset(s) for \n" + errorList;
                     } 
                 }
+
+                if(savedRecordCount + _multiplePositionCount != _recordsToSaveCount)
+                    statusMsg = string.Format("Added {0}/{1} record(s) as part of PIMS portfolio initialization; ticker(s) omitted: \n{2} ",
+                                              savedRecordCount + _multiplePositionCount, _recordsToSaveCount, _assetsNotAddedListing);
+                else
+                    statusMsg = string.Format("Sucessfully added {0}/{1} record(s) as part of PIMS portfolio initialization.", 
+                                              savedRecordCount + _multiplePositionCount, _recordsToSaveCount);
+
              }
             
             return statusMsg;
