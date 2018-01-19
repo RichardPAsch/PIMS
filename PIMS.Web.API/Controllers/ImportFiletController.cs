@@ -28,7 +28,8 @@ namespace PIMS.Web.Api.Controllers
         private static IGenericRepository<Profile> _repositoryProfile;
         private static IGenericRepository<Asset> _repositoryAsset;
         private static IGenericRepository<Income> _repositoryIncome;
-        private static int _recordsToSaveCount;
+        private static int _totalXlsPositionRecordsToSave;
+        private static int _totalXlsPositionRecordsSaved; // unique Positions
         private static string _serverBaseUri = string.Empty;
         private static OkNegotiatedContentResult<List<AssetIncomeVm>> _existingInvestorAssets;
         private static bool _isDuplicateIncomeData;
@@ -36,8 +37,8 @@ namespace PIMS.Web.Api.Controllers
         private static string _xlsIncomeRecordsOmitted = string.Empty;
         private static int _assetsWithAProfileCount = 0;
         private static string _assetsNotAddedListing = string.Empty;
-        // Asset-Positions belonging to more than 1 account. 
-        private static int _multiplePositionCount = 0;
+        // Count the number Positions belonging to more than 1 account. 
+        private static int _extraPositionCount = 0;
 
 
         public ImportFileController(ImportFileRepository fileRepository,
@@ -121,7 +122,7 @@ namespace PIMS.Web.Api.Controllers
                 {
                     var workSheet = package.Workbook.Worksheets[1];
                     var totalRows = workSheet.Dimension.End.Row;
-                    _recordsToSaveCount = totalRows;
+                    _totalXlsPositionRecordsToSave = totalRows;
                     var totalColumns = workSheet.Dimension.End.Column;
                     _xlsIncomeRecordsOmitted = string.Empty;
 
@@ -191,6 +192,7 @@ namespace PIMS.Web.Api.Controllers
             var assetsToCreateList = new List<AssetCreationVm>();
             var assetCtrl = new AssetController(_repositoryAsset, _identityService, _repositoryInvestor);
             _assetsWithAProfileCount = 0;
+            _assetsNotAddedListing = string.Empty;
 
             try
             {
@@ -201,7 +203,7 @@ namespace PIMS.Web.Api.Controllers
                 {
                     var workSheet = package.Workbook.Worksheets[1];
                     var totalRows = workSheet.Dimension.End.Row;
-                    _recordsToSaveCount = totalRows -1;
+                    _totalXlsPositionRecordsToSave = totalRows -1;
                     var totalColumns = workSheet.Dimension.End.Column;
                     var newAsset = new AssetCreationVm();
 
@@ -253,18 +255,14 @@ namespace PIMS.Web.Api.Controllers
                                 // TODO: Allow investor to assign asset classification.
                                 // Investor to assign/update classification as needed, e.g. CS [common stock], via UI. ;"TBA" (aka - to be assigned)
                                 lastTickerProcessed = enumerableCells.ElementAt(1).Trim();
-                                // if same position is next but with diff account, we don't want to save the new asset yet.
                                 assetsToCreateList.Add(newAsset);
                             }
                             else
                             {
                                 // Asset header initialization bypassed; processing same position, different account. Created
                                 // position(s) collection passed for new position addition.
-                                _multiplePositionCount += 1;
-                                //assetsToCreateList.Last().PositionsCreated.Add() 
-                                //newAsset.PositionsCreated = InitializePositions(newAsset.PositionsCreated, enumerableCells);
+                                _extraPositionCount += 1;
                                 assetsToCreateList.Last().PositionsCreated = InitializePositions(newAsset.PositionsCreated, enumerableCells);
-                                var debugTest = 2;
                             }
                             _assetsWithAProfileCount += 1;   
                         }
@@ -312,7 +310,7 @@ namespace PIMS.Web.Api.Controllers
                 Qty = decimal.Parse(currentRow.ElementAt(3)),
                 UnitCost = costBasis,
                 // TODO: Allow user to assign date position added.
-                // Unlikely that position add date has been assigned, therefore assign an unlikely date & allow for investor update via UI.
+                // Position add date will not have been assigned, therefore assign an unlikely date & allow for investor update via UI.
                 DateOfPurchase = new DateTime(1950,1,1),
                 DatePositionAdded = null,
                 LastUpdate = DateTime.Now,
@@ -354,17 +352,18 @@ namespace PIMS.Web.Api.Controllers
                 try
                 {
                     var response = client.GetAsync("Pims.Web.Api/api/Profile/" + ticker).Result;
-                    // Enforce the 50 char limitation on the description.
                     if (response.IsSuccessStatusCode)
                     {
                         var profile = response.Content.ReadAsAsync<ProfileVm>().Result;
-                        profile.TickerDescription = profile.TickerDescription.Substring(0, 50);
+                        // Enforce the 50 char limitation on the ticker 'description' dB field.
+                        if(profile.TickerDescription.Length >= 50)
+                            profile.TickerDescription = profile.TickerDescription.Substring(0, 50);
+
                         return profile;
                     }
                 }
                 catch (Exception e)
                 {
-                    //var debug = 1;
                     if (e.InnerException != null) Console.WriteLine(e.InnerException.Message);
                 }
             }
@@ -383,8 +382,8 @@ namespace PIMS.Web.Api.Controllers
                       accounts, e.g., CHW : (CMA & Roth-IRA). Positions are persisted accordingly.
             */
            
-            var savedRecordCount = 0;
-            var statusMsg = string.Empty;
+            _totalXlsPositionRecordsSaved = 0;
+            string statusMsg;
             var errorList = string.Empty;
 
 
@@ -399,7 +398,7 @@ namespace PIMS.Web.Api.Controllers
                     {
                         var httpResponseMessage = client.PostAsJsonAsync("PIMS.Web.Api/api/Asset", asset).Result;
                         if (httpResponseMessage.IsSuccessStatusCode)
-                            savedRecordCount += 1;
+                            _totalXlsPositionRecordsSaved += 1;
                     }
                     catch (Exception e) {
                         if (e.InnerException == null) continue;
@@ -412,14 +411,23 @@ namespace PIMS.Web.Api.Controllers
                     } 
                 }
 
-                if(savedRecordCount + _multiplePositionCount != _recordsToSaveCount)
-                    statusMsg = string.Format("Added {0}/{1} record(s) as part of PIMS portfolio initialization; ticker(s) omitted: \n{2} ",
-                                              savedRecordCount + _multiplePositionCount, _recordsToSaveCount, _assetsNotAddedListing);
-                else
-                    statusMsg = string.Format("Sucessfully added {0}/{1} record(s) as part of PIMS portfolio initialization.", 
-                                              savedRecordCount + _multiplePositionCount, _recordsToSaveCount);
 
-             }
+                if (_totalXlsPositionRecordsSaved + _extraPositionCount == _totalXlsPositionRecordsToSave)
+                    statusMsg = string.Format("Sucessfully added {0}/{1} record(s) as part of PIMS portfolio initialization.", 
+                                                 _totalXlsPositionRecordsSaved + _extraPositionCount, _totalXlsPositionRecordsToSave);
+                else
+                {
+                    if (_assetsNotAddedListing.Any())
+                    {
+                        // Missing Profile data most likely accounts for skipped Asset processing.
+                        statusMsg = string.Format("Added {0}/{1} record(s) as part of PIMS portfolio initialization; Positions(s) omitted (Profile ?): \n{2} ",
+                            _totalXlsPositionRecordsSaved + _extraPositionCount, _totalXlsPositionRecordsToSave, _assetsNotAddedListing);
+                    }
+                    else
+                        statusMsg = string.Format("Added {0}/{1} record(s) as part of PIMS portfolio initialization, some records omitted & unrelated to missing Profile(s)", 
+                            _totalXlsPositionRecordsSaved + _extraPositionCount, _totalXlsPositionRecordsToSave); 
+                }
+            }
             
             return statusMsg;
         }
