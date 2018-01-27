@@ -215,11 +215,19 @@ namespace PIMS.Web.Api.Controllers
                         // Allow new asset creation for "BadRequest" response, as no existing asset should be found for logged in investor.
                         if (responseAsset.Result.ToString().IndexOf("Bad", StringComparison.Ordinal) > 0)
                         {
+                            ProfileVm assetProfilePersisted = null;
                             if (lastTickerProcessed != enumerableCells.ElementAt(1).Trim()) {
-                                var assetProfile = InitializeProfile(enumerableCells.ElementAt(1).Trim());
-                                
-                                // Bypass saving asset if no Profile fetched, e.g., due to invalid ticker symbol.
+
+                                // Profile/ticker check via Tiingo API.
+                                var assetProfile = InitializeProfile(enumerableCells.ElementAt(1).Trim(), false);
+
+                                // Profile/ticker check via database.
                                 if (assetProfile == null) {
+                                    assetProfilePersisted = InitializeProfile(enumerableCells.ElementAt(1).Trim(), true);
+                                }
+
+                                // Bypass saving asset if no Profile fetched, e.g., invalid ticker symbol or no custom Profile entry ?
+                                if (assetProfile == null && assetProfilePersisted == null) {
                                     if (_assetsNotAddedListing == string.Empty)
                                         _assetsNotAddedListing = enumerableCells.ElementAt(1).Trim();
                                     else
@@ -332,13 +340,19 @@ namespace PIMS.Web.Api.Controllers
 
 
 
-        private static ProfileVm InitializeProfile(string ticker)
+        private static ProfileVm InitializeProfile(string ticker, bool isDbProfileCheck)
         {
             using (var client = new HttpClient {BaseAddress = new Uri(_serverBaseUri)})
             {
+                HttpResponseMessage response = null;
                 try
                 {
-                    var response = client.GetAsync("Pims.Web.Api/api/Profile/" + ticker).Result;
+                    if(!isDbProfileCheck)
+                        response = client.GetAsync("Pims.Web.Api/api/Profile/" + ticker).Result;
+                    else
+                        response = client.GetAsync("Pims.Web.Api/api/Profile/persisted/" + ticker).Result;
+
+
                     if (response.IsSuccessStatusCode)
                     {
                         var profile = response.Content.ReadAsAsync<ProfileVm>().Result;
