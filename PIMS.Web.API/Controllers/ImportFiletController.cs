@@ -229,9 +229,9 @@ namespace PIMS.Web.Api.Controllers
                                 // Bypass saving asset if no Profile fetched, e.g., invalid ticker symbol or no custom Profile entry ?
                                 if (assetProfile == null && assetProfilePersisted == null) {
                                     if (_assetsNotAddedListing == string.Empty)
-                                        _assetsNotAddedListing = enumerableCells.ElementAt(1).Trim();
+                                        _assetsNotAddedListing = "[" + enumerableCells.ElementAt(1).Trim() + "]";
                                     else
-                                        _assetsNotAddedListing += ", " + enumerableCells.ElementAt(1).Trim();
+                                        _assetsNotAddedListing += ",  [" + enumerableCells.ElementAt(1).Trim() + "]";
 
                                     continue;
                                 }
@@ -249,7 +249,7 @@ namespace PIMS.Web.Api.Controllers
                                     AssetClassificationId = "1b42ade9-27b9-45c7-b63f-7ef97d6cad8b",
                                     // InvestorId to be initialized during asset creation.
                                     AssetInvestorId = string.Empty,
-                                    ProfileToCreate = assetProfile,
+                                    ProfileToCreate = assetProfile ?? assetProfilePersisted,
                                     PositionsCreated = newPositionsToBeSaved
                                 };
                                 // TODO: Allow investor to assign asset classification.
@@ -414,7 +414,7 @@ namespace PIMS.Web.Api.Controllers
                     statusMsg = string.Format("Portfolio initialization partially complete, with the following asset(s) omitted ( Profile ? ) : \n{0} ",
                                                                                                      _assetsNotAddedListing);
                 else
-                    statusMsg = "Portfolio initialization complete; \nall asset(s) successfully added.";
+                    statusMsg = "Portfolio initialization complete; \nasset(s) successfully added.";
             }
             
             return statusMsg;
