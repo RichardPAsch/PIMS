@@ -32,7 +32,7 @@ namespace PIMS.Web.Api.Controllers
         private static IGenericRepository<Profile> _repository;
         private const string BaseTiingoUrl = "https://api.tiingo.com/tiingo/daily/";
         private const string TiingoAccountToken = "95cff258ce493ec51fd10798b3e7f0657ee37740";
-        private DateTime profileLastUpdateStartDateInHours = DateTime.Now.AddHours(-72);
+        private DateTime cutOffDateTimeForProfileUpdate = DateTime.Now.AddHours(-72);
 
 
         public ProfileController(IGenericRepository<Profile> repository)
@@ -222,7 +222,7 @@ namespace PIMS.Web.Api.Controllers
                     if (existingProfile.Any())
                     {
                         // Profile update IF last updated > 72hrs ago.
-                        if (Convert.ToDateTime(existingProfile.First().LastUpdate) > profileLastUpdateStartDateInHours)
+                        if (Convert.ToDateTime(existingProfile.First().LastUpdate) > cutOffDateTimeForProfileUpdate)
                             return Ok(existingProfile.First());
 
                         // 11.17.2017 - Due to Tiingo API limitations, update just dividend rate.
