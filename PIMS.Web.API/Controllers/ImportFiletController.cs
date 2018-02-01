@@ -131,7 +131,8 @@ namespace PIMS.Web.Api.Controllers
                         var enumerableCells = row as string[] ?? row.ToArray();
                         var xlsTicker = enumerableCells.ElementAt(3).Trim();
                         var xlsAccount = Utilities.ParseAccountTypeFromDescription(enumerableCells.ElementAt(1).Trim());
-                        var currentXlsAsset = _existingInvestorAssets.Content.Find(a => a.RevenueTickerSymbol == xlsTicker && a.RevenueAccount == xlsAccount);
+                        var currentXlsAsset = _existingInvestorAssets
+                            .Content.Find(a => a.RevenueTickerSymbol == xlsTicker && string.Equals(a.RevenueAccount, xlsAccount, StringComparison.CurrentCultureIgnoreCase));
 
                         // Ignore: either a bad ticker symbol, or no account was found to be affiliated with this position/asset.
                         if (currentXlsAsset == null)
