@@ -131,6 +131,7 @@ namespace PIMS.Web.Api.Controllers
             var cachedInvestorAssets = new List<AssetIncomeVm>();
             foreach (var asset in existingInvestorAssets)
             {
+                var positionsTally = asset.Positions.Count;
                 var investorAsset = new AssetIncomeVm();
                 investorAsset.RevenueTickerSymbol = asset.Profile.TickerSymbol;
                 investorAsset.RevenueAssetId = asset.AssetId;
@@ -138,6 +139,20 @@ namespace PIMS.Web.Api.Controllers
                 investorAsset.RevenueAccount = asset.Positions.First().Account.AccountTypeDesc;
 
                 cachedInvestorAssets.Add(investorAsset);
+
+                if (positionsTally <= 1) continue;
+
+                // If applicable, returned sequence should contain one element for EACH position/account combination, e.g., CSQ-IRA, CSQ-CMA.
+                for (var pos = 1; pos < positionsTally; pos++)
+                {
+                    investorAsset = new AssetIncomeVm();
+                    investorAsset.RevenueTickerSymbol = asset.Profile.TickerSymbol;
+                    investorAsset.RevenueAssetId = asset.AssetId;
+                    investorAsset.RevenuePositionId = asset.Positions.ElementAt(pos).PositionId; // 0-based
+                    investorAsset.RevenueAccount = asset.Positions.ElementAt(pos).Account.AccountTypeDesc;
+
+                    cachedInvestorAssets.Add(investorAsset);
+                }
             }
 
             return Ok(cachedInvestorAssets);
