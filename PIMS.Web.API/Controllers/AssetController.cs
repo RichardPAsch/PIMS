@@ -160,6 +160,28 @@ namespace PIMS.Web.Api.Controllers
 
 
         [HttpGet]
+        [Route("~/api/Asset/{tickerSymbol}/Account/{assetAccount}")]
+        // Ex. http://localhost/Pims.Web.Api/api/Asset/CHW/Account/CMA
+        public bool GetByTickerAndAccount(string tickerSymbol, string assetAccount)
+        {
+            //_repositoryInvestor.UrlAddress = ControllerContext.Request.RequestUri.ToString();
+            var currentInvestor = _identityService.CurrentUser;
+
+            // Allow for Fiddler debugging
+            if (currentInvestor == null)
+                currentInvestor = "rpasch@rpclassics.net";  // temp login for Fiddler TESTING
+                //currentInvestor = "maryblow@yahoo.com";
+            
+            var positionInfo =  Task.FromResult(_repository.Retreive(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim())
+                                                                            && a.Profile.TickerSymbol.Trim() == tickerSymbol.Trim())
+                                                            .SelectMany(a => a.Positions).Where(p => p.Account.AccountTypeDesc == assetAccount)
+                                                            .AsQueryable());
+
+            return positionInfo.Result.Any();
+        }
+
+
+        [HttpGet]
         [Route("{tickerSymbol}", Name = "AssetsByTicker")]
         // Ex. http://localhost/Pims.Web.Api/api/Asset/VNR
         public async Task<IHttpActionResult> GetByTicker(string tickerSymbol)
