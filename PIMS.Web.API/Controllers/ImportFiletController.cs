@@ -94,7 +94,7 @@ namespace PIMS.Web.Api.Controllers
 
                 var portfolioAssetsToBeInserted = portfolioListing as AssetCreationVm[] ?? portfolioListing.ToArray();
                 if (!portfolioAssetsToBeInserted.Any() )
-                    return BadRequest("No portfolio data saved; please check XLSX spreadsheet for valid data.");
+                    return BadRequest("Invalid XLS data, duplicates ?");
 
                 dataPersistenceResults = PersistPortfolioData(portfolioAssetsToBeInserted); 
             }
@@ -211,10 +211,9 @@ namespace PIMS.Web.Api.Controllers
                         // Args: Cells[fromRow, fromCol, toRow, toCol]
                         var row = workSheet.Cells[rowNum, 1, rowNum, totalColumns].Select(c => c.Value == null ? string.Empty : c.Value.ToString());
                         var enumerableCells = row as string[] ?? row.ToArray();
-                        var responseAsset = assetCtrl.GetByTicker(enumerableCells.ElementAt(1).Trim());
+                        var isAccountPosition = assetCtrl.GetByTickerAndAccount(enumerableCells.ElementAt(1).Trim(), enumerableCells.ElementAt(0).Trim());
 
-                        // Allow new asset creation for "BadRequest" response, as no existing asset should be found for logged in investor.
-                        if (responseAsset.Result.ToString().IndexOf("Bad", StringComparison.Ordinal) > 0)
+                        if(!isAccountPosition)
                         {
                             ProfileVm assetProfilePersisted = null;
                             if (lastTickerProcessed != enumerableCells.ElementAt(1).Trim()) {
@@ -264,14 +263,11 @@ namespace PIMS.Web.Api.Controllers
                         }
                         else
                         {
-                            // Capture attempted duplicate asset insertion.
+                            // Attempted duplicate asset insertion: Position-AccountType
                             _assetsNotAddedListing += enumerableCells.ElementAt(1).Trim() + " ,";
                             lastTickerProcessed = enumerableCells.ElementAt(1).Trim();
-                            responseAsset.Dispose();
-                            continue;
                         }
 
-                        responseAsset.Dispose();
                     } // end of XLS row looping
 
                 }
@@ -398,6 +394,7 @@ namespace PIMS.Web.Api.Controllers
                     try
                     {
                         var httpResponseMessage = client.PostAsJsonAsync("PIMS.Web.Api/api/Asset", asset).Result;
+                        var debugTest = httpResponseMessage.StatusCode;
                     }
                     catch (Exception e) {
                         if (e.InnerException == null) continue;
