@@ -325,13 +325,17 @@ namespace PIMS.Web.Api.Controllers
                 return BadRequest("Unable to retreive required AccountType data for Asset creation.");
 
 
-            var duplicateCheck = GetByTicker(submittedAsset.AssetTicker.Trim());
-            if(duplicateCheck.Result.ToString().Contains("OkNegotiatedContent"))
-                return ResponseMessage(new HttpResponseMessage {
-                                                        StatusCode = HttpStatusCode.Conflict,
-                                                        ReasonPhrase = "No Asset created; duplicate Asset found for " + submittedAsset.AssetTicker.Trim()
-                });
-
+            var isDuplicate = GetByTickerAndAccount(submittedAsset.AssetTicker.Trim().ToUpper(), submittedAsset.PositionsCreated.First().ReferencedAccount.ToString());
+            if (isDuplicate)
+            {
+                return ResponseMessage(new HttpResponseMessage
+                                       {
+                                           StatusCode = HttpStatusCode.Conflict,
+                                           ReasonPhrase = "No Asset created; duplicate Asset found for " + 
+                                               submittedAsset.AssetTicker.Trim() + "\nin Account " + submittedAsset.PositionsCreated.First().ReferencedAccount
+                                        });
+            }
+          
             submittedAsset.AssetInvestorId = registeredInvestor.First().InvestorId.ToString();                      // Required entry.
             submittedAsset.AssetClassificationId = await Task.FromResult(_repositoryAssetClass.Retreive(ac => ac.Code.Trim() == submittedAsset.AssetClassification.Trim())
                                                                                               .AsQueryable()
@@ -347,8 +351,8 @@ namespace PIMS.Web.Api.Controllers
             if(submittedAsset.ProfileToCreate.TickerSymbol.IsEmpty() || 
                submittedAsset.ProfileToCreate.TickerDescription.IsEmpty() ||
                submittedAsset.ProfileToCreate.Price == 0 || 
-               profileLastUpdate == DateTime.MinValue) // ||  // 11.9.17 - removed URL requirement
-               //submittedAsset.ProfileToCreate.Url.IsEmpty())
+               profileLastUpdate == DateTime.MinValue) 
+               //submittedAsset.ProfileToCreate.Url.IsEmpty()) // ||  // 11.9.17 - removed URL requirement for now
                     return BadRequest("Asset creation aborted: minimum Profile data [ticker,tickerDesc,Price,or lastUpDate] is missing or invalid.");
 
             var existingProfile = await Task.FromResult(_repositoryProfile.Retreive(p => p.TickerSymbol.Trim() == submittedAsset.AssetTicker.Trim())
