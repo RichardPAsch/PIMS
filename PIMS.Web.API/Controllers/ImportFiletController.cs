@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Results;
 using FluentNHibernate.Conventions;
+using NHibernate.Transform;
 using OfficeOpenXml;
 using PIMS.Core.Models;
 using PIMS.Core.Models.ViewModels;
@@ -94,7 +96,7 @@ namespace PIMS.Web.Api.Controllers
 
                 var portfolioAssetsToBeInserted = portfolioListing as AssetCreationVm[] ?? portfolioListing.ToArray();
                 if (!portfolioAssetsToBeInserted.Any() )
-                    return BadRequest("Invalid XLS data, duplicates ?");
+                    return BadRequest("Invalid XLS data, duplicate position-account ?");
 
                 dataPersistenceResults = PersistPortfolioData(portfolioAssetsToBeInserted); 
             }
@@ -394,7 +396,8 @@ namespace PIMS.Web.Api.Controllers
                     try
                     {
                         var httpResponseMessage = client.PostAsJsonAsync("PIMS.Web.Api/api/Asset", asset).Result;
-                        var debugTest = httpResponseMessage.StatusCode;
+                        if(httpResponseMessage.StatusCode != HttpStatusCode.Created)
+                            throw new Exception();
                     }
                     catch (Exception e) {
                         if (e.InnerException == null) continue;
