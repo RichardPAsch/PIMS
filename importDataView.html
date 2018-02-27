@@ -1,0 +1,119 @@
+﻿<style>
+    #inputFilePath {
+        background-color: lightgoldenrodyellow;
+        width: 600px;
+    }
+    .panel .panel-default {  /* adjust height as new fileds are added.*/
+        height: 375px;
+    }
+    #notation {
+        padding-left: 50px;
+    }
+    #panelSection {  /* adjust panel height*/
+        margin-top: 70px;
+        height: 313px;
+    }
+    #lblFilePath, #lblDataType {
+        text-align: left;
+        margin-left: 37px;
+        width: 150px;
+    }
+    #divBtns {
+        /*width: 300px;*/
+        margin-left: 24px;
+        margin-top: 3px;
+    }
+    input[type="file"] {
+        display: block;
+        height: 34px;
+    }
+    #msgs {
+        padding-left: 25px;
+    }
+    #btnImport {
+        margin-left: 13px;
+        width: 143px;
+    }
+    #btnCancel {
+        width: 80px;
+        margin-left: 10px;
+    }
+    #divDataTypes {
+        width: 225px;
+        margin-left: 2px;
+        margin-top: 8px;
+    }
+    ul {
+        list-style-type: none;
+        padding-left: 1px;
+    }
+    
+    
+</style>
+
+
+
+<div class="col-md-12" data-ng-app="incomeMgmt"> 
+    <section id="panelSection" class="panel panel-default">
+        <div class="panel-heading"><strong>
+           <span class="glyphicon glyphicon-th"></span>&nbsp; Import new / existing portfolio data </strong>
+        </div>
+
+        <div class="panel-body">
+            <form class="form-horizontal ng-valid" role="form">
+
+                <div class="form-group">
+                    <div id="notation" class="col-md-12 col-md-offset-0">
+                        <ul>
+                            <li>Enter the file location of an XLSX spreadsheet containing either revenue, or portfolio asset data.</li>
+                            <li> * Importing of revenue requires the existence of a Position (Asset) with an affiliated Account for each income record to be recorded.</li>
+                            <li> * If necessary, any missing information must <em>first</em> be added via the 'Asset [new]' option.</li>
+                        </ul>
+                    </div>
+                </div>
+              
+                <div class="form-group">
+                    <label id="lblDataType" class="col-sm-2 control-label">Import data type:</label>
+                    <div id="divDataTypes" class="col-md-5"> 
+                        <input type="radio" data-ng-model="vm.importDataType" value="revenue" />&nbsp;Revenue&nbsp;&nbsp;
+                        <input type="radio" data-ng-model="vm.importDataType" value="asset" />&nbsp;Asset [ new ]&nbsp;&nbsp; 
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label id="lblFilePath" class="col-sm-2 control-label">File location:</label>
+                    <div class="col-md-7">
+                            <input type="text"  
+                                   id="inputFilePath"
+                                   class="form-control"
+                                   data-ng-model="vm.importFilePath" />
+                    </div>
+                </div> 
+
+                <div class="form-group">
+                    <div id="divBtns" class="col-md-10 col-md-offset-2">
+                        <span>
+                            <!--! data-ng-disabled=vm.isValidFilePath()"-->
+                            <button id="btnImport" data-ng-disabled="false" class="btn btn-w-md btn-gap-v btn-info col-md-2" type="button" data-ng-click="vm.processImportFile()">
+                                Import
+                            </button>
+                        </span>
+                        <span>
+                            <button id="btnCancel" class="btn btn-w-md btn-gap-v btn-info col-md-4" type="button" data-ng-click="vm.clearRevenue()">
+                                Cancel
+                            </button>
+                        </span>
+                        <span id="msgs">Messages go here...</span>
+                    </div>
+               </div>
+                
+
+            </form>  
+        </div>
+
+    </section>
+</div>
+
+
+
+
