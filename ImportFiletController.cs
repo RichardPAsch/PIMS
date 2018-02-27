@@ -79,13 +79,12 @@ namespace PIMS.Web.Api.Controllers
                 var investorId = Utilities.GetInvestorId(_repositoryInvestor, _currentInvestor);
                 _existingInvestorAssets = await assetCtrl.GetByInvestorAllAssets(investorId) as OkNegotiatedContentResult<List<AssetIncomeVm>>;
                 var portfolioRevenueToBeInserted = ParseRevenueSpreadsheet(importFileUrl);
-                if(portfolioRevenueToBeInserted == null)
-                    return BadRequest("Invalid XLS data submitted.");
-
+                
                 var revenueToBeInserted = portfolioRevenueToBeInserted as Income[] ?? portfolioRevenueToBeInserted.ToArray();
                 if (!revenueToBeInserted.Any() )
-                    return BadRequest("No income data saved; please check ticker symbol(s), amount(s), and/or account(s) for validity.");
-
+                    // Omitted ticker symbols.
+                    return BadRequest(_xlsIncomeRecordsOmitted);
+                   
                 dataPersistenceResults = PersistIncomeData(revenueToBeInserted);
             }
             else
@@ -109,6 +108,7 @@ namespace PIMS.Web.Api.Controllers
         private static IEnumerable<Income> ParseRevenueSpreadsheet(string filePath)
         {
            var newIncomeListing = new List<Income>();
+            _xlsIncomeRecordsOmitted = string.Empty;
 
             try
             {
