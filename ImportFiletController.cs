@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Results;
 using FluentNHibernate.Conventions;
-//using NHibernate.Transform;
 using OfficeOpenXml;
 using PIMS.Core.Models;
 using PIMS.Core.Models.ViewModels;
@@ -23,30 +22,25 @@ namespace PIMS.Web.Api.Controllers
     [RoutePrefix("api/ImportFile")]
     public class ImportFileController : ApiController
     {
-        private static ImportFileRepository _fileRepository;
+
         private static IGenericRepository<Investor> _repositoryInvestor;
         private static IPimsIdentityService _identityService;
         private static string _currentInvestor;
-        private static IGenericRepository<Profile> _repositoryProfile;
         private static IGenericRepository<Asset> _repositoryAsset;
         private static IGenericRepository<Income> _repositoryIncome;
         private static string _serverBaseUri = string.Empty;
         private static OkNegotiatedContentResult<List<AssetIncomeVm>> _existingInvestorAssets;
         private static bool _isDuplicateIncomeData;
-        private static int _totalXlsIncomeRecordsToSave = 0;
         private static string _xlsIncomeRecordsOmitted = string.Empty;
-        private static string _assetsNotAddedListing = string.Empty;
+        private static string _excludedAssetsFromXlsx = string.Empty;
 
 
-        public ImportFileController(ImportFileRepository fileRepository,
-            IGenericRepository<Investor> repositoryInvestor, IPimsIdentityService identityService,
-            IGenericRepository<Profile> repositoryProfile, IGenericRepository<Asset> repositoryAsset,
+        public ImportFileController(IGenericRepository<Investor> repositoryInvestor, IPimsIdentityService identityService,
+            IGenericRepository<Asset> repositoryAsset,
             IGenericRepository<Income> repositoryIncome) 
         {
-                                    _fileRepository = fileRepository;
                                     _repositoryInvestor = repositoryInvestor;
                                     _identityService = identityService;
-                                    _repositoryProfile = repositoryProfile;
                                     _repositoryAsset = repositoryAsset;
                                     _repositoryIncome = repositoryIncome;
         }
@@ -173,7 +167,6 @@ namespace PIMS.Web.Api.Controllers
                         newIncome.LastUpdate = DateTime.Now;
 
                         newIncomeListing.Add(newIncome);
-                        _totalXlsIncomeRecordsToSave += 1;
                         incomeCtrl.Dispose();
                     }
                 }
@@ -192,7 +185,7 @@ namespace PIMS.Web.Api.Controllers
         {
             var assetsToCreateList = new List<AssetCreationVm>();
             var assetCtrl = new AssetController(_repositoryAsset, _identityService, _repositoryInvestor);
-            _assetsNotAddedListing = string.Empty;
+            _excludedAssetsFromXlsx = string.Empty;
 
             try
             {
@@ -234,10 +227,10 @@ namespace PIMS.Web.Api.Controllers
 
                                 // Bypass saving asset if no Profile fetched, e.g., invalid ticker symbol or no custom Profile entry ?
                                 if (assetProfile == null && assetProfilePersisted == null) {
-                                    if (_assetsNotAddedListing == string.Empty)
-                                        _assetsNotAddedListing = "[" + enumerableCells.ElementAt(1).Trim() + "]";
+                                    if (_excludedAssetsFromXlsx == string.Empty)
+                                        _excludedAssetsFromXlsx = "[" + enumerableCells.ElementAt(1).Trim() + "]";
                                     else
-                                        _assetsNotAddedListing += ",  [" + enumerableCells.ElementAt(1).Trim() + "]";
+                                        _excludedAssetsFromXlsx += ",  [" + enumerableCells.ElementAt(1).Trim() + "]";
 
                                     continue;
                                 }
@@ -270,7 +263,7 @@ namespace PIMS.Web.Api.Controllers
                         else
                         {
                             // Attempted duplicate asset insertion: Position-AccountType
-                            _assetsNotAddedListing += enumerableCells.ElementAt(1).Trim() + " ,";
+                            _excludedAssetsFromXlsx += enumerableCells.ElementAt(1).Trim() + " ,";
                             lastTickerProcessed = enumerableCells.ElementAt(1).Trim();
                         }
 
@@ -347,9 +340,9 @@ namespace PIMS.Web.Api.Controllers
         {
             using (var client = new HttpClient {BaseAddress = new Uri(_serverBaseUri)})
             {
-                HttpResponseMessage response = null;
                 try
                 {
+                    HttpResponseMessage response = null;
                     if(!isDbProfileCheck)
                         response = client.GetAsync("Pims.Web.Api/api/Profile/" + ticker).Result;
                     else
@@ -362,6 +355,8 @@ namespace PIMS.Web.Api.Controllers
                         // Enforce the 50 char limitation on the ticker 'description' dB field.
                         if(profile.TickerDescription.Length >= 50)
                             profile.TickerDescription = profile.TickerDescription.Substring(0, 50);
+                        if(profile.DividendYield == null)
+                           profile.DividendYield = 0;
 
                         return profile;
                     }
@@ -385,10 +380,9 @@ namespace PIMS.Web.Api.Controllers
                       only contain unique ticker symbols, such that a ticker/asset/position may be affiliated with multiple
                       accounts, e.g., CHW : (CMA & Roth-IRA). Positions sre created and persisted accordingly.
             */
-           
-            string statusMsg;
-            var errorList = string.Empty;
 
+            string statusMsg;
+            var persistenceErrorList = string.Empty;
 
             if (portfolioToSave == null) throw new ArgumentNullException("portfolioToSave");
             
@@ -400,24 +394,24 @@ namespace PIMS.Web.Api.Controllers
                     try
                     {
                         var httpResponseMessage = client.PostAsJsonAsync("PIMS.Web.Api/api/Asset", asset).Result;
-                        if(httpResponseMessage.StatusCode != HttpStatusCode.Created)
-                            throw new Exception();
+                        if (httpResponseMessage.StatusCode != HttpStatusCode.Created)
+                            throw new Exception(httpResponseMessage.ReasonPhrase);
                     }
-                    catch (Exception e) {
-                        if (e.InnerException == null) continue;
-                        if (errorList.IsEmpty())
-                            errorList += assetCreationVms.First().AssetTicker.Trim();
+                    catch (Exception exception) {
+                        //if (e.InnerException == null) continue;
+                        if (persistenceErrorList.IsEmpty())
+                            persistenceErrorList += assetCreationVms.First().AssetTicker.Trim() + " with error : " + exception.Message;
                         else
-                            errorList += ", " + assetCreationVms.First().AssetTicker.Trim();
-                        
-                        return "Error saving asset(s) for \n" + errorList;
+                            persistenceErrorList += ", " + assetCreationVms.First().AssetTicker.Trim()+ " with error : " + exception.Message;
                     } 
                 }
-
-
-                if (_assetsNotAddedListing.Any())
-                    statusMsg = string.Format("Portfolio initialization partially complete, with the following asset(s) omitted ( Profile ? ) : \n{0} ",
-                                                                                                     _assetsNotAddedListing);
+                
+                // Since we're persisting portfolio data here, we'll use this opportunity to notify the user of any 
+                // assets that were not selected to be saved, most likely a result of Profile or ticker issues,
+                // or selected assets that were not saved due to possible data validity problems.
+                if (_excludedAssetsFromXlsx.Any() || persistenceErrorList.Any())
+                    statusMsg = string.Format("Error saving portfolio data for the following asset(s) : \n{0} ",
+                                  _excludedAssetsFromXlsx + " - " +  persistenceErrorList);
                 else
                     statusMsg = "Portfolio initialization complete; \nasset(s) successfully added.";
             }
@@ -431,7 +425,7 @@ namespace PIMS.Web.Api.Controllers
         {
             var savedIncomeRecordCount = 0;
             var statusMsg = string.Empty;
-            var errorList = string.Empty;
+            var persistenceErrorList = string.Empty;
             var savedIncomeRecordTotal = 0.0;
 
             if (incomeToSave == null) throw new ArgumentNullException("incomeToSave");
@@ -451,10 +445,10 @@ namespace PIMS.Web.Api.Controllers
                     }
                     catch (Exception e) {
                         if (e.InnerException == null) continue;
-                        if(errorList.IsEmpty())
-                            errorList += incomeRecord.IncomeAsset.Profile.TickerSymbol;
+                        if(persistenceErrorList.IsEmpty())
+                            persistenceErrorList += incomeRecord.IncomeAsset.Profile.TickerSymbol;
                         else
-                            errorList += ", " + incomeRecord.IncomeAsset.Profile.TickerSymbol;
+                            persistenceErrorList += ", " + incomeRecord.IncomeAsset.Profile.TickerSymbol;
                     }
                 }
 
@@ -462,16 +456,16 @@ namespace PIMS.Web.Api.Controllers
                 // Return status to handle :
                 //   1. err text associated with either a bad ticker or no associated account, or
                 //   2. err text associated with error saving ticker data into db.
-                if (errorList.IsNotEmpty() && _xlsIncomeRecordsOmitted.Any())
-                    statusMsg = "Error(s) saving/recording income for: \n" + errorList 
+                if (persistenceErrorList.IsNotEmpty() && _xlsIncomeRecordsOmitted.Any())
+                    statusMsg = "Error(s) saving/recording income for: \n" + persistenceErrorList 
                                                                          + "\n and unable to process income for ticker(s): \n" 
                                                                          + _xlsIncomeRecordsOmitted 
                                                                          + ".\nCheck account, amount, and/or ticker validity.";
-                else if (errorList.IsEmpty() && _xlsIncomeRecordsOmitted.Any())
+                else if (persistenceErrorList.IsEmpty() && _xlsIncomeRecordsOmitted.Any())
                     statusMsg = "Unable to process income for ticker(s): \n" + _xlsIncomeRecordsOmitted 
                                                                            + ".\n Check account, amount, and/or ticker validity.";
-                if (errorList.IsNotEmpty() && _xlsIncomeRecordsOmitted.IsNotAny())
-                    statusMsg = "Error(s) saving/recording income for: \n" + errorList;
+                if (persistenceErrorList.IsNotEmpty() && _xlsIncomeRecordsOmitted.IsNotAny())
+                    statusMsg = "Error(s) saving/recording income for: \n" + persistenceErrorList;
                 
             }
 
