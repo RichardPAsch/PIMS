@@ -97,6 +97,55 @@ namespace PIMS.Web.Api.Controllers
         }
 
 
+        [HttpGet]
+        [Route("~/api/Profiles/{t1}/{t2?}/{t3?}/{t4?}/{t5?}")]
+        // e.g. http://localhost/Pims.Web.Api/api/Profiles/{t1}/{t2?}/{t3?}/{t4?}/{t5?}/ 
+        // t = ticker symbol
+        public async Task<IHttpActionResult> GetProfiles(string t1, string t2 = "", string t3 = "", string t4 = "", string t5 = "") {
+
+            if (string.IsNullOrEmpty(t1))
+                return BadRequest(string.Format("Error fetching Profile, minimum of 1 ticker symbol required."));
+
+            var tickersTemp = string.Empty;
+            tickersTemp += t1;
+            if (!string.IsNullOrEmpty(t2)) tickersTemp += "," + t2;
+            if (!string.IsNullOrEmpty(t3)) tickersTemp += "," + t3;
+            if (!string.IsNullOrEmpty(t4)) tickersTemp += "," + t4;
+            if (!string.IsNullOrEmpty(t5)) tickersTemp += "," + t5;
+
+            var tickers = tickersTemp.Split(',');
+
+            var profileProjections = new List<ProfileProjectionVm>();
+            foreach (var ticker in tickers)
+            {
+                try
+                {
+                    var actionResult = await GetProfileByTicker(ticker) as OkNegotiatedContentResult<Profile>;
+                    if (actionResult == null) continue;
+                    var profileContent = actionResult.Content;
+                    var projectionVm = new ProfileProjectionVm
+                                       {
+                                           Ticker = profileContent.TickerSymbol.ToUpper().Trim(),
+                                           Capital = 0,
+                                           ProjectedRevenue = 0,
+                                           Price = profileContent.Price,
+                                           DivRate = profileContent.DividendRate > 0 ? profileContent.DividendRate : 0
+                                       };
+
+                    profileProjections.Add(projectionVm);
+                }
+                catch (Exception e)
+                {
+                    return BadRequest("Error obtaining Profile data for \n\'projections\' calculations. Check ticker accuracy.");
+                }
+            }
+
+
+            return profileProjections.Count > 0 ?  Ok(profileProjections.ToArray()) : null;
+
+        }
+
+
 
         /*  ** NOTE **
             11.9.2017 -  GetProfileByTicker() & GetProfiles() are now OBSOLETE due to the shutdown of Yahoo Finance API.
@@ -141,44 +190,7 @@ namespace PIMS.Web.Api.Controllers
         //}
 
 
-        //[HttpGet]
-        //[Route("~/api/Profiles/{t1}/{t2?}/{t3?}/{t4?}/{t5?}")]
-        //// e.g. http://localhost/Pims.Web.Api/api/Profiles/{t1}/{t2?}/{t3?}/{t4?}/{t5?}/ 
-        //// t = ticker symbol
-        //public async Task<IHttpActionResult> GetProfiles(string t1, string t2 = "", string t3 = "", string t4 = "", string t5 = "") {
-
-        //    if (string.IsNullOrEmpty(t1))
-        //        return BadRequest(string.Format("Error fetching Profile, minimum of 1 ticker symbol required."));
-
-        //    var tickersTemp = string.Empty;
-        //    tickersTemp += t1;
-        //    if (!string.IsNullOrEmpty(t2)) tickersTemp += "," + t2;
-        //    if (!string.IsNullOrEmpty(t3)) tickersTemp += "," + t3;
-        //    if (!string.IsNullOrEmpty(t4)) tickersTemp += "," + t4;
-        //    if (!string.IsNullOrEmpty(t5)) tickersTemp += "," + t5;
-
-        //    var tickers = tickersTemp.Split(',');
-            
-
-        //    // Yahoo url sample:  http://finance.yahoo.com/d/quotes.csv?s=<tickers>&f=sodyrr1
-        //    //if (existingProfile.Any()) {
-        //    //    // Update existing Profile only IF Profile last updated > 24hrs ago.
-        //    //    if (Convert.ToDateTime(existingProfile.First().LastUpdate) > DateTime.UtcNow.AddHours(-24))
-        //    //        return Ok(existingProfile.First());
-
-        //    //    updatedOrNewProfile = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfile(tickerForProfile.Trim(), existingProfile.First()));
-        //    //    if (updatedOrNewProfile != null)
-        //    //        return Ok(MapProfileToVm(updatedOrNewProfile));
-
-        //    //    return BadRequest("Error updating Profile for ticker: " + tickerForProfile);
-        //    //}
-
-        //    var initializedProfiles = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfiles(tickers));
-        //    if (initializedProfiles != null)
-        //        return Ok(initializedProfiles);
-
-        //    return BadRequest(string.Format("Error obtaining Profile data due to connectivity, invalid submitted ticker symbols, or no data available. \nCheck ticker accuracy."));
-        //}
+        
 
 
         [HttpGet]
@@ -324,7 +336,7 @@ namespace PIMS.Web.Api.Controllers
             updatedOrNewProfile.LastUpdate = DateTime.Now;
             return Ok(updatedOrNewProfile);
 
-        } // end fx
+        } 
 
 
 
