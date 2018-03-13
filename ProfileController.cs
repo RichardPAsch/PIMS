@@ -198,7 +198,7 @@ namespace PIMS.Web.Api.Controllers
         // e.g. http://localhost/Pims.Web.Api/api/Profile/IBM
         public async Task<IHttpActionResult> GetProfileByTicker(string tickerForProfile)
         {
-            
+            var divCashGtZero = false;
             var updatedOrNewProfile = new Profile();
             var existingProfile = await Task.FromResult(_repository.Retreive(p => p.TickerSymbol.Trim() == tickerForProfile.Trim()).AsQueryable());
 
@@ -207,8 +207,7 @@ namespace PIMS.Web.Api.Controllers
 
             using (var client = new HttpClient())
             {
-                client.BaseAddress =
-                    new Uri(BaseTiingoUrl + tickerForProfile); // https://api.tiingo.com/tiingo/daily/<ticker>
+                client.BaseAddress = new Uri(BaseTiingoUrl + tickerForProfile); // https://api.tiingo.com/tiingo/daily/<ticker>
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                 client.DefaultRequestHeaders.Add("Authorization", "Bearer " + TiingoAccountToken);
@@ -219,9 +218,7 @@ namespace PIMS.Web.Api.Controllers
                 Task<string> responsePriceData;
 
 
-                historicPriceDataResponse = await client.GetAsync(
-                    client.BaseAddress + "/prices?startDate=" + priceHistoryStartDate + "&" + "token=" +
-                    TiingoAccountToken);
+                historicPriceDataResponse = await client.GetAsync(client.BaseAddress + "/prices?startDate=" + priceHistoryStartDate + "&" + "token=" + TiingoAccountToken);
                 if (historicPriceDataResponse == null)
                     return BadRequest("Unable to update Profile price data for: " + tickerForProfile);
 
@@ -232,7 +229,7 @@ namespace PIMS.Web.Api.Controllers
                 var orderedJsonTickerPriceData = new JArray(jsonTickerPriceData.OrderByDescending(obj => obj["date"]));
 
                 var sequenceIndex = 0;
-                var divCashGtZero = false;
+                //var divCashGtZero = false;
                 var metaDataInitialized = false;
 
                 foreach (var objChild in orderedJsonTickerPriceData.Children<JObject>())
@@ -250,14 +247,11 @@ namespace PIMS.Web.Api.Controllers
                             var cashValue = decimal.Parse(property.Value.ToString());
 
                             if (cashValue <= 0) break;
+                            divCashGtZero = true;
                             existingProfile.First().DividendRate = decimal.Parse(property.Value.ToString());
-                            existingProfile.First().DividendPayDate =
-                                DateTime.Parse(objChild.Properties().ElementAt(0).Value.ToString());
-                            existingProfile.First().Price =
-                                decimal.Parse(objChild.Properties().ElementAt(1).Value.ToString());
-                            existingProfile.First().DividendYield =
-                                Utilities.CalculateDividendYield(existingProfile.First().DividendRate,
-                                    existingProfile.First().Price);
+                            existingProfile.First().DividendPayDate = DateTime.Parse(objChild.Properties().ElementAt(0).Value.ToString());
+                            existingProfile.First().Price = decimal.Parse(objChild.Properties().ElementAt(1).Value.ToString());
+                            existingProfile.First().DividendYield = Utilities.CalculateDividendYield(existingProfile.First().DividendRate, existingProfile.First().Price);
                             existingProfile.First().LastUpdate = DateTime.Now;
                             updatedOrNewProfile = existingProfile.First();
 
@@ -322,19 +316,30 @@ namespace PIMS.Web.Api.Controllers
                     }
 
                     sequenceIndex += 1;
-                } // end foreach
+                } // end foreach orderedJsonTickerPriceData
 
                 historicPriceDataResponse.Dispose();
+               
 
             } // end using()
 
 
             // Apply any available persisted values as needed.
-            var updatedProfile = CheckPersistedProfile(updatedOrNewProfile, tickerForProfile);
-            updatedOrNewProfile = updatedProfile.Result.Content;
+            // If here, Tiingo & we had no updated 'divCash' info within all the historical data in 'orderedJsonTickerPriceData' for 
+            // which to update our Profile, therefore we'll return the original Profile.
+            if (!divCashGtZero)
+                return Ok(existingProfile.First());
 
-            updatedOrNewProfile.LastUpdate = DateTime.Now;
-            return Ok(updatedOrNewProfile);
+            return null;
+
+            // TODO: 3.12.18 - still needed ?? 
+            //    var updatedProfile = CheckPersistedProfile(updatedOrNewProfile, tickerForProfile);
+            //    updatedOrNewProfile = updatedProfile.Result.Content;
+
+            //    updatedOrNewProfile.LastUpdate = DateTime.Now;
+            //    return Ok(updatedOrNewProfile);
+            
+
 
         } 
 
