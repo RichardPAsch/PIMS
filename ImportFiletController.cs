@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Results;
 using FluentNHibernate.Conventions;
+using NHibernate.Transform;
 using OfficeOpenXml;
 using PIMS.Core.Models;
 using PIMS.Core.Models.ViewModels;
@@ -75,7 +76,7 @@ namespace PIMS.Web.Api.Controllers
                 var portfolioRevenueToBeInserted = ParseRevenueSpreadsheet(importFileUrl);
                 
                 var revenueToBeInserted = portfolioRevenueToBeInserted as Income[] ?? portfolioRevenueToBeInserted.ToArray();
-                if (!revenueToBeInserted.Any() )
+                if (!revenueToBeInserted.Any() || _xlsIncomeRecordsOmitted.Length > 0 )
                     // Omitted ticker symbols.
                     return BadRequest(_xlsIncomeRecordsOmitted);
                    
@@ -123,10 +124,12 @@ namespace PIMS.Web.Api.Controllers
                             return null;
 
                         var row = workSheet.Cells[rowNum, 1, rowNum, totalColumns].Select(c => c.Value == null ? string.Empty : c.Value.ToString());
-                        // 'totalRows' sometimes gives an erroneous count (?); therefore, for now we'll check the 'row' sequence accordingly.
+                        // 'totalRows' sometimes gives an erroneous count (?), or there may be extraneous XLSX artifacts; therefore, for 
+                        //  now we'll check the 'row' sequence accordingly.
                         var enumerable = row as string[] ?? row.ToArray();
-                        if (enumerable.Any() == false)
+                        if (enumerable.Any() == false || enumerable[0] == string.Empty)
                             break;
+
 
                         var enumerableCells = row as string[] ?? enumerable.ToArray();
                         var xlsTicker = enumerableCells.ElementAt(3).Trim();
