@@ -356,7 +356,7 @@ namespace PIMS.Web.Api.Controllers
             var existingProfile = await Task.FromResult(_repositoryProfile.Retreive(p => p.TickerSymbol.Trim() == submittedAsset.AssetTicker.Trim())
                                                                           .AsQueryable());
 
-            var profileCtrl = new ProfileController(_repositoryProfile);
+            var profileCtrl = new ProfileController(_repositoryProfile, null);
             if (existingProfile.Any())
             {
                 if (existingProfile.First().LastUpdate <= DateTime.Now.AddHours(-72))
@@ -395,13 +395,9 @@ namespace PIMS.Web.Api.Controllers
             // BUG: 11.30.17 - reverify loop iteration for position count > 1
             for (var pos = 0; pos < submittedAsset.PositionsCreated.Count; pos++)
             {
-                var currentPositionTest = pos;
-                // ReSharper disable once AccessToModifiedClosure
-                // Validate correct account type & id.
-                var positionAcctTypeId = existingAcctTypes.Content.Where(at => at.AccountTypeDesc.Trim().ToUpper() == submittedAsset.PositionsCreated.ElementAt(pos)
-                                                                  .PreEditPositionAccount
-                                                                  .ToUpper()
-                                                                  .Trim())
+                // Parse account in validating allowable account only, e.g., CMA-TRUST -> CMA
+                var parsedAccountType = Utilities.ParseAccountTypeFromDescription(submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.ToUpper().Trim());
+                var positionAcctTypeId = existingAcctTypes.Content.Where(at => at.AccountTypeDesc.Trim().ToUpper() == parsedAccountType)
                                                                   .AsQueryable()
                                                                   .Select(at => at.KeyId);
 
