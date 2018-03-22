@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Results;
 using FluentNHibernate.Conventions;
-using NHibernate.Transform;
 using OfficeOpenXml;
 using PIMS.Core.Models;
 using PIMS.Core.Models.ViewModels;
@@ -130,16 +129,14 @@ namespace PIMS.Web.Api.Controllers
                         if (enumerable.Any() == false || enumerable[0] == string.Empty)
                             break;
 
-
                         var enumerableCells = row as string[] ?? enumerable.ToArray();
                         var xlsTicker = enumerableCells.ElementAt(3).Trim();
                         var xlsAccount = Utilities.ParseAccountTypeFromDescription(enumerableCells.ElementAt(1).Trim());
-                        var currentXlsAsset = _existingInvestorAssets
-                            .Content.Find(a => a.RevenueTickerSymbol == xlsTicker && string.Equals(a.RevenueAccount, xlsAccount, StringComparison.CurrentCultureIgnoreCase));
+                        var currentXlsAsset = _existingInvestorAssets.Content.Find(a => a.RevenueTickerSymbol == xlsTicker && string.Equals(a.RevenueAccount, xlsAccount, StringComparison.CurrentCultureIgnoreCase));
                         
                         if (currentXlsAsset == null)
                         {
-                            // Either a bad ticker symbol, or no account was found to be affiliated with this current position(aka asset).
+                            // Either a bad ticker symbol (spacing or characters), or no account was found affiliated with this current position(aka asset).
                             if (_xlsIncomeRecordsOmitted == string.Empty)
                                 _xlsIncomeRecordsOmitted += xlsTicker;
                             else
