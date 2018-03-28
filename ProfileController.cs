@@ -155,67 +155,35 @@ namespace PIMS.Web.Api.Controllers
             11.10.2017 - Seperate API calls will be necessary for gathering meta & price data, as mandated by Tiingo.
         */
 
-        //[HttpGet]
-        //[Route("{tickerForProfile?}")]
-        //// e.g. http://localhost/Pims.Web.Api/api/Profile/IBM
-        //public async Task<IHttpActionResult> GetProfileByTicker(string tickerForProfile)
-        //{
-        //    Profile updatedOrNewProfile;
-        //    var existingProfile = await Task.FromResult(_repository.Retreive(p => p.TickerSymbol.Trim() == tickerForProfile.Trim()).AsQueryable());
-
-        //    // Yahoo url sample:  http://finance.yahoo.com/d/quotes.csv?s=VNR&f=nsb2dyreqr1
-        //    if (existingProfile.Any())
-        //    {
-        //        // Update Profile table only IF existing Profile was last updated > 24hrs ago; return updated Profile.
-        //        if (Convert.ToDateTime(existingProfile.First().LastUpdate) < DateTime.UtcNow.AddHours(-24))
-        //        {
-        //            updatedOrNewProfile = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfile(tickerForProfile.Trim(), existingProfile.First()));
-        //            if (updatedOrNewProfile != null)
-        //                return Ok(updatedOrNewProfile);
-        //        }
-        //        else
-        //        {
-        //            // Return existing table Profile
-        //            return Ok(existingProfile.First());
-        //        }
-        //    }
-        //    else
-        //    {
-        //        // Return new Profile.
-        //        updatedOrNewProfile = await Task.FromResult(YahooFinanceSvc.ProcessYahooProfile(tickerForProfile.Trim(), new Profile()));
-        //        if (updatedOrNewProfile != null)
-        //            return Ok(updatedOrNewProfile);
-        //    }
-
-        //    return BadRequest(string.Format("Error creating or updating Profile for {0}, check ticker symbol.", tickerForProfile));
-
-        //}
-
-
-        
-
-
+     
         [HttpGet]
         [Route("{tickerForProfile?}")]
         // e.g. http://localhost/Pims.Web.Api/api/Profile/IBM
         public async Task<IHttpActionResult> GetProfileByTicker(string tickerForProfile)
         {
-
-            //var currentInvestor = _identityService.CurrentUser;
+            var currentInvestor = _identityService.CurrentUser;
 
             // Allow for Fiddler debugging
             //if (currentInvestor == null)
             //    currentInvestor = "rpasch@rpclassics.net";  // temp login for Fiddler TESTING
             //currentInvestor = "maryblow@yahoo.com";
 
-
-            var divCashGtZero = false; // 'divCash' aka dividend rate per Tiingo API.
-            var updatedOrNewProfile = new Profile();
             var existingSavedProfile = await Task.FromResult(_repository.Retreive(p => p.TickerSymbol.Trim() == tickerForProfile.Trim()).AsQueryable());
-
-            // By default, we'll use the last 6 months pricing historical data.
+            var updatedOrNewProfile = new Profile();
+            var foundTiingoData = false;
+            
+            // By default, we'll use the last 6 months of Tiingo pricing historical data.
             var priceHistoryStartDate = CalculateStartDate(-180);
 
+            // Bypass Tiingo if dealing with a custom Profile.
+            if (existingSavedProfile.Any() && currentInvestor != null)
+            {
+                if(existingSavedProfile.First().CreatedBy.Trim() == currentInvestor.Trim())
+                    return Ok(existingSavedProfile.First());
+            }
+                
+
+            var divCashGtZero = false; // 'divCash' (per Tiingo API), aka dividend rate.
             using (var client = new HttpClient())
             {
                 client.BaseAddress = new Uri(BaseTiingoUrl + tickerForProfile); // https://api.tiingo.com/tiingo/daily/<ticker>
@@ -228,6 +196,7 @@ namespace PIMS.Web.Api.Controllers
                 JArray jsonTickerPriceData;
                 Task<string> responsePriceData;
 
+               
                 // If possible, try to obtain updated Profile info via Tiingo API.
                 historicPriceDataResponse = await client.GetAsync(client.BaseAddress + "/prices?startDate=" + priceHistoryStartDate + "&" + "token=" + TiingoAccountToken);
                 if (historicPriceDataResponse == null)
@@ -245,44 +214,45 @@ namespace PIMS.Web.Api.Controllers
                 // Check Tiingo historical results for this ticker.
                 if (orderedJsonTickerPriceData.Count > 0)
                 {
-                        foreach (var objChild in orderedJsonTickerPriceData.Children<JObject>())
+                    foundTiingoData = true;
+                    foreach (var objChild in orderedJsonTickerPriceData.Children<JObject>())
+                    {
+                        if (existingSavedProfile.Any())
                         {
-                            if (existingSavedProfile.Any())
+                            // If applicable, update existing Profile IF last update was  > 72hrs ago.
+                            if (Convert.ToDateTime(existingSavedProfile.First().LastUpdate) > cutOffDateTimeForProfileUpdate)
+                                return Ok(existingSavedProfile.First());
+
+                            // 11.17.2017 - Due to Tiingo API limitations, update just dividend rate.
+                            foreach (var property in objChild.Properties())
                             {
-                                // Profile update IF last updated > 72hrs ago.
-                                if (Convert.ToDateTime(existingSavedProfile.First().LastUpdate) > cutOffDateTimeForProfileUpdate)
-                                    return Ok(existingSavedProfile.First());
+                                if (property.Name != "divCash") continue;
+                                var cashValue = decimal.Parse(property.Value.ToString());
 
-                                // 11.17.2017 - Due to Tiingo API limitations, update just dividend rate.
-                                foreach (var property in objChild.Properties())
-                                {
-                                    if (property.Name != "divCash") continue;
-                                    var cashValue = decimal.Parse(property.Value.ToString());
+                                if (cashValue <= 0) break;
+                                divCashGtZero = true;
+                                existingSavedProfile.First().DividendRate = decimal.Parse(property.Value.ToString());
+                                existingSavedProfile.First().DividendPayDate = DateTime.Parse(objChild.Properties().ElementAt(0).Value.ToString());
+                                existingSavedProfile.First().Price = decimal.Parse(objChild.Properties().ElementAt(1).Value.ToString());
+                                existingSavedProfile.First().DividendYield = Utilities.CalculateDividendYield(existingSavedProfile.First().DividendRate, existingSavedProfile.First().Price);
+                                existingSavedProfile.First().LastUpdate = DateTime.Now;
+                                updatedOrNewProfile = existingSavedProfile.First();
 
-                                    if (cashValue <= 0) break;
-                                    divCashGtZero = true;
-                                    existingSavedProfile.First().DividendRate = decimal.Parse(property.Value.ToString());
-                                    existingSavedProfile.First().DividendPayDate = DateTime.Parse(objChild.Properties().ElementAt(0).Value.ToString());
-                                    existingSavedProfile.First().Price = decimal.Parse(objChild.Properties().ElementAt(1).Value.ToString());
-                                    existingSavedProfile.First().DividendYield = Utilities.CalculateDividendYield(existingSavedProfile.First().DividendRate, existingSavedProfile.First().Price);
-                                    existingSavedProfile.First().LastUpdate = DateTime.Now;
-                                    updatedOrNewProfile = existingSavedProfile.First();
-
-                                    // Update with any relevant saved info.
-                                    var updatedProfile2 = CheckPersistedProfile(updatedOrNewProfile, tickerForProfile);
-                                    updatedOrNewProfile = updatedProfile2.Result.Content;
+                                // Update with any relevant saved info.
+                                var updatedProfile2 = CheckPersistedProfile(updatedOrNewProfile, tickerForProfile);
+                                updatedOrNewProfile = updatedProfile2.Result.Content;
                                    
-                                    return Ok(updatedOrNewProfile);
-                                }
-
-                                continue;
+                                return Ok(updatedOrNewProfile);
                             }
+
+                            continue;
+                        }
 
                         if (divCashGtZero)
                             break;
 
 
-                        /* New Profile processing. Capture meta data. */
+                        /* New Profile processing. Capture meta data for ticker info. */
                         if (!metaDataInitialized)
                         {
                             metaDataResponse = await client.GetAsync(client.BaseAddress + "?token=" + TiingoAccountToken);
@@ -299,11 +269,17 @@ namespace PIMS.Web.Api.Controllers
                         }
 
 
-                        // Capture most recent closing price & dividend rate (aka divCash); 
+                        // Capture most recent closing price & where applicable, the dividend rate (aka divCash); 
                         if (sequenceIndex == 0)
                         {
                             foreach (var property in objChild.Properties())
                             {
+                                if (property.Name == "divCash" && decimal.Parse(property.Value.ToString()) > 0)
+                                {
+                                    updatedOrNewProfile.DividendRate = decimal.Parse(property.Value.ToString());
+                                    divCashGtZero = true;
+                                }
+
                                 if (property.Name != "close") continue;
                                 updatedOrNewProfile.Price = decimal.Parse(property.Value.ToString());
                                 break;
@@ -318,39 +294,44 @@ namespace PIMS.Web.Api.Controllers
 
                                 if (cashValue <= 0) continue;
                                 updatedOrNewProfile.DividendRate = decimal.Parse(property.Value.ToString());
-                                updatedOrNewProfile.DividendYield =
-                                    Utilities.CalculateDividendYield(updatedOrNewProfile.DividendRate,
-                                        updatedOrNewProfile.Price);
-                                updatedOrNewProfile.DividendPayDate =
-                                    DateTime.Parse(objChild.Properties().ElementAt(0).Value.ToString());
+                                updatedOrNewProfile.DividendYield = Utilities.CalculateDividendYield(updatedOrNewProfile.DividendRate, updatedOrNewProfile.Price);
+                                updatedOrNewProfile.DividendPayDate = DateTime.Parse(objChild.Properties().ElementAt(0).Value.ToString());
                                 divCashGtZero = true;
                                 break;
                             }
                         }
 
                         sequenceIndex += 1;
-                    } // end foreach orderedJsonTickerPriceData
-               }
+                    } // end foreach 
+
+               } // enf if
 
                 historicPriceDataResponse.Dispose();
 
             } // end using()
 
 
-            // If here, per Tiingo API, there was no 'divCash' (divCash = 0) info found within our returned historical data for
-            // which to update our existing Profile, therefore we'll return our original existing Profile.
-            return !divCashGtZero ? Ok(existingSavedProfile.First()) : null;
+            if(foundTiingoData && divCashGtZero)
+                return Ok(updatedOrNewProfile);
 
+            if(!foundTiingoData && existingSavedProfile.Any())
+                return Ok(existingSavedProfile.First());
+
+            return null;
         } 
+        
 
-
-
-
+        
         [HttpPost]
-        [Route("", Name = "CreateNewProfile")]
-        public async Task<IHttpActionResult> CreateNewProfile([FromBody] ProfileVm submittedProfile)
+        [Route("{loggedInvestor?}", Name = "CreateNewProfile")]
+        public async Task<IHttpActionResult> CreateNewProfile([FromBody] ProfileVm submittedProfile, string loggedInvestor)
         {
-            var currentInvestor = _identityService.CurrentUser;
+            var currentInvestor = string.Empty;
+            if(_identityService != null)
+                currentInvestor = _identityService.CurrentUser;
+            else if(loggedInvestor != string.Empty)
+                currentInvestor = loggedInvestor;
+
             
             if (!ModelState.IsValid) return ResponseMessage(new HttpResponseMessage {
                 StatusCode = HttpStatusCode.BadRequest,
@@ -366,10 +347,12 @@ namespace PIMS.Web.Api.Controllers
                                                 ReasonPhrase = "No Profile created, existing data is less than 72 hours old."
                                      });
 
-            if(currentInvestor == null)
+            if(currentInvestor == null || currentInvestor == string.Empty)
                 return BadRequest("Please log in, or register, to create a custom Profile.");
 
-            submittedProfile.CreatedBy = currentInvestor;
+            if(submittedProfile.CreatedBy != string.Empty || submittedProfile.CreatedBy != null)
+                submittedProfile.CreatedBy = currentInvestor;
+
             var profileToCreate = MapVmToProfile(submittedProfile);
 
             var isCreated = await Task.FromResult(_repository.Create(profileToCreate));
@@ -382,7 +365,8 @@ namespace PIMS.Web.Api.Controllers
         }
 
 
-        [HttpPut]
+
+        [HttpPost]
         [Route("~/api/Asset/{ticker}/Profile")]
         public async Task<IHttpActionResult> UpdateProfile([FromBody]ProfileVm editedProfile)
         {
@@ -433,8 +417,12 @@ namespace PIMS.Web.Api.Controllers
             return Ok(updatedOrNewProfile);
 
         }
+
+
+       
         
 
+       
 
 
         #region Helpers
@@ -470,26 +458,6 @@ namespace PIMS.Web.Api.Controllers
                 var priorDate = today.AddDays(priorNumberOfDays);
                 return (priorDate.Year + "-" + priorDate.Month + "-" + priorDate.Day).Trim();
             }
-
-            // Deferred
-            //private static ProfileVm MapProfileToVm(Profile sourceData)
-            //{
-            //    return new ProfileVm
-            //    {
-            //        ProfileId = sourceData.ProfileId,
-            //        TickerSymbol = sourceData.TickerSymbol,
-            //        TickerDescription = sourceData.TickerDescription,
-            //        DividendFreq = sourceData.DividendFreq,
-            //        DividendRate = sourceData.DividendRate,
-            //        DividendYield = sourceData.DividendYield,
-            //        EarningsPerShare = sourceData.EarningsPerShare,
-            //        PE_Ratio = sourceData.PE_Ratio,
-            //        LastUpdate = sourceData.LastUpdate,
-            //        ExDividendDate = sourceData.ExDividendDate,
-            //        DividendPayDate = sourceData.DividendPayDate,
-            //        Price = sourceData.Price
-            //    };
-            //}
 
 
         #endregion
