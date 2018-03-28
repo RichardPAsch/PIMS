@@ -345,13 +345,12 @@ namespace PIMS.Web.Api.Controllers
             // * PROFILE.*
             // Submited Asset must contain the following minimum Profile information, per client validation checks.
             var profileLastUpdate = Convert.ToDateTime(submittedAsset.ProfileToCreate.LastUpdate) ;
+            if(profileLastUpdate == DateTime.MinValue)
+                submittedAsset.ProfileToCreate.LastUpdate = DateTime.Today;
             
-            if(submittedAsset.ProfileToCreate.TickerSymbol.IsEmpty() || 
-               submittedAsset.ProfileToCreate.TickerDescription.IsEmpty() ||
-               submittedAsset.ProfileToCreate.Price == 0 || 
-               profileLastUpdate == DateTime.MinValue) 
-               //submittedAsset.ProfileToCreate.Url.IsEmpty()) // ||  // 11.9.17 - removed URL requirement for now
-                    return BadRequest("Asset creation aborted: minimum Profile data [ticker,tickerDesc,Price,or lastUpDate] is missing or invalid.");
+            if(submittedAsset.ProfileToCreate.TickerSymbol.IsEmpty() || submittedAsset.ProfileToCreate.TickerDescription.IsEmpty() || submittedAsset.ProfileToCreate.Price == 0) 
+                return BadRequest("Asset creation aborted: minimum Profile data [ticker,tickerDesc,Price,or lastUpDate] is missing or invalid.");
+
 
             var existingProfile = await Task.FromResult(_repositoryProfile.Retreive(p => p.TickerSymbol.Trim() == submittedAsset.AssetTicker.Trim())
                                                                           .AsQueryable());
@@ -370,7 +369,7 @@ namespace PIMS.Web.Api.Controllers
             }
             else
             {
-                var createdProfile = await profileCtrl.CreateNewProfile(submittedAsset.ProfileToCreate) as CreatedNegotiatedContentResult<Profile>;
+                var createdProfile = await profileCtrl.CreateNewProfile(submittedAsset.ProfileToCreate, _currentInvestor) as CreatedNegotiatedContentResult<Profile>;
                 if (createdProfile == null)
                     return BadRequest("Error creating new Profile.");
 
