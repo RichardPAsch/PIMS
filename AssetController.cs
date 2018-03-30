@@ -369,7 +369,9 @@ namespace PIMS.Web.Api.Controllers
             }
             else
             {
-                var createdProfile = await profileCtrl.CreateNewProfile(submittedAsset.ProfileToCreate, _currentInvestor) as CreatedNegotiatedContentResult<Profile>;
+                // Indicate that we're creating a Profile as part of Asset/Position creation process.
+                submittedAsset.ProfileToCreate.CreatedBy = "XLSX";
+                var createdProfile = await profileCtrl.CreateNewProfile(submittedAsset.ProfileToCreate) as CreatedNegotiatedContentResult<Profile>;
                 if (createdProfile == null)
                     return BadRequest("Error creating new Profile.");
 
