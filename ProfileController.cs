@@ -49,18 +49,14 @@ namespace PIMS.Web.Api.Controllers
         [Route("persisted/{tickerSymbol}")]
         public async Task<IHttpActionResult> GetPersistedProfileByTicker(string tickerSymbol)
         {
-           var savedProfile = await Task.FromResult(_repository.RetreiveAll()
-                                         .Where(p => p.TickerSymbol == tickerSymbol)
-                                         .AsQueryable()
-                                         .Select(p => p).First());
-
-            if(savedProfile == null)
+            var savedProfile = await Task.FromResult(_repository.Retreive(p => p.TickerSymbol == tickerSymbol).AsQueryable());
+   
+            if(!savedProfile.Any())
                 return BadRequest("No saved Profile found, or unable to retreive data for ticker: " + tickerSymbol);
 
-            return Ok(savedProfile);
+            return Ok(savedProfile.First());
         }
-
-
+        
 
         [HttpGet]
         [Route("")]
@@ -102,7 +98,7 @@ namespace PIMS.Web.Api.Controllers
         [HttpGet]
         [Route("~/api/Profiles/{t1}/{t2?}/{t3?}/{t4?}/{t5?}")]
         // e.g. http://localhost/Pims.Web.Api/api/Profiles/{t1}/{t2?}/{t3?}/{t4?}/{t5?}/ 
-        // t = ticker symbol
+        // t = ticker 
         public async Task<IHttpActionResult> GetProfiles(string t1, string t2 = "", string t3 = "", string t4 = "", string t5 = "") {
 
             if (string.IsNullOrEmpty(t1))
@@ -146,8 +142,7 @@ namespace PIMS.Web.Api.Controllers
             return profileProjections.Count > 0 ?  Ok(profileProjections.ToArray()) : null;
 
         }
-
-
+        
 
         /*  ** NOTE **
             11.9.2017 -  GetProfileByTicker() & GetProfiles() are now OBSOLETE due to the shutdown of Yahoo Finance API.
@@ -199,8 +194,8 @@ namespace PIMS.Web.Api.Controllers
                
                 // If possible, try to obtain updated Profile info via Tiingo API.
                 historicPriceDataResponse = await client.GetAsync(client.BaseAddress + "/prices?startDate=" + priceHistoryStartDate + "&" + "token=" + TiingoAccountToken);
-                if (historicPriceDataResponse == null)
-                    return BadRequest("Unable to update Profile price data for: " + tickerForProfile);
+                if (historicPriceDataResponse == null || !historicPriceDataResponse.IsSuccessStatusCode)
+                    return BadRequest("Unable to fetch, or no Profile history found via web for: " + tickerForProfile);
 
                 responsePriceData = historicPriceDataResponse.Content.ReadAsStringAsync();
                 jsonTickerPriceData = JArray.Parse(responsePriceData.Result);
@@ -323,14 +318,16 @@ namespace PIMS.Web.Api.Controllers
 
         
         [HttpPost]
-        [Route("{loggedInvestor?}", Name = "CreateNewProfile")]
-        public async Task<IHttpActionResult> CreateNewProfile([FromBody] ProfileVm submittedProfile, string loggedInvestor)
+        //[Route("{loggedInvestor?}", Name = "CreateNewProfile")]
+        [Route("")]
+        //public async Task<IHttpActionResult> CreateNewProfile([FromBody] ProfileVm submittedProfile, string loggedInvestor)
+        public async Task<IHttpActionResult> CreateNewProfile([FromBody] ProfileVm submittedProfile)
         {
             var currentInvestor = string.Empty;
-            if(_identityService != null)
+            if(_identityService != null && _identityService.CurrentUser != null)
                 currentInvestor = _identityService.CurrentUser;
-            else if(loggedInvestor != string.Empty)
-                currentInvestor = loggedInvestor;
+            //else if(loggedInvestor != "unkown")
+            //    currentInvestor = loggedInvestor;
 
             
             if (!ModelState.IsValid) return ResponseMessage(new HttpResponseMessage {
@@ -347,12 +344,18 @@ namespace PIMS.Web.Api.Controllers
                                                 ReasonPhrase = "No Profile created, existing data is less than 72 hours old."
                                      });
 
-            if(currentInvestor == null || currentInvestor == string.Empty)
-                return BadRequest("Please log in, or register, to create a custom Profile.");
-
-            if(submittedProfile.CreatedBy != string.Empty || submittedProfile.CreatedBy != null)
+            // Leverage 'CreatedBy' attribute; initialized temporarily to 'XLXS' when Profile is being created as part
+            // of the Asset creation process, e.g., resulting from new Position data introduced via XLSX spreadsheet.
+            if (submittedProfile.CreatedBy.ToUpper().Trim() == "XLSX")
+                submittedProfile.CreatedBy = string.Empty;
+            else
+            {
+                if(string.IsNullOrEmpty(currentInvestor))
+                    return BadRequest("Please log in, or register, to create a custom Profile.");
+                
                 submittedProfile.CreatedBy = currentInvestor;
-
+            }
+           
             var profileToCreate = MapVmToProfile(submittedProfile);
 
             var isCreated = await Task.FromResult(_repository.Create(profileToCreate));
@@ -361,7 +364,6 @@ namespace PIMS.Web.Api.Controllers
 
             // TODO: This fx should be accessed via a HttpClient web call, so that we can fetch Request.RequestUrl for base server address.
             return Created("http://localhost/Pims.Web.Api/api/Profile/", profileToCreate);
-           //return Created(submittedProfile.Url + "/" + profileToCreate.ProfileId, profileToCreate);
         }
 
 
