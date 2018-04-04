@@ -98,11 +98,14 @@ namespace PIMS.Web.Api.Controllers
         [HttpGet]
         [Route("~/api/Profiles/{t1}/{t2?}/{t3?}/{t4?}/{t5?}")]
         // e.g. http://localhost/Pims.Web.Api/api/Profiles/{t1}/{t2?}/{t3?}/{t4?}/{t5?}/ 
-        // t = ticker 
+        // t = ticker; used primarily in context of 'Projections' forecasting.
         public async Task<IHttpActionResult> GetProfiles(string t1, string t2 = "", string t3 = "", string t4 = "", string t5 = "") {
 
             if (string.IsNullOrEmpty(t1))
                 return BadRequest(string.Format("Error fetching Profile, minimum of 1 ticker symbol required."));
+
+            // Track (N)ot (A)vailable Tiingo API Profile data.
+            var tickerNaCountGtZero = false;
 
             var tickersTemp = string.Empty;
             tickersTemp += t1;
@@ -113,28 +116,71 @@ namespace PIMS.Web.Api.Controllers
 
             var tickers = tickersTemp.Split(',');
 
+            ProfileProjectionVm projectionVm = null;
             var profileProjections = new List<ProfileProjectionVm>();
             foreach (var ticker in tickers)
             {
                 try
                 {
-                    var actionResult = await GetProfileByTicker(ticker) as OkNegotiatedContentResult<Profile>;
-                    if (actionResult == null) continue;
-                    var profileContent = actionResult.Content;
-                    var projectionVm = new ProfileProjectionVm
+                   var webTiingoResult = await GetProfileByTicker(ticker) as OkNegotiatedContentResult<Profile>;
+                   if (webTiingoResult != null)
+                    {
+                        var profileContent = webTiingoResult.Content;
+                        projectionVm = new ProfileProjectionVm
+                                           {
+                                               Ticker = profileContent.TickerSymbol.ToUpper().Trim(),
+                                               Capital = 0,
+                                               ProjectedRevenue = 0,
+                                               Price = profileContent.Price,
+                                               DivRate = profileContent.DividendRate > 0 ? profileContent.DividendRate : 0
+                                           };
+                    }
+                    else
+                    {
+                        // Capture exception ticker (no Profile data available via Tiingo) for later database check(s).
+                        tickerNaCountGtZero = true;
+                        projectionVm = new ProfileProjectionVm
                                        {
-                                           Ticker = profileContent.TickerSymbol.ToUpper().Trim(),
+                                           Ticker = ticker.Trim().ToUpper() + "-NA",
                                            Capital = 0,
                                            ProjectedRevenue = 0,
-                                           Price = profileContent.Price,
-                                           DivRate = profileContent.DividendRate > 0 ? profileContent.DividendRate : 0
+                                           Price = 0,
+                                           DivRate = 0
                                        };
-
+                    }
                     profileProjections.Add(projectionVm);
                 }
                 catch (Exception e)
                 {
-                    return BadRequest("Error obtaining Profile data for \n\'projections\' calculations. Check ticker accuracy.");
+                    return BadRequest("Error obtaining Profile data via web for \n\'projections\' calculations. Check ticker accuracy.");
+                }
+            }
+
+
+            // If necessary, check against any saved Profile(s) info, before returning projection results.
+            if (tickerNaCountGtZero)
+            {
+                foreach (var projection in profileProjections)
+                {
+                    if (projection.Ticker.IndexOf("NA", StringComparison.Ordinal) < 0) continue;
+                    var tempProfile = new Profile
+                                      {
+                                          TickerSymbol = projection.Ticker.Substring(0,projection.Ticker.IndexOf("-", StringComparison.Ordinal)),
+                                          DividendRate = 0,
+                                          DividendFreq = null
+                                      };
+
+                    var persistedProfile = CheckPersistedProfile(tempProfile, tempProfile.TickerSymbol).Result.Content;
+                        
+                    // Updated projection data as needed.
+                    if (string.IsNullOrEmpty(persistedProfile.TickerSymbol))
+                        projection.Ticker = persistedProfile.TickerSymbol.Trim().ToUpper() + "-NA";
+
+                    if (persistedProfile.DividendRate <= 0 || persistedProfile.Price <= 0) continue;
+                    projection.DivRate = persistedProfile.DividendRate;
+                    projection.Price = persistedProfile.Price;
+
+
                 }
             }
 
@@ -318,9 +364,7 @@ namespace PIMS.Web.Api.Controllers
 
         
         [HttpPost]
-        //[Route("{loggedInvestor?}", Name = "CreateNewProfile")]
         [Route("")]
-        //public async Task<IHttpActionResult> CreateNewProfile([FromBody] ProfileVm submittedProfile, string loggedInvestor)
         public async Task<IHttpActionResult> CreateNewProfile([FromBody] ProfileVm submittedProfile)
         {
             var currentInvestor = string.Empty;
@@ -393,21 +437,19 @@ namespace PIMS.Web.Api.Controllers
         {
             if (updatedOrNewProfile.DividendRate == 0 || updatedOrNewProfile.DividendFreq == null || updatedOrNewProfile.DividendYield == null)
             {
-                var actionResult = await Task.FromResult(GetPersistedProfileByTicker(tickerForProfile.Trim().ToUpper()));
-                if (actionResult.Status != TaskStatus.Faulted)
+                var persistedResult = await Task.FromResult(GetPersistedProfileByTicker(tickerForProfile.Trim().ToUpper()));
+                if (persistedResult.Status != TaskStatus.Faulted)
                 {
-                    var persistedProfile = actionResult.Result as OkNegotiatedContentResult<Profile>;
+                    var persistedProfile = persistedResult.Result as OkNegotiatedContentResult<Profile>;
                     if (persistedProfile != null)
                     {
-                        updatedOrNewProfile.DividendFreq = updatedOrNewProfile.DividendFreq ?? persistedProfile.Content.DividendFreq;
-                        updatedOrNewProfile.DividendRate = updatedOrNewProfile.DividendRate == 0
-                            ? decimal.Parse(persistedProfile.Content.DividendFreq)
-                            : updatedOrNewProfile.DividendRate;
+                        updatedOrNewProfile.DividendFreq = persistedProfile.Content.DividendFreq ?? updatedOrNewProfile.DividendFreq;
+                        updatedOrNewProfile.DividendRate = persistedProfile.Content.DividendRate == 0 ? 0 : persistedProfile.Content.DividendRate;
+                        updatedOrNewProfile.Price = persistedProfile.Content.Price > 0 ? persistedProfile.Content.Price : 0;
                     }
                 }
-                else
-                    actionResult.Dispose();
-                
+               
+                persistedResult.Dispose();
                 
                 updatedOrNewProfile.ProfileId = Guid.NewGuid();
                 updatedOrNewProfile.AssetId = Guid.NewGuid();
@@ -417,7 +459,6 @@ namespace PIMS.Web.Api.Controllers
             }
 
             return Ok(updatedOrNewProfile);
-
         }
 
 
@@ -460,7 +501,6 @@ namespace PIMS.Web.Api.Controllers
                 var priorDate = today.AddDays(priorNumberOfDays);
                 return (priorDate.Year + "-" + priorDate.Month + "-" + priorDate.Day).Trim();
             }
-
 
         #endregion
 
