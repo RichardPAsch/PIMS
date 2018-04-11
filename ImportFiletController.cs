@@ -91,6 +91,7 @@ namespace PIMS.Web.Api.Controllers
                 if (!portfolioAssetsToBeInserted.Any() )
                     return BadRequest("Invalid XLS data, duplicate position-account ?");
 
+                // TODO: Error here:
                 dataPersistenceResults = PersistPortfolioData(portfolioAssetsToBeInserted); 
             }
 
