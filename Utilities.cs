@@ -103,8 +103,14 @@ namespace PIMS.Web.Api.Common
 
         public static decimal CalculateDividendYield(decimal divRate, decimal unitPrice)
         {
+            // Dividend yield = ANNUALIZED dividend/share price.
             var yield = divRate * 12 / unitPrice * 100;
-            return decimal.Round(decimal.Parse(yield.ToString(CultureInfo.InvariantCulture)), 2);
+
+            // Due to occasional erroneous divRate results by Tiingo API, e.g., ACRNX, we'll cap
+            // the resultant yield to avoid an 'out of range' exception upon posting to the db.
+            return yield >= 25 
+                ? decimal.Round(decimal.Parse("25")) 
+                : decimal.Round(decimal.Parse(yield.ToString(CultureInfo.InvariantCulture)), 2);
         }
 
 
