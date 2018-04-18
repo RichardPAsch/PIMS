@@ -241,16 +241,16 @@ namespace PIMS.Web.Api.Controllers
                                     return null;
 
                                 newAsset = new AssetCreationVm {
-                                    AssetTicker = enumerableCells.ElementAt(1),
-                                    AssetDescription = enumerableCells.ElementAt(2).Length >= 49
-                                                                        ? enumerableCells.ElementAt(2).Substring(0, 49)
-                                                                        : enumerableCells.ElementAt(2),
-                                    AssetClassification = "TBA",
-                                    AssetClassificationId = "1b42ade9-27b9-45c7-b63f-7ef97d6cad8b",
-                                    // InvestorId to be initialized during asset creation.
-                                    AssetInvestorId = string.Empty,
-                                    ProfileToCreate = assetProfile ?? assetProfilePersisted,
-                                    PositionsCreated = newPositionsToBeSaved
+                                        AssetTicker = enumerableCells.ElementAt(1),
+                                        AssetDescription = enumerableCells.ElementAt(2).Length >= 49
+                                                                            ? enumerableCells.ElementAt(2).Substring(0, 49)
+                                                                            : enumerableCells.ElementAt(2),
+                                        AssetClassification = "TBA",
+                                        AssetClassificationId = "1b42ade9-27b9-45c7-b63f-7ef97d6cad8b",
+                                        // InvestorId to be initialized during asset creation.
+                                        AssetInvestorId = string.Empty,
+                                        ProfileToCreate = assetProfile ?? assetProfilePersisted,
+                                        PositionsCreated = newPositionsToBeSaved
                                 };
                                 // TODO: Allow investor to assign asset classification.
                                 // Investor to assign/update classification as needed, e.g. CS [common stock], via UI. ;"TBA" (aka - to be assigned)
