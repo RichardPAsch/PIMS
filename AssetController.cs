@@ -83,20 +83,18 @@ namespace PIMS.Web.Api.Controllers
 
             var assetSummary = await Task.FromResult(_repository.RetreiveAll()
                 .Where(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
-                .Select(a => new
-                             {
-                                 AvailablePositions = a.Positions,
-                                 AvailableProfile = a.Profile,
-                                 AssetClassifications = a.AssetClass
-                             })
+                .Select(a => new {
+                    AvailablePositions = a.Positions,
+                    AvailableProfile = a.Profile,
+                    AssetClassifications = a.AssetClass
+                })
                 .SelectMany(p => p.AvailablePositions)
                 .Where(p => p.Status == char.Parse(status))
-                .Select(x => new AssetSummaryQueryVm
-                             {
-                                 TickerSymbol = x.PositionAsset.Profile.TickerSymbol,
-                                 TickerDescription = x.PositionAsset.Profile.TickerDescription,
-                                 AssetClassification = x.PositionAsset.AssetClass.Description
-                             })
+                .Select(x => new AssetSummaryQueryVm {
+                    TickerSymbol = x.PositionAsset.Profile.TickerSymbol,
+                    TickerDescription = x.PositionAsset.Profile.TickerDescription,
+                    AssetClassification = x.PositionAsset.AssetClass.Description
+                })
 
                 .AsQueryable()
                 );
@@ -104,9 +102,7 @@ namespace PIMS.Web.Api.Controllers
             // TODO: Temporary workaround for NHibernate bug re: "GroupBy". Fixed in v4.1.0,
             // TODO: however, deferring upgrade (v.3.3.1) for fear of breaking changes.
             assetSummary = CheckForDuplicateTickers(assetSummary);
-                //.GroupBy(x => x.TickerSymbol)
-                //.Select(x => x.First())
-                //);
+
            
             return Ok(assetSummary);                         
         }
@@ -617,6 +613,7 @@ namespace PIMS.Web.Api.Controllers
                                                     TickerSymbol = asset.TickerSymbol,
                                                     TickerDescription = asset.TickerDescription,
                                                     AssetClassification = asset.AssetClassification
+                                                    //AvailableTypes = asset.AvailableTypes
                                                 }
                                              );
                     }
