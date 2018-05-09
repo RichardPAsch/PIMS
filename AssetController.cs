@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -8,6 +9,8 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Results;
 using FluentNHibernate.Conventions;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using PIMS.Core.Models;
 using PIMS.Core.Models.ViewModels;
 using PIMS.Data.Repositories;
@@ -22,6 +25,7 @@ namespace PIMS.Web.Api.Controllers
     public class AssetController : ApiController
     {
         private readonly IGenericRepository<Asset> _repository;
+        private readonly IAssetTypeEditsRepository<Asset> _repositoryAssetType;
         private readonly IPimsIdentityService _identityService;
         private readonly IGenericRepository<Investor> _repositoryInvestor;
         private readonly IGenericRepository<AssetClass> _repositoryAssetClass;
@@ -36,8 +40,9 @@ namespace PIMS.Web.Api.Controllers
         private string _currentInvestor;
 
 
-        public AssetController(IGenericRepository<Asset> repository, IPimsIdentityService identityService, IGenericRepository<Investor> repositoryInvestor)
+        public AssetController(IGenericRepository<Asset> repository, IPimsIdentityService identityService, IGenericRepository<Investor> repositoryInvestor )
         {
+            // Only used by ImportFileController.ParsePortfolioSpreadsheet().
             _repository = repository;
             _identityService = identityService;
             _repositoryInvestor = repositoryInvestor;
@@ -53,7 +58,9 @@ namespace PIMS.Web.Api.Controllers
                                                                      IPositionEditsRepository<Position> repositoryEdits,
                                                                      IGenericRepository<Income> repositoryIncome,
                                                                      IGenericRepository<Transaction> repositoryTransaction,
-                                                                     ITransactionEditsRepository<Transaction> repositoryTransactionEdits)
+                                                                     ITransactionEditsRepository<Transaction> repositoryTransactionEdits,
+                                                                     IAssetTypeEditsRepository<Asset> repositoryAssetType
+                              )
         {
             _repository = repository;
             _identityService = identityService;
@@ -66,6 +73,7 @@ namespace PIMS.Web.Api.Controllers
             _repositoryEdits = repositoryEdits;
             _repositoryTransaction = repositoryTransaction;
             _repositoryTransactionEdits = repositoryTransactionEdits;
+            _repositoryAssetType = repositoryAssetType;
         }
 
 
@@ -79,7 +87,7 @@ namespace PIMS.Web.Api.Controllers
 
             // Allow for Fiddler debugging
             if (currentInvestor == null)
-                currentInvestor = "maryblow@yahoo.com";
+                currentInvestor = "rpasch@rpclassics.net";
 
             var assetSummary = await Task.FromResult(_repository.RetreiveAll()
                 .Where(a => a.InvestorId == Utilities.GetInvestorId(_repositoryInvestor, currentInvestor.Trim()))
@@ -93,7 +101,10 @@ namespace PIMS.Web.Api.Controllers
                 .Select(x => new AssetSummaryQueryVm {
                     TickerSymbol = x.PositionAsset.Profile.TickerSymbol,
                     TickerDescription = x.PositionAsset.Profile.TickerDescription,
-                    AssetClassification = x.PositionAsset.AssetClass.Description
+                    AssetClassification = x.PositionAsset.AssetClass.Description,
+                    ProfileId = x.PositionAsset.ProfileId.ToString(),
+                    InvestorId = x.PositionAsset.InvestorId.ToString(),
+                    AssetId = x.PositionAssetId.ToString()
                 })
 
                 .AsQueryable()
@@ -526,6 +537,42 @@ namespace PIMS.Web.Api.Controllers
         }
 
 
+        [HttpPut]
+        [HttpPatch]
+        [Route("~/api/AssetTypeUpdates/Asset")]
+        // Ex. http://localhost/Pims.Web.Api/api/AssetTypeUpdates/Asset  
+        public async Task<IHttpActionResult> UpdateByTypes([FromBody]object[] editedTypes)
+        {
+            var currentInvestor = _identityService.CurrentUser;
+            if (string.IsNullOrEmpty(currentInvestor.Trim()))
+                currentInvestor = "maryblow@yahoo.com";
+                //return BadRequest(string.Format("No login credentials found for current investor"));
+
+            
+            var pendingAssetUpdates = new Asset[editedTypes.Length];// { };
+            for(var i = 0; i < editedTypes.Length; i++)
+            {
+                var assetPendingUpdate = JsonConvert.DeserializeObject<Asset>(editedTypes[i].ToString());
+                assetPendingUpdate.LastUpdate = DateTime.Now;
+                pendingAssetUpdates[i] = assetPendingUpdate;
+            }
+
+
+            try
+            {
+                var isUpdated = await Task.FromResult(_repositoryAssetType.UpdateAssetTypes(pendingAssetUpdates));
+                if (!isUpdated)
+                    return BadRequest("Unable to update one or more asset types.");
+            }
+            catch (Exception e)
+            {
+                return BadRequest("Error updating asset type(s) due to: " + e.Data);
+            }
+
+            return Ok("Successful asset type update(s).");
+        }
+
+
         [HttpDelete]
         [Route("{tickerSymbol?}")]
         // Ex. http://localhost/Pims.Web.Api/api/Asset/VNR
@@ -575,7 +622,7 @@ namespace PIMS.Web.Api.Controllers
                 return null;
             }
 
-       
+        
             private async Task<IHttpActionResult> SaveAssetAndGetId(AssetCreationVm assetToSave)
             {
                 var isCreated = false;
@@ -595,8 +642,7 @@ namespace PIMS.Web.Api.Controllers
                 //TODO: Use routeData for URL.
                return Created("http://localhost/Pims.Web.Api/api/Asset/", createdAsset);
             }
-
-
+        
 
             private static IQueryable<AssetSummaryQueryVm> CheckForDuplicateTickers(IEnumerable<AssetSummaryQueryVm> sourceCollection)
             {
@@ -612,8 +658,10 @@ namespace PIMS.Web.Api.Controllers
                                                 {
                                                     TickerSymbol = asset.TickerSymbol,
                                                     TickerDescription = asset.TickerDescription,
-                                                    AssetClassification = asset.AssetClassification
-                                                    //AvailableTypes = asset.AvailableTypes
+                                                    AssetClassification = asset.AssetClassification,
+                                                    ProfileId = asset.ProfileId,
+                                                    InvestorId = asset.InvestorId,
+                                                    AssetId = asset.AssetId
                                                 }
                                              );
                     }
@@ -627,111 +675,6 @@ namespace PIMS.Web.Api.Controllers
         #endregion
         
 
-
-
-
-
-        #region Obsolete - handled via UI/AngularJs
-        //[HttpGet]
-        //[Route("")]
-        //// Ex: http://localhost/Pims.Web.Api/api/Asset?sortBy=assetClass
-        //public async Task<IHttpActionResult> GetAndSortByOther([FromUri]string sortBy)
-        //{
-        //   _repositoryInvestor.UrlAddress = ControllerContext.Request.RequestUri.ToString();
-        //    var currentInvestor = _identityService.CurrentUser;
-
-        //    IQueryable<Asset> assets;
-        //    IQueryable<AssetSummaryVm> assetSummary = null;
-
-        //    switch (sortBy.Trim().ToUpper()) {
-        //        case "ASSETCLASS": {
-        //                assets = await Task.FromResult(_repository.Retreive(a => a.Investor
-        //                                                                          .LastName.ToUpper().Trim() == currentInvestor.Trim().ToUpper())
-        //                                                           .OrderBy(item => item.AssetClass.LastUpdate).AsQueryable());
-
-        //                assetSummary = assets.AsQueryable().Select(a => new AssetSummaryVm {
-        //                                                                        AccountTypePostEdit = a.Revenue.First().Account,
-        //                                                                        AssetClassification = a.AssetClass.LastUpdate,
-        //                                                                        DividendFrequency = a.Profile.DividendFreq,
-        //                                                                        IncomeRecvd = a.Revenue.First().Actual,
-        //                                                                        Quantity = a.Positions.First().Quantity,
-        //                                                                        UnitPrice = a.Positions.First().MarketPrice,
-        //                                                                        TickerSymbol = a.Profile.TickerSymbol,
-        //                                                                        DateRecvd = a.Revenue.First().DateRecvd,
-        //                                                                        TickerSymbolDescription = a.Profile.TickerDescription,
-        //                                                                        CurrentInvestor = a.Investor.LastName
-        //                                                                });
-        //                break;
-        //            }
-        //        case "ACCTTYPE": {
-        //                assets = await Task.FromResult(_repository.Retreive(a => a.Investor
-        //                                                                          .LastName.ToUpper().Trim() == currentInvestor.Trim().ToUpper())
-        //                                                          .OrderBy(item => item.Positions.First().Account.AccountTypeDesc).AsQueryable());
-
-        //                assetSummary = assets.AsQueryable().Select(a => new AssetSummaryVm {
-        //                                                                            AccountTypePostEdit = a.Revenue.First().Account,
-        //                                                                            AssetClassification = a.AssetClass.LastUpdate,
-        //                                                                            DividendFrequency = a.Profile.DividendFreq,
-        //                                                                            IncomeRecvd = a.Revenue.First().Actual,
-        //                                                                            Quantity = a.Positions.First().Quantity,
-        //                                                                            UnitPrice = a.Positions.First().MarketPrice,
-        //                                                                            TickerSymbol = a.Profile.TickerSymbol,
-        //                                                                            DateRecvd = a.Revenue.First().DateRecvd,
-        //                                                                            TickerSymbolDescription = a.Profile.TickerDescription,
-        //                                                                            CurrentInvestor = a.Investor.LastName
-        //                                                                    });
-        //                break;
-        //            }
-        //        case "INCOME": {
-
-        //                assets = await Task.FromResult(_repository.Retreive(a => a.Investor
-        //                                                                          .LastName.ToUpper().Trim() == currentInvestor.Trim().ToUpper())
-        //                                                          .OrderByDescending(assetList => assetList.Revenue.First().Actual).AsQueryable());
-
-        //                assetSummary = assets.AsQueryable().Select(a => new AssetSummaryVm {
-        //                                                                        AccountTypePostEdit = a.Revenue.First().Account,
-        //                                                                        AssetClassification = a.AssetClass.LastUpdate,
-        //                                                                        DividendFrequency = a.Profile.DividendFreq,
-        //                                                                        IncomeRecvd = a.Revenue.First().Actual,
-        //                                                                        Quantity = a.Positions.First().Quantity,
-        //                                                                        UnitPrice = a.Positions.First().MarketPrice,
-        //                                                                        TickerSymbol = a.Profile.TickerSymbol,
-        //                                                                        DateRecvd = a.Revenue.First().DateRecvd,
-        //                                                                        TickerSymbolDescription = a.Profile.TickerDescription,
-        //                                                                        CurrentInvestor = a.Investor.LastName
-        //                                                                    });
-        //                break;
-        //            }
-        //        case "DATERECVD": {
-        //                //var withinLast12Months = DateTime.Now.AddYears(-1);
-        //                assets = await Task.FromResult(_repository.Retreive(a => a.Investor
-        //                                                                          .LastName.ToUpper().Trim() == currentInvestor.Trim().ToUpper())
-        //                                                          .OrderByDescending(assetList => assetList.Revenue.First().DateRecvd).AsQueryable());
-
-        //                assetSummary = assets.AsQueryable().Select(a => new AssetSummaryVm {
-        //                                                                        AccountTypePostEdit = a.Revenue.First().Account,
-        //                                                                        AssetClassification = a.AssetClass.LastUpdate,
-        //                                                                        DividendFrequency = a.Profile.DividendFreq,
-        //                                                                        IncomeRecvd = a.Revenue.First().Actual,
-        //                                                                        Quantity = a.Positions.First().Quantity,
-        //                                                                        UnitPrice = a.Positions.First().MarketPrice,
-        //                                                                        TickerSymbol = a.Profile.TickerSymbol,
-        //                                                                        DateRecvd = a.Revenue.First().DateRecvd,
-        //                                                                        TickerSymbolDescription = a.Profile.TickerDescription,
-        //                                                                        CurrentInvestor = a.Investor.LastName
-        //                                                                    });
-        //                break;
-        //            }
-
-        //    }
-
-        //    if (assetSummary != null)
-        //        return Ok(assetSummary);
-
-        //    return BadRequest("Unable to retreive Assets for: " + currentInvestor);
-        //}
-
-        #endregion
 
     }
 }
