@@ -47,6 +47,9 @@ namespace PIMS.Core.Models.ViewModels
         public string TickerSymbol { get; set; }
         public string TickerDescription { get; set; }
         public string AssetClassification { get; set; }
+        public string ProfileId { get; set; }
+        public string InvestorId { get; set; }
+        public string AssetId { get; set; }
     }
 
 }
