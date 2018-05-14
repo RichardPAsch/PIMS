@@ -104,7 +104,8 @@ namespace PIMS.Web.Api.Controllers
                     AssetClassification = x.PositionAsset.AssetClass.Description,
                     ProfileId = x.PositionAsset.ProfileId.ToString(),
                     InvestorId = x.PositionAsset.InvestorId.ToString(),
-                    AssetId = x.PositionAssetId.ToString()
+                    AssetId = x.PositionAssetId.ToString(),
+                    DistFreq = x.PositionAsset.Profile.DividendFreq
                 })
 
                 .AsQueryable()
@@ -661,7 +662,8 @@ namespace PIMS.Web.Api.Controllers
                                                     AssetClassification = asset.AssetClassification,
                                                     ProfileId = asset.ProfileId,
                                                     InvestorId = asset.InvestorId,
-                                                    AssetId = asset.AssetId
+                                                    AssetId = asset.AssetId,
+                                                    DistFreq = asset.DistFreq
                                                 }
                                              );
                     }
