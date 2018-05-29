@@ -144,7 +144,7 @@ namespace PIMS.Web.Api.Controllers
 
             // Allow for Fiddler debugging
             if (currentInvestor == null)
-                currentInvestor = "joeblow@yahoo.com";
+                currentInvestor = "rpasch@rpclassics.net";
 
             for (var i = 0; i < editedTransactions.Length; i++)
                 mappedTransactions[i] = MapVmToTransaction(editedTransactions[i]);
