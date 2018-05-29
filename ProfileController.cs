@@ -45,6 +45,7 @@ namespace PIMS.Web.Api.Controllers
         }
 
 
+
         [HttpGet]
         [Route("persisted/{tickerSymbol}")]
         public async Task<IHttpActionResult> GetPersistedProfileByTicker(string tickerSymbol)
@@ -98,7 +99,7 @@ namespace PIMS.Web.Api.Controllers
         [HttpGet]
         [Route("~/api/Profiles/{t1}/{t2?}/{t3?}/{t4?}/{t5?}")]
         // e.g. http://localhost/Pims.Web.Api/api/Profiles/{t1}/{t2?}/{t3?}/{t4?}/{t5?}/ 
-        // t = ticker; used primarily in context of 'Projections' forecasting.
+        // t = ticker; used primarily in context of revenue 'Projections' forecasting.
         public async Task<IHttpActionResult> GetProfiles(string t1, string t2 = "", string t3 = "", string t4 = "", string t5 = "") {
 
             if (string.IsNullOrEmpty(t1))
@@ -202,11 +203,11 @@ namespace PIMS.Web.Api.Controllers
         // e.g. http://localhost/Pims.Web.Api/api/Profile/IBM
         public async Task<IHttpActionResult> GetProfileByTicker(string tickerForProfile)
         {
-            var currentInvestor = _identityService.CurrentUser;
 
             // Allow for Fiddler debugging
-            //if (currentInvestor == null)
-            //    currentInvestor = "rpasch@rpclassics.net";  // temp login for Fiddler TESTING
+            var currentInvestor = _identityService.CurrentUser;
+            if (currentInvestor == null)
+                currentInvestor = "rpasch@rpclassics.net";  // temp login for Fiddler TESTING
             //currentInvestor = "maryblow@yahoo.com";
 
             var existingSavedProfile = await Task.FromResult(_repository.Retreive(p => p.TickerSymbol.Trim() == tickerForProfile.Trim()).AsQueryable());
@@ -217,7 +218,7 @@ namespace PIMS.Web.Api.Controllers
             var priceHistoryStartDate = CalculateStartDate(-180);
 
             // Bypass Tiingo if dealing with a custom Profile.
-            if (existingSavedProfile.Any() && currentInvestor != null)
+            if (existingSavedProfile.Any() && existingSavedProfile.First().CreatedBy != null)
             {
                 if(existingSavedProfile.First().CreatedBy.Trim() == currentInvestor.Trim())
                     return Ok(existingSavedProfile.First());
