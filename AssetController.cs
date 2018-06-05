@@ -368,6 +368,7 @@ namespace PIMS.Web.Api.Controllers
             {
                 if (existingProfile.First().LastUpdate <= DateTime.Now.AddHours(-72))
                 {
+                    submittedAsset.ProfileToCreate.ProfileId = existingProfile.First().ProfileId;
                     var updatedResponse = await profileCtrl.UpdateProfile(submittedAsset.ProfileToCreate) as OkNegotiatedContentResult<string>;
                     // We'll cancel Asset creation here, as out-of-date Profile data would render inaccurate income projections, should the user
                     // choose to use these projections real-time.
@@ -404,8 +405,10 @@ namespace PIMS.Web.Api.Controllers
             // BUG: 11.30.17 - reverify loop iteration for position count > 1
             for (var pos = 0; pos < submittedAsset.PositionsCreated.Count; pos++)
             {
-                // Parse account in validating allowable account only, e.g., CMA-TRUST -> CMA
-                var parsedAccountType = Utilities.ParseAccountTypeFromDescription(submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.ToUpper().Trim());
+                // Parse account in validating allowable account only, (e.g., CMA-TRUST -> CMA) when importing data.
+                var parsedAccountType = Utilities.ParseAccountTypeFromDescription(submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.ToUpper().Trim()) 
+                                     ?? submittedAsset.PositionsCreated.ElementAt(pos).PreEditPositionAccount.ToUpper().Trim();
+
                 var positionAcctTypeId = existingAcctTypes.Content.Where(at => at.AccountTypeDesc.Trim().ToUpper() == parsedAccountType)
                                                                   .AsQueryable()
                                                                   .Select(at => at.KeyId);
@@ -485,7 +488,7 @@ namespace PIMS.Web.Api.Controllers
             if (submittedAsset.RevenueCreated == null) 
                 return ResponseMessage(new HttpResponseMessage {
                                               StatusCode = HttpStatusCode.Created,
-                                              ReasonPhrase = "Asset(s) created w/o submitted Income - affiliated Profile, Position(s), and Transaction(s) sucessfully recorded."
+                                              ReasonPhrase = "Asset created w/o submitted Income; affiliated Profile, Position(s), and Transaction(s) sucessfully recorded."
             });
 
             var incomeCtrl = new IncomeController(_identityService, _repository, _repositoryInvestor, _repositoryIncome);
